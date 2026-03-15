@@ -1,0 +1,6 @@
+{
+    "name": "@synapse/web",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Synapse web UI (placeholder)"
+}
