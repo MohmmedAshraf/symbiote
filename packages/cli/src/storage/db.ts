@@ -23,9 +23,7 @@ const SCHEMA = `
         source_id TEXT NOT NULL,
         target_id TEXT NOT NULL,
         type TEXT NOT NULL,
-        PRIMARY KEY (source_id, target_id, type),
-        FOREIGN KEY (source_id) REFERENCES nodes(id) ON DELETE CASCADE,
-        FOREIGN KEY (target_id) REFERENCES nodes(id) ON DELETE CASCADE
+        PRIMARY KEY (source_id, target_id, type)
     );
 
     CREATE TABLE IF NOT EXISTS files (
