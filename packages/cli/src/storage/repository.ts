@@ -197,6 +197,22 @@ export class Repository {
         return result;
     }
 
+    getAllNodes(): NodeRecord[] {
+        const rows = this.db
+            .prepare('SELECT * FROM nodes')
+            .all() as NodeRow[];
+
+        return rows.map(this.mapNodeRow);
+    }
+
+    getAllEdges(): EdgeRecord[] {
+        const rows = this.db
+            .prepare('SELECT * FROM edges')
+            .all() as EdgeRow[];
+
+        return rows.map(this.mapEdgeRow);
+    }
+
     private mapNodeRow(row: NodeRow): NodeRecord {
         return {
             id: row.id,
