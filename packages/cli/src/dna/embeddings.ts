@@ -1,9 +1,7 @@
-import { pipeline } from '@huggingface/transformers';
+import { pipeline, type FeatureExtractionPipeline } from '@huggingface/transformers';
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
 const EMBEDDING_DIM = 384;
-
-type Extractor = Awaited<ReturnType<typeof pipeline<'feature-extraction'>>>;
 
 export function cosineSimilarity(a: number[], b: number[]): number {
     let dotProduct = 0;
@@ -22,7 +20,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export class EmbeddingModel {
-    private extractor: Extractor | null = null;
+    private extractor: FeatureExtractionPipeline | null = null;
 
     async embed(text: string): Promise<number[]> {
         const extractor = await this.getExtractor();
@@ -56,13 +54,13 @@ export class EmbeddingModel {
         return results;
     }
 
-    private async getExtractor(): Promise<Extractor> {
+    private async getExtractor(): Promise<FeatureExtractionPipeline> {
         if (!this.extractor) {
             this.extractor = await pipeline(
-                'feature-extraction',
+                'feature-extraction' as 'feature-extraction',
                 MODEL_NAME,
                 { dtype: 'fp32' }
-            );
+            ) as unknown as FeatureExtractionPipeline;
         }
         return this.extractor;
     }

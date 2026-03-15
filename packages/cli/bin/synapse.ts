@@ -12,6 +12,8 @@ import {
     ensureSynapseHome,
     getBrainDbPath,
 } from '../src/utils/config.js';
+import { DnaStorage } from '../src/dna/storage.js';
+import { DnaEngine } from '../src/dna/engine.js';
 
 const program = new Command();
 
@@ -94,12 +96,178 @@ program
         console.log('synapse mcp — not yet implemented');
     });
 
-program
+const dnaCommand = program
     .command('dna')
-    .description('View and manage your developer DNA')
-    .action(async () => {
-        console.log('synapse dna — not yet implemented');
+    .description('View and manage your developer DNA');
+
+dnaCommand
+    .command('list')
+    .description('List all DNA entries')
+    .option(
+        '-s, --status <status>',
+        'Filter by status (suggested, approved, rejected)'
+    )
+    .option(
+        '-c, --category <category>',
+        'Filter by category (style, preferences, anti-patterns, decisions)'
+    )
+    .action(
+        async (options: { status?: string; category?: string }) => {
+            const synapseHome = ensureSynapseHome();
+            const dnaDir = path.join(synapseHome, 'dna');
+            const storage = new DnaStorage(dnaDir);
+            storage.ensureDirectories();
+
+            const entries = storage.listEntries({
+                status: options.status as 'suggested' | 'approved' | 'rejected',
+                category: options.category as 'style' | 'preferences' | 'anti-patterns' | 'decisions',
+            });
+
+            if (entries.length === 0) {
+                console.log('No DNA entries found.');
+                return;
+            }
+
+            console.log(
+                `\nDeveloper DNA — ${entries.length} entries\n`
+            );
+            console.log('\u2500'.repeat(70));
+
+            for (const entry of entries) {
+                const fm = entry.frontmatter;
+                const statusIcon =
+                    fm.status === 'approved'
+                        ? '[+]'
+                        : fm.status === 'rejected'
+                            ? '[-]'
+                            : '[?]';
+
+                console.log(
+                    `${statusIcon} ${fm.id}  (${fm.category}, confidence: ${fm.confidence}, occurrences: ${fm.occurrences})`
+                );
+                console.log(
+                    `    ${entry.content.slice(0, 100)}${entry.content.length > 100 ? '...' : ''}`
+                );
+                console.log('\u2500'.repeat(70));
+            }
+        }
+    );
+
+dnaCommand
+    .command('approve <id>')
+    .description('Approve a suggested DNA entry')
+    .action(async (id: string) => {
+        const synapseHome = ensureSynapseHome();
+        const dnaDir = path.join(synapseHome, 'dna');
+        const storage = new DnaStorage(dnaDir);
+        storage.ensureDirectories();
+        const engine = new DnaEngine(storage);
+
+        const entry = engine.approveEntry(id);
+        if (entry) {
+            console.log(`Approved: ${entry.frontmatter.id}`);
+        } else {
+            console.log(`Entry not found: ${id}`);
+        }
     });
+
+dnaCommand
+    .command('reject <id>')
+    .description('Reject a suggested DNA entry')
+    .action(async (id: string) => {
+        const synapseHome = ensureSynapseHome();
+        const dnaDir = path.join(synapseHome, 'dna');
+        const storage = new DnaStorage(dnaDir);
+        storage.ensureDirectories();
+        const engine = new DnaEngine(storage);
+
+        const entry = engine.rejectEntry(id);
+        if (entry) {
+            console.log(`Rejected: ${entry.frontmatter.id}`);
+        } else {
+            console.log(`Entry not found: ${id}`);
+        }
+    });
+
+dnaCommand
+    .command('show <id>')
+    .description('Show a specific DNA entry')
+    .action(async (id: string) => {
+        const synapseHome = ensureSynapseHome();
+        const dnaDir = path.join(synapseHome, 'dna');
+        const storage = new DnaStorage(dnaDir);
+        storage.ensureDirectories();
+
+        const entry = storage.readEntry(id);
+        if (!entry) {
+            console.log(`Entry not found: ${id}`);
+            return;
+        }
+
+        const fm = entry.frontmatter;
+        console.log(`\nID:          ${fm.id}`);
+        console.log(`Category:    ${fm.category}`);
+        console.log(`Status:      ${fm.status}`);
+        console.log(`Confidence:  ${fm.confidence}`);
+        console.log(`Source:      ${fm.source}`);
+        console.log(`First seen:  ${fm.firstSeen}`);
+        console.log(`Last seen:   ${fm.lastSeen}`);
+        console.log(`Occurrences: ${fm.occurrences}`);
+        console.log(`Sessions:    ${fm.sessionIds.length}`);
+        console.log(`\n${entry.content}\n`);
+    });
+
+dnaCommand
+    .command('delete <id>')
+    .description('Delete a DNA entry')
+    .action(async (id: string) => {
+        const synapseHome = ensureSynapseHome();
+        const dnaDir = path.join(synapseHome, 'dna');
+        const storage = new DnaStorage(dnaDir);
+        storage.ensureDirectories();
+
+        storage.deleteEntry(id);
+        console.log(`Deleted: ${id}`);
+    });
+
+dnaCommand.action(async () => {
+    const synapseHome = ensureSynapseHome();
+    const dnaDir = path.join(synapseHome, 'dna');
+    const storage = new DnaStorage(dnaDir);
+    storage.ensureDirectories();
+
+    const all = storage.listEntries();
+    const approved = all.filter(
+        (e) => e.frontmatter.status === 'approved'
+    );
+    const suggested = all.filter(
+        (e) => e.frontmatter.status === 'suggested'
+    );
+    const rejected = all.filter(
+        (e) => e.frontmatter.status === 'rejected'
+    );
+
+    console.log('\nDeveloper DNA Summary');
+    console.log('\u2500'.repeat(21));
+    console.log(`Total:     ${all.length}`);
+    console.log(`Approved:  ${approved.length}`);
+    console.log(`Suggested: ${suggested.length}`);
+    console.log(`Rejected:  ${rejected.length}`);
+
+    if (suggested.length > 0) {
+        console.log('\nPending review:');
+        for (const entry of suggested) {
+            console.log(
+                `  [?] ${entry.frontmatter.id} (confidence: ${entry.frontmatter.confidence})`
+            );
+        }
+        console.log(
+            "\nRun 'synapse dna approve <id>' or 'synapse dna reject <id>' to review."
+        );
+    }
+
+    console.log();
+});
 
 program.action(async () => {
     const projectRoot = process.cwd();
