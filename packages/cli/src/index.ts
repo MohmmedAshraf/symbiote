@@ -47,4 +47,31 @@ export {
     type SimilarMatch,
 } from './dna/index.js';
 
+export {
+    IntentStore,
+    parseIntentFrontmatter,
+    serializeIntentEntry,
+    type IntentEntry,
+    type IntentFrontmatter,
+    type IntentType,
+    type IntentStatus,
+    type ListIntentOptions,
+    HealthAnalyzer,
+    type HealthReport,
+    type HealthViolation,
+    type CircularDep,
+    ensureEmbeddingsTable,
+    storeEmbedding,
+    deleteEmbeddingsForFile,
+    semanticSearch,
+    type SearchResult,
+} from './brain/index.js';
+
+export {
+    createMcpServer,
+    createServerContext,
+    type ServerContext,
+    type ServerContextOptions,
+} from './mcp/index.js';
+
 export const VERSION = '0.1.0';

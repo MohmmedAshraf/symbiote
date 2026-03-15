@@ -14,6 +14,8 @@ import {
 } from '../src/utils/config.js';
 import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
+import { createMcpServer } from '../src/mcp/server.js';
+import { createServerContext } from '../src/mcp/context.js';
 
 const program = new Command();
 
@@ -84,16 +86,127 @@ program
 program
     .command('serve')
     .description('Start MCP server and web UI')
-    .option('-p, --port <number>', 'Web UI port', '3333')
-    .action(async () => {
-        console.log('synapse serve — not yet implemented');
+    .option('-p, --port <number>', 'HTTP port', '3333')
+    .action(async (options: { port: string }) => {
+        const { SSEServerTransport } = await import(
+            '@modelcontextprotocol/sdk/server/sse.js'
+        );
+        const http = await import('node:http');
+
+        const projectRoot = process.cwd();
+        const brainDir = ensureBrainDir(projectRoot);
+        const synapseHome = ensureSynapseHome();
+        const dbPath = getBrainDbPath(projectRoot);
+        const db = createDatabase(dbPath);
+
+        const ctx = createServerContext({
+            db,
+            brainDir,
+            synapseHome,
+        });
+        const { server } = createMcpServer(ctx);
+
+        const port = parseInt(options.port, 10);
+        const transports = new Map<
+            string,
+            InstanceType<typeof SSEServerTransport>
+        >();
+
+        const httpServer = http.createServer(async (req, res) => {
+            const url = new URL(
+                req.url ?? '/',
+                `http://localhost:${port}`
+            );
+
+            if (url.pathname === '/sse' && req.method === 'GET') {
+                const transport = new SSEServerTransport(
+                    '/messages',
+                    res
+                );
+                transports.set(transport.sessionId, transport);
+                await server.connect(transport);
+                return;
+            }
+
+            if (
+                url.pathname === '/messages' &&
+                req.method === 'POST'
+            ) {
+                const sessionId =
+                    url.searchParams.get('sessionId');
+                const transport = sessionId
+                    ? transports.get(sessionId)
+                    : undefined;
+
+                if (!transport) {
+                    res.writeHead(404);
+                    res.end('Session not found');
+                    return;
+                }
+
+                await transport.handlePostMessage(req, res);
+                return;
+            }
+
+            if (url.pathname === '/health') {
+                res.writeHead(200, {
+                    'Content-Type': 'application/json',
+                });
+                res.end(JSON.stringify({ status: 'ok' }));
+                return;
+            }
+
+            res.writeHead(404);
+            res.end('Not found');
+        });
+
+        httpServer.listen(port, () => {
+            console.log(
+                `Synapse server running on http://localhost:${port}`
+            );
+            console.log(
+                `MCP SSE endpoint: http://localhost:${port}/sse`
+            );
+            console.log(
+                `Health check: http://localhost:${port}/health`
+            );
+        });
+
+        process.on('SIGINT', () => {
+            httpServer.close();
+            db.close();
+            process.exit(0);
+        });
     });
 
 program
     .command('mcp')
     .description('Start MCP server only (stdio, for editor integration)')
     .action(async () => {
-        console.log('synapse mcp — not yet implemented');
+        const { StdioServerTransport } = await import(
+            '@modelcontextprotocol/sdk/server/stdio.js'
+        );
+
+        const projectRoot = process.cwd();
+        const brainDir = ensureBrainDir(projectRoot);
+        const synapseHome = ensureSynapseHome();
+        const dbPath = getBrainDbPath(projectRoot);
+        const db = createDatabase(dbPath);
+
+        const ctx = createServerContext({
+            db,
+            brainDir,
+            synapseHome,
+        });
+        const { server } = createMcpServer(ctx);
+
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+
+        process.on('SIGINT', () => {
+            db.close();
+            process.exit(0);
+        });
     });
 
 const dnaCommand = program
