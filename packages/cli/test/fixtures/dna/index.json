@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "entries": [
+        {
+            "id": "style-early-returns",
+            "category": "style",
+            "status": "approved",
+            "confidence": 0.95,
+            "fileName": "early-returns.md"
+        },
+        {
+            "id": "preferences-drizzle-over-prisma",
+            "category": "preferences",
+            "status": "suggested",
+            "confidence": 0.5,
+            "fileName": "drizzle-over-prisma.md"
+        }
+    ]
+}
