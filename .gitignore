@@ -12,8 +12,14 @@ packages/cli/src/**/*.js
 packages/cli/src/**/*.d.ts
 packages/cli/bin/**/*.js
 packages/cli/bin/**/*.d.ts
+packages/cli/test/**/*.js
+packages/cli/test/**/*.d.ts
 packages/cli/vitest.config.js
 packages/cli/vitest.config.d.ts
+packages/web/src/**/*.js
+packages/web/src/**/*.d.ts
+packages/web/vite.config.js
+packages/web/vite.config.d.ts
 
 # Turborepo
 .turbo/
