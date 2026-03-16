@@ -2,12 +2,15 @@
 
 <img src="art/cover.png" alt="Symbiote" width="100%" />
 
-**Your codebase gets a brain. Your AI never forgets who you are.**
+**Your AI forgets. Symbiote remembers.**
 
-A living, queryable knowledge layer for your codebase that makes every AI coding tool understand your project and your style.
+Bonds with your AI coding tools, giving them a brain that understands your project
+and a DNA that carries your style. One command. Every session. Zero cold start.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/symbiote-cli.svg)](https://www.npmjs.com/package/symbiote-cli)
+[![npm](https://img.shields.io/npm/v/symbiote-cli?style=flat-square&color=7b5fff)](https://www.npmjs.com/package/symbiote-cli)
+[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square)](https://www.typescriptlang.org/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-7b5fff?style=flat-square)](https://modelcontextprotocol.io/)
 
 </div>
 
@@ -15,138 +18,214 @@ A living, queryable knowledge layer for your codebase that makes every AI coding
 
 ## The Problem
 
-AI coding assistants lose context every session. They hallucinate, ignore your conventions, and repeat the same mistakes. You write CLAUDE.md files, cursor rules, memory files — all static, all manual, all incomplete. Every new project is a cold start.
+Every AI coding session starts from scratch. The AI doesn't know your architecture, ignores your conventions, and repeats the same mistakes you corrected yesterday. Static rule files are manual and fragile. Every new conversation is a cold start.
 
-## The Solution
+**Your corrections vanish. Your preferences reset. Your AI has amnesia.**
 
-One command. Every AI tool. Zero cold start.
-
-```bash
-npx symbiote
-```
-
-Symbiote scans your codebase and builds a **living project brain** — a knowledge graph of every function, class, import, and dependency. Then it layers on your **Developer DNA** — your personal coding style, preferences, and patterns learned from your corrections and instructions across every project you work on.
-
-Any AI tool that connects via MCP instantly understands both your project and you.
-
-## Features
-
-### Project Brain
-
-- **Code Graph** — Every function, class, import, and dependency mapped and queryable
-- **Intent Layer** — Architectural decisions, constraints, and rationale that travel with the repo
-- **Constraint Enforcement** — Define rules ("no raw SQL") and violations are flagged automatically
-- **Health Pulse** — Dead code, circular dependencies, coupling hotspots, and a 0-100 health score
-
-### Developer DNA
-
-- **Learned From You** — Built from your corrections and instructions to AI, not from AI-generated code
-- **Follows You Everywhere** — One DNA across all your projects, zero cold start
-- **Always Evolving** — Symbiote proposes DNA updates as you work, you approve or reject
-- **Non-Blocking** — Review DNA proposals in the dashboard when you feel like it, or don't
-
-### Visual Brain
-
-- **3D Knowledge Graph** — Interactive force-directed visualization of your entire codebase
-- **Ask Your Project** — Chat interface where you talk to your project, not to an AI
-- **Health Dashboard** — Real-time code health monitoring with actionable insights
-- **DNA Lab** — View, approve, and manage your coding DNA
-
-## Quick Start
+## How Symbiote Fixes This
 
 ```bash
-# Initialize in any project
-npx symbiote
-
-# Connect to Claude Code
-claude mcp add symbiote -- npx symbiote mcp
-
-# Connect to Cursor (~/.cursor/mcp.json)
-{
-    "mcpServers": {
-        "symbiote": {
-            "command": "npx",
-            "args": ["symbiote", "mcp"]
-        }
-    }
-}
+npx symbiote init
 ```
 
-## CLI
+Symbiote scans your codebase, builds a living knowledge graph, detects your AI tools, and bonds with them — all in one command. From that point on, your AI knows your project's architecture, respects your constraints, and writes code in your style.
+
+```
+  Scanning codebase...
+  ◇ 142 files · 891 nodes · 1,204 edges
+
+  Analyzing project...
+  ◇ TypeScript, React, Tailwind detected
+  ◇ 12 rules imported · 3 DNA traits loaded
+
+  Bond with detected hosts?
+  > [x] Claude Code  — MCP server + hooks
+    [x] Cursor        — MCP server
+
+  Symbiote is bonded. Your AI knows who you are.
+```
+
+No manual config. No copy-pasting MCP commands. Symbiote detects what's installed and hooks in.
+
+## Two Layers of Intelligence
+
+### Developer DNA — Your Coding Identity
+
+Lives at `~/.symbiote/dna/`. Follows you across every project.
+
+When you correct your AI — _"no, use early returns"_ — Symbiote captures it. Same correction across three sessions? Auto-promoted from suggestion to approved trait. Explicit instruction? Approved immediately.
+
+Your DNA is human-readable markdown. Review it, edit it, or ignore it:
 
 ```bash
-npx symbiote              # Scan + launch server + UI
-npx symbiote init         # First-time project setup
-npx symbiote scan         # Rescan codebase
-npx symbiote scan --force # Full rescan (ignore cache)
-npx symbiote serve        # MCP server + web UI
-npx symbiote mcp          # MCP server only (stdio, for editors)
-npx symbiote dna          # View and manage your Developer DNA
+symbiote dna              # Summary: 34 traits, 2 pending review
+symbiote dna list         # All traits with confidence scores
+symbiote dna approve <id> # Promote a suggestion
 ```
 
-## How It Works
+### Project Brain — Your Codebase's Nervous System
 
-```
-You code normally
-    ↓
-Symbiote watches, builds a knowledge graph of your codebase
-    ↓
-AI tool connects via MCP
-    ↓
-Symbiote provides: project architecture + your coding style + active constraints
-    ↓
-AI writes code that actually fits your project and your preferences
-    ↓
-You correct the AI? Symbiote captures it as a DNA update
-    ↓
-Next session, any project → AI already knows
+Lives at `.brain/` in each repo. Auto-generated, optionally enriched.
+
+- **Code graph** — Every function, class, import, and call chain mapped via Tree-sitter
+- **Semantic search** — Natural language queries over your codebase (local embeddings, no API)
+- **Intent layer** — Architectural decisions and constraints that travel with the repo
+- **Health engine** — Dead code, circular deps, coupling hotspots, constraint violations
+- **Impact analysis** — "What breaks if I change this?" with confidence-weighted blast radius
+
+## The Living Brain
+
+```bash
+npx symbiote serve
 ```
 
-## MCP Tools
+Open `localhost:3333`. Your project's brain — a 3D neural graph of your entire codebase. Nodes are files, functions, classes. Edges are calls, imports, dependencies. Color-coded by module cluster. Sized by PageRank importance.
 
-| Tool                   | Description                                       |
-| ---------------------- | ------------------------------------------------- |
-| `get_developer_dna`    | Your coding style, preferences, and anti-patterns |
-| `get_project_overview` | Tech stack, structure, key modules, entry points  |
-| `get_context_for_file` | Dependencies, dependents, related constraints     |
-| `query_graph`          | Search symbols, trace call chains                 |
-| `semantic_search`      | Natural language search over your codebase        |
-| `get_constraints`      | Active project constraints and rules              |
-| `get_decisions`        | Architectural decisions and rationale             |
-| `get_health`           | Code health: dead code, cycles, violations        |
-| `propose_decision`     | AI writes back a decision it discovered           |
-| `propose_constraint`   | AI writes back a constraint it inferred           |
-| `record_instruction`   | Captures your corrections for DNA learning        |
+**It reacts in real time.** When your AI reads a file, the node glows. When it edits, the node pulses bright. When it navigates between files, impulses fire along the edges. You're watching your AI think.
 
-## Language Support
+```
+◉ Bonded to Claude Code  ·  file:edit src/api/payments.ts  ·  12 events this session
+```
 
-**Tier 1 (bundled):** TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
+Three views:
 
-**Tier 2 (on-demand):** All other languages supported by Tree-sitter — downloaded and cached on first encounter.
+| View             | What it shows                                    |
+| ---------------- | ------------------------------------------------ |
+| **Brain Graph**  | 3D neural visualization — the hero, always alive |
+| **Health Pulse** | Code health score (0-100) with actionable issues |
+| **DNA Lab**      | Your traits — approve, reject, edit              |
+
+## Host Integration
+
+Symbiote bonds with any MCP-compatible AI tool. `symbiote init` auto-detects and connects:
+
+| Host               | MCP | Hooks | Real-Time Brain |
+| ------------------ | --- | ----- | --------------- |
+| **Claude Code**    | Yes | Yes   | Yes             |
+| **Cursor**         | Yes | —     | —               |
+| **Windsurf**       | Yes | —     | —               |
+| **GitHub Copilot** | Yes | —     | —               |
+| **OpenCode**       | Yes | —     | —               |
+
+Claude Code gets the deepest integration — hooks inject context on **every** tool call and the brain reacts in real time. Other hosts access Symbiote through MCP tools the AI calls when it needs context.
+
+```bash
+symbiote unbond              # Detach from all hosts
+symbiote unbond claude-code  # Detach from a specific host
+```
+
+## What Your AI Gets
+
+When bonded, your AI gains 13 tools via MCP:
+
+| Tool                   | Purpose                                            |
+| ---------------------- | -------------------------------------------------- |
+| `get_developer_dna`    | Your style and preferences, filtered by relevance  |
+| `get_project_overview` | Tech stack, structure, modules, health summary     |
+| `get_context_for_file` | Dependencies, dependents, constraints for any file |
+| `query_graph`          | Symbol search, call chains, dependency tracing     |
+| `semantic_search`      | Natural language search over the codebase          |
+| `get_constraints`      | Active project rules, scoped to file or module     |
+| `get_decisions`        | Architectural decisions with rationale             |
+| `get_health`           | Dead code, cycles, coupling, violations            |
+| `get_impact`           | Blast radius analysis with confidence scores       |
+| `detect_changes`       | Git diff mapped to affected graph nodes            |
+| `propose_decision`     | AI writes back a discovered decision               |
+| `propose_constraint`   | AI writes back an inferred constraint              |
+| `record_instruction`   | Captures your corrections for DNA learning         |
+
+Plus 3 MCP resources: `symbiote://dna`, `symbiote://project/overview`, `symbiote://project/health`
+
+## How It Actually Works
+
+```
+You code in your terminal
+    → AI calls a tool (Read, Edit, Write)
+    → Symbiote hooks fire BEFORE the tool executes
+        → Injects: file context, dependencies, constraints, your DNA
+    → AI acts with full context
+    → Symbiote hooks fire AFTER the tool executes
+        → Re-indexes the changed file in the graph
+        → Streams the event to the living brain
+        → Tracks the session for learning
+```
+
+The hooks are the key. Your AI doesn't _choose_ to use Symbiote — Symbiote is injected into every interaction. The AI just writes better code because it has better context.
+
+## Project Health
+
+```bash
+symbiote impact   # What breaks from your uncommitted changes?
+```
+
+The health engine scores your project 0-100 across four dimensions:
+
+| Dimension             | Weight | What it catches                             |
+| --------------------- | ------ | ------------------------------------------- |
+| Constraint violations | 40%    | Your own rules being broken                 |
+| Circular dependencies | 20%    | Modules that shouldn't depend on each other |
+| Dead code             | 20%    | Unused exports, orphan files                |
+| Coupling hotspots     | 20%    | Files that change together too often        |
+
+Every issue links to a file and line number. The Health Pulse view in the web UI makes them actionable.
 
 ## What Gets Created
 
 ```
-~/.symbiote/                 # Global (your Developer DNA)
+~/.symbiote/                 # Global — your coding identity
 ├── config.json
 └── dna/
-    ├── style/               # Coding patterns
-    ├── preferences/         # Tech choices
-    ├── anti-patterns/       # Things you never do
-    └── decisions/           # How you make trade-offs
+    ├── style/               # "Use early returns, not nested else"
+    ├── preferences/         # "Drizzle over Prisma"
+    ├── anti-patterns/       # "No nested ternaries"
+    └── decisions/           # "Composition over inheritance"
 
-your-project/.brain/         # Per-project (the brain)
-├── config.json
-├── symbiote.db              # Code graph (gitignored)
-└── intent/
+your-project/.brain/         # Per-project — the brain
+├── symbiote.db              # Code graph + embeddings (gitignored)
+└── intent/                  # Committed to git — shared with team
     ├── overview.md          # Auto-generated project summary
-    ├── decisions/           # Architectural decisions
-    └── constraints/         # Project rules and constraints
+    ├── decisions/           # "Why we chose X over Y"
+    └── constraints/         # "No raw SQL in application code"
 ```
+
+The intent layer is committed to git. New team member runs `symbiote init` — they get the full project brain plus their personal DNA on top. Same project understanding, individual style.
+
+## Language Support
+
+Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship with the package and have dedicated extraction patterns. **On-demand** languages are downloaded on first encounter and use generic AST traversal.
+
+| Language   | Functions | Classes | Methods | Imports | Calls | Types | Enums |
+| ---------- | --------- | ------- | ------- | ------- | ----- | ----- | ----- |
+| TypeScript | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | ✓     |
+| JavaScript | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
+| TSX        | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | ✓     |
+| Python     | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
+| Go         | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | —     |
+| Rust       | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | ✓     |
+| Java       | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | ✓     |
+| C          | ✓         | ✓       | —       | ✓       | ✓     | ✓     | ✓     |
+| C++        | ✓         | ✓       | ✓       | ✓       | ✓     | ✓     | ✓     |
+| Ruby       | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
+| PHP        | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
+
+> **Any other language** with a Tree-sitter grammar also works — downloaded and cached at `~/.symbiote/grammars/` on first encounter. Functions and classes are extracted via generic traversal; deeper features (imports, calls, types) depend on language-specific patterns.
+
+## CLI Reference
+
+| Command                 | What it does                          |
+| ----------------------- | ------------------------------------- |
+| `symbiote init`         | Scan + analyze + bond with AI agents  |
+| `symbiote scan`         | Rescan codebase (incremental)         |
+| `symbiote scan --force` | Full rescan, ignore cache             |
+| `symbiote serve`        | MCP server + web UI at localhost:3333 |
+| `symbiote mcp`          | MCP server only (stdio, for editors)  |
+| `symbiote dna`          | View and manage developer DNA         |
+| `symbiote impact`       | Analyze impact of working changes     |
+| `symbiote unbond`       | Detach from AI agents                 |
 
 ## Privacy
 
-Everything runs locally. No data leaves your machine. The optional "Ask Your Project" chat feature requires an LLM provider (OpenAI, Anthropic, or Ollama for fully-local).
+Everything runs locally. No data leaves your machine. No external API calls for core features. The code graph, embeddings, DNA, and health analysis all run on your hardware.
 
 ## License
 
