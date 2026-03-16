@@ -1,11 +1,11 @@
-import type { Repository, NodeRecord } from '../../storage/repository.js';
+import type { Repository } from '../../storage/repository.js';
 import type { CircularDep } from './types.js';
 
 export class CycleDetector {
     constructor(private repo: Repository) {}
 
-    detect(): CircularDep[] {
-        const allEdges = this.repo.getAllEdges();
+    async detect(): Promise<CircularDep[]> {
+        const allEdges = await this.repo.getAllEdges();
         if (allEdges.length === 0) return [];
 
         const adjacency = new Map<string, string[]>();
@@ -22,16 +22,16 @@ export class CycleDetector {
         const inStack = new Set<string>();
         const seen = new Set<string>();
 
-        const dfs = (
+        const dfs = async (
             nodeId: string,
             nodePath: string[]
-        ): void => {
+        ): Promise<void> => {
             if (inStack.has(nodeId)) {
                 const cycleStart = nodePath.indexOf(nodeId);
                 if (cycleStart < 0) return;
 
                 const chain = nodePath.slice(cycleStart);
-                const filePaths = this.resolveFilePaths(chain);
+                const filePaths = await this.resolveFilePaths(chain);
 
                 if (filePaths.size <= 1) return;
 
@@ -53,7 +53,7 @@ export class CycleDetector {
 
             const neighbors = adjacency.get(nodeId) ?? [];
             for (const neighbor of neighbors) {
-                dfs(neighbor, [...nodePath, nodeId]);
+                await dfs(neighbor, [...nodePath, nodeId]);
             }
 
             inStack.delete(nodeId);
@@ -61,17 +61,17 @@ export class CycleDetector {
 
         for (const nodeId of adjacency.keys()) {
             if (!visited.has(nodeId)) {
-                dfs(nodeId, []);
+                await dfs(nodeId, []);
             }
         }
 
         return cycles;
     }
 
-    private resolveFilePaths(chain: string[]): Set<string> {
+    private async resolveFilePaths(chain: string[]): Promise<Set<string>> {
         const filePaths = new Set<string>();
         for (const id of chain) {
-            const node = this.repo.getNodeById(id);
+            const node = await this.repo.getNodeById(id);
             if (node) filePaths.add(node.filePath);
         }
         return filePaths;

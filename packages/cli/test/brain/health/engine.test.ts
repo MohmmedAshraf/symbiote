@@ -17,7 +17,7 @@ describe('HealthEngine', () => {
     let engine: HealthEngine;
 
     beforeEach(async () => {
-        db = createDatabase(':memory:');
+        db = await createDatabase(':memory:');
         repo = new Repository(db);
         const scanner = new Scanner(repo);
         await scanner.scan(path.join(FIXTURES, 'src'));
@@ -28,20 +28,20 @@ describe('HealthEngine', () => {
         engine = new HealthEngine(repo, intent, db);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
     });
 
-    it('produces a complete health report', () => {
-        const report = engine.analyze();
+    it('produces a complete health report', async () => {
+        const report = await engine.analyze();
         expect(report.score).toBeGreaterThanOrEqual(0);
         expect(report.score).toBeLessThanOrEqual(100);
         expect(report.categories).toBeDefined();
         expect(report.timestamp).toBeDefined();
     });
 
-    it('populates all report arrays', () => {
-        const report = engine.analyze();
+    it('populates all report arrays', async () => {
+        const report = await engine.analyze();
         expect(Array.isArray(report.constraintViolations)).toBe(true);
         expect(Array.isArray(report.descriptiveConstraints)).toBe(true);
         expect(Array.isArray(report.circularDeps)).toBe(true);
@@ -49,37 +49,37 @@ describe('HealthEngine', () => {
         expect(Array.isArray(report.couplingHotspots)).toBe(true);
     });
 
-    it('saves a snapshot when saveSnapshot is called', () => {
-        const report = engine.analyze();
-        engine.saveSnapshot(report);
+    it('saves a snapshot when saveSnapshot is called', async () => {
+        const report = await engine.analyze();
+        await engine.saveSnapshot(report);
 
-        const history = engine.getHistory(10);
+        const history = await engine.getHistory(10);
         expect(history.length).toBe(1);
         expect(history[0].score).toBe(report.score);
     });
 
-    it('detects circular deps when manually added', () => {
-        repo.insertNodes([
+    it('detects circular deps when manually added', async () => {
+        await repo.insertNodes([
             { id: 'fn:x.ts:a', type: 'function', name: 'a', filePath: 'x.ts', lineStart: 1, lineEnd: 3 },
             { id: 'fn:y.ts:b', type: 'function', name: 'b', filePath: 'y.ts', lineStart: 1, lineEnd: 3 },
         ]);
-        repo.insertEdges([
+        await repo.insertEdges([
             { sourceId: 'fn:x.ts:a', targetId: 'fn:y.ts:b', type: 'calls' },
             { sourceId: 'fn:y.ts:b', targetId: 'fn:x.ts:a', type: 'calls' },
         ]);
 
-        const report = engine.analyze();
+        const report = await engine.analyze();
         expect(report.circularDeps.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('returns score between 0 and 100 even with many issues', () => {
+    it('returns score between 0 and 100 even with many issues', async () => {
         for (let i = 0; i < 50; i++) {
-            repo.insertNodes([
+            await repo.insertNodes([
                 { id: `fn:orphan${i}.ts:fn${i}`, type: 'function', name: `fn${i}`, filePath: `orphan${i}.ts`, lineStart: 1, lineEnd: 3 },
             ]);
         }
 
-        const report = engine.analyze();
+        const report = await engine.analyze();
         expect(report.score).toBeGreaterThanOrEqual(0);
         expect(report.score).toBeLessThanOrEqual(100);
     });

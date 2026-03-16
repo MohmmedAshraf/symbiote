@@ -34,11 +34,11 @@ export class HealthEngine {
         this.history = new HealthHistory(db);
     }
 
-    analyze(): HealthReport {
-        const constraintResult = this.constraintChecker.check();
-        const circularDeps = this.cycleDetector.detect();
-        const deadCode = this.deadCodeDetector.detect();
-        const couplingHotspots = this.couplingAnalyzer.detect();
+    async analyze(): Promise<HealthReport> {
+        const constraintResult = await this.constraintChecker.check();
+        const circularDeps = await this.cycleDetector.detect();
+        const deadCode = await this.deadCodeDetector.detect();
+        const couplingHotspots = await this.couplingAnalyzer.detect();
 
         const scored = computeHealthScore({
             constraintViolations:
@@ -60,7 +60,7 @@ export class HealthEngine {
         };
     }
 
-    saveSnapshot(report: HealthReport): void {
+    async saveSnapshot(report: HealthReport): Promise<void> {
         const input: SaveSnapshotInput = {
             score: report.score,
             constraintScore:
@@ -76,14 +76,14 @@ export class HealthEngine {
             couplingHotspotCount:
                 report.couplingHotspots.length,
         };
-        this.history.save(input);
+        await this.history.save(input);
     }
 
-    getHistory(limit: number): HealthSnapshot[] {
+    async getHistory(limit: number): Promise<HealthSnapshot[]> {
         return this.history.list(limit);
     }
 
-    getLatestSnapshot(): HealthSnapshot | null {
+    async getLatestSnapshot(): Promise<HealthSnapshot | null> {
         return this.history.latest();
     }
 }

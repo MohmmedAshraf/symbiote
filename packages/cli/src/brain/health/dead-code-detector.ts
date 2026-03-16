@@ -12,11 +12,11 @@ const ENTRY_POINT_PATTERNS = [
 export class DeadCodeDetector {
     constructor(private repo: Repository) {}
 
-    detect(): DeadCodeEntry[] {
-        const allNodes = this.repo.getAllNodes();
+    async detect(): Promise<DeadCodeEntry[]> {
+        const allNodes = await this.repo.getAllNodes();
         if (allNodes.length === 0) return [];
 
-        const allEdges = this.repo.getAllEdges();
+        const allEdges = await this.repo.getAllEdges();
         const referencedIds = new Set<string>();
 
         for (const edge of allEdges) {

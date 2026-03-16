@@ -6,9 +6,9 @@ const HOTSPOT_THRESHOLD = 8;
 export class CouplingAnalyzer {
     constructor(private repo: Repository) {}
 
-    detect(): CouplingHotspot[] {
-        const allNodes = this.repo.getAllNodes();
-        const allEdges = this.repo.getAllEdges();
+    async detect(): Promise<CouplingHotspot[]> {
+        const allNodes = await this.repo.getAllNodes();
+        const allEdges = await this.repo.getAllEdges();
         if (allEdges.length === 0) return [];
 
         const nodeToFile = new Map<string, string>();

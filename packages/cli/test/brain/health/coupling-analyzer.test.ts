@@ -8,39 +8,39 @@ describe('CouplingAnalyzer', () => {
     let repo: Repository;
     let analyzer: CouplingAnalyzer;
 
-    beforeEach(() => {
-        db = createDatabase(':memory:');
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         repo = new Repository(db);
         analyzer = new CouplingAnalyzer(repo);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
     });
 
-    it('returns empty array when graph has no edges', () => {
-        repo.insertNodes([
+    it('returns empty array when graph has no edges', async () => {
+        await repo.insertNodes([
             { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
         ]);
 
-        const hotspots = analyzer.detect();
+        const hotspots = await analyzer.detect();
         expect(hotspots).toEqual([]);
     });
 
-    it('returns empty array when coupling is below threshold', () => {
-        repo.insertNodes([
+    it('returns empty array when coupling is below threshold', async () => {
+        await repo.insertNodes([
             { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
             { id: 'fn:b.ts:bar', type: 'function', name: 'bar', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
         ]);
-        repo.insertEdges([
+        await repo.insertEdges([
             { sourceId: 'fn:a.ts:foo', targetId: 'fn:b.ts:bar', type: 'calls' },
         ]);
 
-        const hotspots = analyzer.detect();
+        const hotspots = await analyzer.detect();
         expect(hotspots).toEqual([]);
     });
 
-    it('detects a file with disproportionate incoming edges', () => {
+    it('detects a file with disproportionate incoming edges', async () => {
         const nodes = [];
         const edges = [];
 
@@ -53,16 +53,16 @@ describe('CouplingAnalyzer', () => {
             edges.push({ sourceId: id, targetId: 'fn:hub.ts:hub', type: 'calls' });
         }
 
-        repo.insertNodes(nodes);
-        repo.insertEdges(edges);
+        await repo.insertNodes(nodes);
+        await repo.insertEdges(edges);
 
-        const hotspots = analyzer.detect();
+        const hotspots = await analyzer.detect();
         expect(hotspots.length).toBeGreaterThanOrEqual(1);
         expect(hotspots[0].filePath).toBe('hub.ts');
         expect(hotspots[0].incomingEdges).toBe(10);
     });
 
-    it('sorts hotspots by total edge count descending', () => {
+    it('sorts hotspots by total edge count descending', async () => {
         const nodes = [];
         const edges = [];
 
@@ -83,10 +83,10 @@ describe('CouplingAnalyzer', () => {
             edges.push({ sourceId: id, targetId: 'fn:small.ts:small', type: 'calls' });
         }
 
-        repo.insertNodes(nodes);
-        repo.insertEdges(edges);
+        await repo.insertNodes(nodes);
+        await repo.insertEdges(edges);
 
-        const hotspots = analyzer.detect();
+        const hotspots = await analyzer.detect();
         if (hotspots.length >= 2) {
             expect(hotspots[0].totalEdges).toBeGreaterThanOrEqual(hotspots[1].totalEdges);
         }

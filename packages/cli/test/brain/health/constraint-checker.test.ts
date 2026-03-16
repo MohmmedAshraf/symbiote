@@ -20,7 +20,7 @@ describe('ConstraintChecker', () => {
     let checker: ConstraintChecker;
 
     beforeEach(async () => {
-        db = createDatabase(':memory:');
+        db = await createDatabase(':memory:');
         repo = new Repository(db);
         const scanner = new Scanner(repo);
         await scanner.scan(path.join(FIXTURES, 'src'));
@@ -28,12 +28,12 @@ describe('ConstraintChecker', () => {
         checker = new ConstraintChecker(repo, intent);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
     });
 
-    it('detects violations for constraints with Tree-sitter patterns', () => {
-        const result = checker.check();
+    it('detects violations for constraints with Tree-sitter patterns', async () => {
+        const result = await checker.check();
         expect(result.violations.length).toBeGreaterThanOrEqual(
             1
         );
@@ -45,29 +45,29 @@ describe('ConstraintChecker', () => {
         expect(sqlViolations[0].filePath).toContain('raw-sql');
     });
 
-    it('includes file path and line info in violations', () => {
-        const result = checker.check();
+    it('includes file path and line info in violations', async () => {
+        const result = await checker.check();
         const violation = result.violations[0];
         expect(violation.filePath).toBeDefined();
         expect(violation.lineStart).toBeGreaterThan(0);
         expect(violation.matchedText).toBeDefined();
     });
 
-    it('does not flag clean files', () => {
-        const result = checker.check();
+    it('does not flag clean files', async () => {
+        const result = await checker.check();
         const cleanViolations = result.violations.filter((v) =>
             v.filePath.includes('clean')
         );
         expect(cleanViolations).toEqual([]);
     });
 
-    it('separates pattern-based and descriptive constraints', () => {
-        const result = checker.check();
+    it('separates pattern-based and descriptive constraints', async () => {
+        const result = await checker.check();
         expect(result.descriptive).toBeDefined();
         expect(Array.isArray(result.descriptive)).toBe(true);
     });
 
-    it('handles constraints without patterns as descriptive', () => {
+    it('handles constraints without patterns as descriptive', async () => {
         const tmpBrain = path.join(
             os.tmpdir(),
             `symbiote-constraint-test-${Date.now()}`
@@ -102,7 +102,7 @@ describe('ConstraintChecker', () => {
             repo,
             tmpIntent
         );
-        const result = tmpChecker.check();
+        const result = await tmpChecker.check();
 
         expect(result.descriptive.length).toBe(1);
         expect(result.descriptive[0].constraintId).toBe(

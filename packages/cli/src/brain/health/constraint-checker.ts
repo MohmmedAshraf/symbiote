@@ -22,7 +22,7 @@ export class ConstraintChecker {
         private intent: IntentStore
     ) {}
 
-    check(): ConstraintCheckResult {
+    async check(): Promise<ConstraintCheckResult> {
         const constraints = this.intent.listEntries('constraint', {
             status: 'active',
         });
@@ -31,8 +31,7 @@ export class ConstraintChecker {
 
         for (const constraint of constraints) {
             if (constraint.frontmatter.pattern) {
-                const found =
-                    this.checkWithPattern(constraint);
+                const found = await this.checkWithPattern(constraint);
                 violations.push(...found);
             } else {
                 descriptive.push({
@@ -46,14 +45,14 @@ export class ConstraintChecker {
         return { violations, descriptive };
     }
 
-    private checkWithPattern(
+    private async checkWithPattern(
         constraint: IntentEntry
-    ): ConstraintViolation[] {
+    ): Promise<ConstraintViolation[]> {
         const pattern = constraint.frontmatter.pattern!;
         const violations: ConstraintViolation[] = [];
         const scope = constraint.frontmatter.scope;
 
-        const filePaths = this.getFilesInScope(scope);
+        const filePaths = await this.getFilesInScope(scope);
 
         for (const filePath of filePaths) {
             const lang = detectLanguage(filePath);
@@ -107,8 +106,8 @@ export class ConstraintChecker {
         return violations;
     }
 
-    private getFilesInScope(scope: string): string[] {
-        const allNodes = this.repo.getAllNodes();
+    private async getFilesInScope(scope: string): Promise<string[]> {
+        const allNodes = await this.repo.getAllNodes();
         const filePaths = new Set<string>();
 
         for (const node of allNodes) {
