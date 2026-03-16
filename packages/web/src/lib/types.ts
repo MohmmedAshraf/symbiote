@@ -1,3 +1,30 @@
+export interface LayoutNode {
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    cluster: number;
+    pagerank: number;
+    centrality: number;
+    type: string;
+    name: string;
+    filePath: string;
+}
+
+export interface LayoutEdge {
+    sourceId: string;
+    targetId: string;
+    type: string;
+    sourcePos: [number, number, number];
+    targetPos: [number, number, number];
+}
+
+export interface BrainLayoutResult {
+    nodes: LayoutNode[];
+    edges: LayoutEdge[];
+    clusterCount: number;
+}
+
 export interface GraphNode {
     id: string;
     type: string;
@@ -5,14 +32,26 @@ export interface GraphNode {
     filePath: string;
     lineStart: number;
     lineEnd: number;
-    metadata: Record<string, unknown>;
+    metadata: {
+        cluster?: number;
+        pagerank?: number;
+        centrality?: number;
+        violation?: boolean;
+    };
     cluster?: number;
 }
 
 export interface GraphEdge {
     sourceId: string;
     targetId: string;
-    type: 'calls' | 'imports' | 'extends' | 'implements';
+    type:
+        | 'calls'
+        | 'imports'
+        | 'contains'
+        | 'references'
+        | 'imports_symbol'
+        | 'extends'
+        | 'implements';
 }
 
 export interface GraphData {
