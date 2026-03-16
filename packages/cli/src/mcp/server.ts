@@ -15,6 +15,8 @@ import {
     handleProposeConstraint,
 } from './tools/intent-tools.js';
 import { handleGetHealth } from './tools/health-tools.js';
+import { handleGetImpact } from './tools/impact-tools.js';
+import { ImpactAnalyzer } from '../core/impact.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
@@ -215,6 +217,33 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 },
             ],
         }),
+    );
+
+    server.tool(
+        'get_impact',
+        'Analyze blast radius: what breaks if a given symbol changes. Returns affected nodes grouped by depth with confidence scores.',
+        {
+            target: z
+                .string()
+                .describe('Node ID of the symbol to analyze (e.g., fn:auth.ts:login)'),
+            maxDepth: z
+                .number()
+                .optional()
+                .default(3)
+                .describe('Maximum traversal depth (default: 3)'),
+        },
+        async (input) => {
+            const impact = new ImpactAnalyzer(ctx.graphology);
+            const result = handleGetImpact({ graph: ctx.graphology, impact }, input);
+            return {
+                content: [
+                    {
+                        type: 'text' as const,
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
+            };
+        },
     );
 
     server.resource(

@@ -11,7 +11,7 @@ describe('createServerContext', () => {
 
     it('creates a context with all required services', async () => {
         const db = await createDatabase(':memory:');
-        ctx = createServerContext({
+        ctx = await createServerContext({
             db,
             brainDir: '/tmp/test-brain',
             symbioteHome: '/tmp/test-symbiote',
@@ -26,7 +26,7 @@ describe('createServerContext', () => {
 
     it('exposes dna engine when symbioteHome is provided', async () => {
         const db = await createDatabase(':memory:');
-        ctx = createServerContext({
+        ctx = await createServerContext({
             db,
             brainDir: '/tmp/test-brain',
             symbioteHome: '/tmp/test-symbiote',

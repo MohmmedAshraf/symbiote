@@ -270,7 +270,7 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabase(dbPath);
 
-    const ctx = createServerContext({
+    const ctx = await createServerContext({
         db,
         brainDir,
         symbioteHome,
@@ -351,7 +351,7 @@ async function cmdMcp(): Promise<void> {
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabase(dbPath);
 
-    const ctx = createServerContext({
+    const ctx = await createServerContext({
         db,
         brainDir,
         symbioteHome,

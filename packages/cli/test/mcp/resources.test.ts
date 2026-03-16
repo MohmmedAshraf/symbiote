@@ -43,7 +43,7 @@ describe('MCP Resources', () => {
             recursive: true,
         });
 
-        ctx = createServerContext({
+        ctx = await createServerContext({
             db,
             brainDir: tmpBrain,
             symbioteHome: tmpHome,

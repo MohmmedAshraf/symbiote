@@ -35,7 +35,7 @@ describe('Health Tools', () => {
             JSON.stringify({ version: 1, entries: [] }),
         );
 
-        ctx = createServerContext({
+        ctx = await createServerContext({
             db,
             brainDir: FIXTURES_BRAIN,
             symbioteHome: tmpHome,

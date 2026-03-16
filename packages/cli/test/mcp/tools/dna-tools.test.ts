@@ -42,7 +42,7 @@ describe('DNA Tools', () => {
             recursive: true,
         });
 
-        ctx = createServerContext({
+        ctx = await createServerContext({
             db,
             brainDir: tmpBrain,
             symbioteHome: tmpHome,
