@@ -424,7 +424,7 @@ async function cmdHookPre(): Promise<void> {
             });
             const url = `http://127.0.0.1:${port}/internal/hook-context?${params}`;
 
-            const response = await new Promise<{ decision: string; message?: string }>(
+            const response = await new Promise<{ decision: string; additionalContext?: string }>(
                 (resolve) => {
                     const req = http.get(url, { timeout: 3000 }, (res) => {
                         let data = '';
@@ -449,7 +449,7 @@ async function cmdHookPre(): Promise<void> {
 
             writeResponse({
                 decision: response.decision as 'allow' | 'block',
-                message: response.message,
+                additionalContext: response.additionalContext,
             });
         } catch {
             writeResponse({ decision: 'allow' });

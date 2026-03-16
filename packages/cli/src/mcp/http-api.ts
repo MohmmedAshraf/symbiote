@@ -324,7 +324,7 @@ export async function handleHookContext(
         }
 
         res.writeHead(200);
-        res.end(JSON.stringify({ decision: 'allow', message: lines.join('\n') }));
+        res.end(JSON.stringify({ decision: 'allow', additionalContext: lines.join('\n') }));
     } catch {
         res.writeHead(200);
         res.end(JSON.stringify({ decision: 'allow' }));

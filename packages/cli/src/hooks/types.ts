@@ -16,6 +16,7 @@ export type HookPayload = PreToolUsePayload | PostToolUsePayload;
 export interface HookResponse {
     decision: 'allow' | 'block';
     message?: string;
+    additionalContext?: string;
 }
 
 export function readStdinPayload(): Promise<HookPayload> {
