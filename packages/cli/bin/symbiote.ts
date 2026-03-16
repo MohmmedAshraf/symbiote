@@ -181,6 +181,46 @@ function parseArgs(argv: string[]): {
     return { command, args, flags };
 }
 
+async function killSymbioteProcesses(dbPath: string): Promise<boolean> {
+    const { execSync: exec } = await import('node:child_process');
+    try {
+        const output = exec(`lsof -t "${dbPath}" 2>/dev/null`, { encoding: 'utf-8' }).trim();
+        if (!output) return false;
+
+        const pids = output.split('\n').filter((p) => p && p !== String(process.pid));
+        if (pids.length === 0) return false;
+
+        for (const pid of pids) {
+            try {
+                process.kill(parseInt(pid, 10), 'SIGTERM');
+            } catch {
+                // already dead
+            }
+        }
+
+        await new Promise((r) => setTimeout(r, 500));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function createDatabaseWithRetry(dbPath: string): Promise<SymbioteDB> {
+    try {
+        return await createDatabase(dbPath);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes('lock')) throw err;
+
+        const killed = await killSymbioteProcesses(dbPath);
+        if (!killed) throw err;
+
+        return await createDatabase(dbPath);
+    }
+}
+
+type SymbioteDB = Awaited<ReturnType<typeof createDatabase>>;
+
 async function cmdInit(): Promise<void> {
     const { SmartInit } = await import('../src/init/index.js');
 
@@ -192,7 +232,7 @@ async function cmdInit(): Promise<void> {
     const brainDir = ensureBrainDir(projectRoot);
 
     const dbPath = getBrainDbPath(projectRoot);
-    const db = await createDatabase(dbPath);
+    const db = await createDatabaseWithRetry(dbPath);
     const repo = new Repository(db);
     const scanner = new Scanner(repo, db);
 
@@ -322,7 +362,7 @@ async function cmdInit(): Promise<void> {
 async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = await createDatabase(dbPath);
+    const db = await createDatabaseWithRetry(dbPath);
     const repo = new Repository(db);
     const scanner = new Scanner(repo, db);
 
@@ -517,7 +557,7 @@ async function cmdHooksUninstall(): Promise<void> {
 async function cmdImpact(): Promise<void> {
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = await createDatabase(dbPath);
+    const db = await createDatabaseWithRetry(dbPath);
 
     p.intro(pc.bold('Symbiote') + pc.dim(' — Impact Analysis'));
 
@@ -632,21 +672,7 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
 
-    let db: Awaited<ReturnType<typeof createDatabase>>;
-    try {
-        db = await createDatabase(dbPath);
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes('lock')) {
-            p.log.error(
-                'Database is locked by another Symbiote process.\n' +
-                    '  Kill it first: ' +
-                    pc.cyan('pkill -f "symbiote mcp"'),
-            );
-            process.exit(1);
-        }
-        throw err;
-    }
+    const db = await createDatabaseWithRetry(dbPath);
 
     const ctx = await createServerContext({
         db,
