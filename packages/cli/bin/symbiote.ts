@@ -235,15 +235,69 @@ async function cmdInit(): Promise<void> {
         p.log.warn(`${scanResult.errors.length} files had parse errors.`);
     }
 
-    p.outro('Your project has a brain.');
+    const { detectInstalledAgents, isBonded, connectWithHooks } =
+        await import('../src/init/agent-connector.js');
 
-    console.log();
-    console.log(pc.dim('  Connect to your AI:'));
-    console.log(`    ${pc.cyan('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
-    console.log();
-    console.log(pc.dim('  Or start the dashboard:'));
-    console.log(`    ${pc.cyan('symbiote serve')}`);
-    console.log();
+    const agents = detectInstalledAgents();
+    const installed = agents.filter((a) => a.installed);
+
+    if (installed.length === 0) {
+        p.log.info(
+            pc.dim(
+                'No AI agents detected. Install Claude Code, Cursor, or another supported host,\n' +
+                    'then run `symbiote init` again.',
+            ),
+        );
+    } else {
+        const alreadyBonded = installed.filter((a) => isBonded(a));
+        const unbonded = installed.filter((a) => !isBonded(a));
+
+        if (alreadyBonded.length > 0) {
+            for (const agent of alreadyBonded) {
+                p.log.info(`${pc.green('✓')} ${agent.name} ${pc.dim('[already bonded]')}`);
+            }
+        }
+
+        if (unbonded.length > 0) {
+            const options = unbonded.map((a) => ({
+                value: a.id,
+                label: a.name,
+                hint: a.id === 'claude-code' ? 'MCP server + hooks' : 'MCP server',
+            }));
+
+            const selected = await p.multiselect({
+                message: 'Bond with detected hosts?',
+                options,
+                initialValues: unbonded.map((a) => a.id),
+                required: false,
+            });
+
+            if (p.isCancel(selected)) {
+                p.log.info(pc.dim('Skipped bonding.'));
+            } else if (Array.isArray(selected) && selected.length > 0) {
+                const toBond = unbonded.filter((a) => selected.includes(a.id));
+                for (const agent of toBond) {
+                    const result = connectWithHooks(agent);
+                    if (result.mcp.success && result.hooks.success) {
+                        const detail =
+                            agent.id === 'claude-code'
+                                ? 'MCP server added, hooks installed'
+                                : 'MCP config written';
+                        p.log.success(`${agent.name} — ${detail}`);
+                    } else if (result.mcp.success) {
+                        p.log.success(`${agent.name} — MCP server added`);
+                        p.log.warn(
+                            `${agent.name} — hooks failed (run \`symbiote hooks install\` manually)`,
+                        );
+                    } else {
+                        p.log.error(`${agent.name} — ${result.mcp.message}`);
+                    }
+                }
+            }
+        }
+    }
+
+    p.outro('Symbiote is bonded. Your AI knows who you are.');
 }
 
 async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
