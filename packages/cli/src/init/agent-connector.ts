@@ -201,15 +201,15 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
         fs.mkdirSync(CLAUDE_HOOKS_DIR, { recursive: true });
 
         const sourceDir = getHooksSourceDir();
-        const hookFiles: Record<string, string> = {
-            SessionStart: 'session-start.sh',
-            PreToolUse: 'pre-tool-use.js',
-            PostToolUse: 'post-tool-use.js',
+        const hookFiles: Record<string, { file: string; matcher: string }> = {
+            SessionStart: { file: 'session-start.sh', matcher: '' },
+            PreToolUse: { file: 'pre-tool-use.js', matcher: 'Read|Edit|Write' },
+            PostToolUse: { file: 'post-tool-use.js', matcher: 'Read|Edit|Write|Bash' },
         };
 
-        for (const [, filename] of Object.entries(hookFiles)) {
-            const src = path.join(sourceDir, filename);
-            const dest = path.join(CLAUDE_HOOKS_DIR, filename);
+        for (const [, config] of Object.entries(hookFiles)) {
+            const src = path.join(sourceDir, config.file);
+            const dest = path.join(CLAUDE_HOOKS_DIR, config.file);
             if (fs.existsSync(src)) {
                 fs.copyFileSync(src, dest);
                 fs.chmodSync(dest, 0o755);
@@ -232,9 +232,11 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
             hooks?: Array<{ type?: string; command?: string; timeout?: number }>;
         }
 
-        for (const [eventName, filename] of Object.entries(hookFiles)) {
-            const hookPath = path.join(CLAUDE_HOOKS_DIR, filename);
-            const command = filename.endsWith('.sh') ? `bash "${hookPath}"` : `node "${hookPath}"`;
+        for (const [eventName, config] of Object.entries(hookFiles)) {
+            const hookPath = path.join(CLAUDE_HOOKS_DIR, config.file);
+            const command = config.file.endsWith('.sh')
+                ? `bash "${hookPath}"`
+                : `node "${hookPath}"`;
 
             const existing: HookEntry[] = Array.isArray(hooks[eventName])
                 ? (hooks[eventName] as HookEntry[])
@@ -246,7 +248,7 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
 
             if (!hasSymbiote) {
                 existing.push({
-                    matcher: '',
+                    matcher: config.matcher,
                     hooks: [
                         {
                             type: 'command',
