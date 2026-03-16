@@ -125,7 +125,7 @@ export function DnaView() {
                             }
                             description={
                                 filter === 'all'
-                                    ? 'Start coding with an AI tool connected to Synapse. Your style preferences will appear here.'
+                                    ? 'Start coding with an AI tool connected to Symbiote. Your style preferences will appear here.'
                                     : `No entries with status "${filter}".`
                             }
                         />

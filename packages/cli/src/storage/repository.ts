@@ -1,4 +1,4 @@
-import type { SynapseDB } from './db.js';
+import type { SymbioteDB } from './db.js';
 
 export interface NodeRecord {
     id: string;
@@ -39,7 +39,7 @@ interface EdgeRow {
 }
 
 export class Repository {
-    constructor(private db: SynapseDB) {}
+    constructor(private db: SymbioteDB) {}
 
     upsertFile(path: string, hash: string): void {
         this.db

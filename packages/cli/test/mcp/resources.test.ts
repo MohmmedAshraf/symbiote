@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SynapseDB } from '../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
 import {
     createServerContext,
     type ServerContext,
@@ -14,7 +14,7 @@ import {
 } from '../../src/mcp/resources.js';
 
 describe('MCP Resources', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let ctx: ServerContext;
     let tmpHome: string;
     let tmpBrain: string;
@@ -23,11 +23,11 @@ describe('MCP Resources', () => {
         db = createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
-            `synapse-mcp-res-home-${Date.now()}`
+            `symbiote-mcp-res-home-${Date.now()}`
         );
         tmpBrain = path.join(
             os.tmpdir(),
-            `synapse-mcp-res-brain-${Date.now()}`
+            `symbiote-mcp-res-brain-${Date.now()}`
         );
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
@@ -55,7 +55,7 @@ describe('MCP Resources', () => {
         ctx = createServerContext({
             db,
             brainDir: tmpBrain,
-            synapseHome: tmpHome,
+            symbioteHome: tmpHome,
         });
     });
 

@@ -64,7 +64,7 @@ describe('IntentStore', () => {
         beforeEach(() => {
             tmpDir = path.join(
                 os.tmpdir(),
-                `synapse-intent-test-${Date.now()}`
+                `symbiote-intent-test-${Date.now()}`
             );
             fs.mkdirSync(path.join(tmpDir, 'intent', 'decisions'), {
                 recursive: true,

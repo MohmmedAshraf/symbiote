@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import type { SynapseDB } from '../storage/db.js';
+import type { SymbioteDB } from '../storage/db.js';
 
 const require = createRequire(import.meta.url);
 
@@ -8,7 +8,7 @@ export interface SearchResult {
     distance: number;
 }
 
-export function ensureEmbeddingsTable(db: SynapseDB): void {
+export function ensureEmbeddingsTable(db: SymbioteDB): void {
     try {
         const sqliteVec = require('sqlite-vec');
         sqliteVec.load(db);
@@ -25,7 +25,7 @@ export function ensureEmbeddingsTable(db: SynapseDB): void {
 }
 
 export function storeEmbedding(
-    db: SynapseDB,
+    db: SymbioteDB,
     nodeId: string,
     vector: number[]
 ): void {
@@ -36,7 +36,7 @@ export function storeEmbedding(
 }
 
 export function deleteEmbeddingsForFile(
-    db: SynapseDB,
+    db: SymbioteDB,
     filePath: string
 ): void {
     db.prepare(
@@ -47,7 +47,7 @@ export function deleteEmbeddingsForFile(
 }
 
 export function semanticSearch(
-    db: SynapseDB,
+    db: SymbioteDB,
     queryVector: number[],
     limit: number = 10
 ): SearchResult[] {

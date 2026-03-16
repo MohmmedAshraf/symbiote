@@ -17,7 +17,7 @@ describe('createServerContext', () => {
         ctx = createServerContext({
             db,
             brainDir: '/tmp/test-brain',
-            synapseHome: '/tmp/test-synapse',
+            symbioteHome: '/tmp/test-symbiote',
         });
 
         expect(ctx.db).toBe(db);
@@ -27,12 +27,12 @@ describe('createServerContext', () => {
         expect(ctx.health).toBeDefined();
     });
 
-    it('exposes dna engine when synapseHome is provided', () => {
+    it('exposes dna engine when symbioteHome is provided', () => {
         const db = createDatabase(':memory:');
         ctx = createServerContext({
             db,
             brainDir: '/tmp/test-brain',
-            synapseHome: '/tmp/test-synapse',
+            symbioteHome: '/tmp/test-symbiote',
         });
 
         expect(ctx.dnaStorage).toBeDefined();

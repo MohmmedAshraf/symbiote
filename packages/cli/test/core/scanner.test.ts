@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
 import { Scanner } from '../../src/core/scanner.js';
-import { createDatabase, type SynapseDB } from '../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
 import { Repository } from '../../src/storage/repository.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures');
 
 describe('Scanner', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let repo: Repository;
     let scanner: Scanner;
 

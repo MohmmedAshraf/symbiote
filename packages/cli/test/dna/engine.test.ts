@@ -13,7 +13,7 @@ describe('DnaEngine', () => {
     beforeEach(() => {
         tmpDir = path.join(
             os.tmpdir(),
-            `synapse-engine-test-${Date.now()}`
+            `symbiote-engine-test-${Date.now()}`
         );
         fs.mkdirSync(tmpDir, { recursive: true });
         storage = new DnaStorage(tmpDir);

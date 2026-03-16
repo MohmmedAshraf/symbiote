@@ -1,4 +1,4 @@
-import type { SynapseDB } from '../storage/db.js';
+import type { SymbioteDB } from '../storage/db.js';
 import { Repository } from '../storage/repository.js';
 import { GraphQuery } from '../core/graph.js';
 import { IntentStore } from '../brain/intent.js';
@@ -8,13 +8,13 @@ import { DnaEngine } from '../dna/engine.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
-    db: SynapseDB;
+    db: SymbioteDB;
     brainDir: string;
-    synapseHome: string;
+    symbioteHome: string;
 }
 
 export interface ServerContext {
-    db: SynapseDB;
+    db: SymbioteDB;
     repo: Repository;
     graph: GraphQuery;
     intent: IntentStore;
@@ -31,7 +31,7 @@ export function createServerContext(
     const intent = new IntentStore(options.brainDir);
     const health = new HealthEngine(repo, intent, options.db);
 
-    const dnaDir = path.join(options.synapseHome, 'dna');
+    const dnaDir = path.join(options.symbioteHome, 'dna');
     const dnaStorage = new DnaStorage(dnaDir);
     const dnaEngine = new DnaEngine(dnaStorage);
 

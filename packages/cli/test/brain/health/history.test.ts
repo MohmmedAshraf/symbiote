@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SynapseDB } from '../../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { HealthHistory } from '../../../src/brain/health/history.js';
 
 describe('HealthHistory', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let history: HealthHistory;
 
     beforeEach(() => {

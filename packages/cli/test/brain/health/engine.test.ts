@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
-import { createDatabase, type SynapseDB } from '../../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { Repository } from '../../../src/storage/repository.js';
 import { Scanner } from '../../../src/core/scanner.js';
 import { IntentStore } from '../../../src/brain/intent.js';
@@ -12,7 +12,7 @@ const FIXTURES = path.join(
 );
 
 describe('HealthEngine', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let repo: Repository;
     let engine: HealthEngine;
 

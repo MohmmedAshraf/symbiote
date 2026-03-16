@@ -1,4 +1,4 @@
-export { createDatabase, type SynapseDB } from './storage/db.js';
+export { createDatabase, type SymbioteDB } from './storage/db.js';
 export {
     Repository,
     type NodeRecord,
@@ -20,10 +20,10 @@ export {
 export { walkFiles, hashFileContent } from './utils/files.js';
 export {
     ensureBrainDir,
-    ensureSynapseHome,
+    ensureSymbioteHome,
     getBrainDbPath,
     BRAIN_DIR,
-    SYNAPSE_HOME,
+    SYMBIOTE_HOME,
 } from './utils/config.js';
 
 export {

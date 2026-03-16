@@ -12,10 +12,10 @@ export interface DnaBootstrapResult {
 }
 
 export function bootstrapDna(
-    synapseHome: string,
+    symbioteHome: string,
     newRules?: ClassifiedRule[],
 ): DnaBootstrapResult {
-    const dnaDir = path.join(synapseHome, 'dna');
+    const dnaDir = path.join(symbioteHome, 'dna');
     const storage = new DnaStorage(dnaDir);
     storage.ensureDirectories();
 

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SynapseDB } from '../../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { Repository } from '../../../src/storage/repository.js';
 import { DeadCodeDetector } from '../../../src/brain/health/dead-code-detector.js';
 
 describe('DeadCodeDetector', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let repo: Repository;
     let detector: DeadCodeDetector;
 

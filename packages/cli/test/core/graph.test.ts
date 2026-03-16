@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SynapseDB } from '../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
 import { Repository } from '../../src/storage/repository.js';
 import { GraphQuery } from '../../src/core/graph.js';
 
 describe('GraphQuery', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let repo: Repository;
     let graph: GraphQuery;
 

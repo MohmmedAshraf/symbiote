@@ -4,7 +4,7 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
 
-export type SynapseDB = DatabaseType;
+export type SymbioteDB = DatabaseType;
 
 const SCHEMA_VERSION = 1;
 
@@ -45,8 +45,8 @@ const SCHEMA = `
     CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
 `;
 
-export function createDatabase(path: string): SynapseDB {
-    const db = new Database(path) as SynapseDB;
+export function createDatabase(path: string): SymbioteDB {
+    const db = new Database(path) as SymbioteDB;
 
     if (path !== ':memory:') {
         db.pragma('journal_mode = WAL');

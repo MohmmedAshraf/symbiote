@@ -11,7 +11,7 @@ import type { ScanResult } from '../core/scanner.js';
 
 export interface SmartInitOptions {
     projectRoot: string;
-    synapseHome: string;
+    symbioteHome: string;
     brainDir: string;
     scanResult?: ScanResult;
 }
@@ -37,13 +37,13 @@ const DEFAULT_SCAN_RESULT: ScanResult = {
 
 export class SmartInit {
     private projectRoot: string;
-    private synapseHome: string;
+    private symbioteHome: string;
     private brainDir: string;
     private scanResult: ScanResult;
 
     constructor(options: SmartInitOptions) {
         this.projectRoot = options.projectRoot;
-        this.synapseHome = options.synapseHome;
+        this.symbioteHome = options.symbioteHome;
         this.brainDir = options.brainDir;
         this.scanResult = options.scanResult ?? DEFAULT_SCAN_RESULT;
     }
@@ -52,7 +52,7 @@ export class SmartInit {
         const rules = importRules(this.projectRoot);
         const analysis = analyzeProject(this.projectRoot);
         const intentCount = this.writeIntentEntries(rules);
-        const dnaResult = bootstrapDna(this.synapseHome, rules);
+        const dnaResult = bootstrapDna(this.symbioteHome, rules);
         const projectName = path.basename(this.projectRoot);
         const overviewContent = generateSmartOverview(
             projectName, analysis, this.scanResult, rules,

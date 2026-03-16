@@ -9,14 +9,14 @@ import type { ScanResult } from '../../src/core/scanner.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = resolve(__dirname, '../fixtures/init-project');
 
-function makeTmpDirs(): { synapseHome: string; brainDir: string; cleanup: () => void } {
-    const synapseHome = mkdtempSync(join(tmpdir(), 'synapse-home-'));
-    const brainDir = mkdtempSync(join(tmpdir(), 'synapse-brain-'));
+function makeTmpDirs(): { symbioteHome: string; brainDir: string; cleanup: () => void } {
+    const symbioteHome = mkdtempSync(join(tmpdir(), 'symbiote-home-'));
+    const brainDir = mkdtempSync(join(tmpdir(), 'symbiote-brain-'));
     return {
-        synapseHome,
+        symbioteHome,
         brainDir,
         cleanup: () => {
-            rmSync(synapseHome, { recursive: true, force: true });
+            rmSync(symbioteHome, { recursive: true, force: true });
             rmSync(brainDir, { recursive: true, force: true });
         },
     };
@@ -32,11 +32,11 @@ const scanResult: ScanResult = {
 
 describe('SmartInit', () => {
     it('runs all steps and returns a summary', () => {
-        const { synapseHome, brainDir, cleanup } = makeTmpDirs();
+        const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
                 projectRoot: FIXTURE_DIR,
-                synapseHome,
+                symbioteHome,
                 brainDir,
                 scanResult,
             });
@@ -52,11 +52,11 @@ describe('SmartInit', () => {
     });
 
     it('writes overview.md to brain directory', () => {
-        const { synapseHome, brainDir, cleanup } = makeTmpDirs();
+        const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
                 projectRoot: FIXTURE_DIR,
-                synapseHome,
+                symbioteHome,
                 brainDir,
                 scanResult,
             });
@@ -74,11 +74,11 @@ describe('SmartInit', () => {
     });
 
     it('creates constraint intent entries', () => {
-        const { synapseHome, brainDir, cleanup } = makeTmpDirs();
+        const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
                 projectRoot: FIXTURE_DIR,
-                synapseHome,
+                symbioteHome,
                 brainDir,
                 scanResult,
             });
@@ -94,11 +94,11 @@ describe('SmartInit', () => {
     });
 
     it('imports DNA entries', () => {
-        const { synapseHome, brainDir, cleanup } = makeTmpDirs();
+        const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
                 projectRoot: FIXTURE_DIR,
-                synapseHome,
+                symbioteHome,
                 brainDir,
                 scanResult,
             });

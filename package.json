@@ -1,5 +1,5 @@
 {
-    "name": "synapse",
+    "name": "symbiote",
     "private": true,
     "packageManager": "npm@11.9.0",
     "workspaces": ["packages/*"],

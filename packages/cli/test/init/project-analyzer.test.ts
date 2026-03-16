@@ -53,7 +53,7 @@ describe('analyzeProject', () => {
     });
 
     it('handles empty directory gracefully', () => {
-        const emptyDir = mkdtempSync(join(tmpdir(), 'synapse-test-'));
+        const emptyDir = mkdtempSync(join(tmpdir(), 'symbiote-test-'));
         const result = analyzeProject(emptyDir);
         expect(result.techStack).toEqual([]);
         expect(result.architecture).toEqual([]);

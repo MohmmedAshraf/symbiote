@@ -17,7 +17,7 @@ describe('DnaEngine - Pattern Matching', () => {
     beforeEach(() => {
         tmpDir = path.join(
             os.tmpdir(),
-            `synapse-patterns-test-${Date.now()}`
+            `symbiote-patterns-test-${Date.now()}`
         );
         fs.mkdirSync(tmpDir, { recursive: true });
         storage = new DnaStorage(tmpDir);

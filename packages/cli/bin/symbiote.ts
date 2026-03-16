@@ -54,7 +54,7 @@ import { Scanner, type ScanResult } from '../src/core/scanner.js';
 import { GraphQuery } from '../src/core/graph.js';
 import {
     ensureBrainDir,
-    ensureSynapseHome,
+    ensureSymbioteHome,
     getBrainDbPath,
 } from '../src/utils/config.js';
 import { DnaStorage } from '../src/dna/storage.js';
@@ -83,7 +83,7 @@ program
         const projectRoot = process.cwd();
         console.log(`Initializing Synapse in ${projectRoot}...`);
 
-        const synapseHome = ensureSynapseHome();
+        const symbioteHome = ensureSymbioteHome();
         const brainDir = ensureBrainDir(projectRoot);
 
         const dbPath = getBrainDbPath(projectRoot);
@@ -97,7 +97,7 @@ program
         console.log('Analyzing project...');
         const init = new SmartInit({
             projectRoot,
-            synapseHome,
+            symbioteHome,
             brainDir,
             scanResult,
         });
@@ -186,14 +186,14 @@ program
 
         const projectRoot = process.cwd();
         const brainDir = ensureBrainDir(projectRoot);
-        const synapseHome = ensureSynapseHome();
+        const symbioteHome = ensureSymbioteHome();
         const dbPath = getBrainDbPath(projectRoot);
         const db = createDatabase(dbPath);
 
         const ctx = createServerContext({
             db,
             brainDir,
-            synapseHome,
+            symbioteHome,
         });
         const { server } = createMcpServer(ctx);
 
@@ -307,14 +307,14 @@ program
 
         const projectRoot = process.cwd();
         const brainDir = ensureBrainDir(projectRoot);
-        const synapseHome = ensureSynapseHome();
+        const symbioteHome = ensureSymbioteHome();
         const dbPath = getBrainDbPath(projectRoot);
         const db = createDatabase(dbPath);
 
         const ctx = createServerContext({
             db,
             brainDir,
-            synapseHome,
+            symbioteHome,
         });
         const { server } = createMcpServer(ctx);
 
@@ -344,8 +344,8 @@ dnaCommand
     )
     .action(
         async (options: { status?: string; category?: string }) => {
-            const synapseHome = ensureSynapseHome();
-            const dnaDir = path.join(synapseHome, 'dna');
+            const symbioteHome = ensureSymbioteHome();
+            const dnaDir = path.join(symbioteHome, 'dna');
             const storage = new DnaStorage(dnaDir);
             storage.ensureDirectories();
 
@@ -388,8 +388,8 @@ dnaCommand
     .command('approve <id>')
     .description('Approve a suggested DNA entry')
     .action(async (id: string) => {
-        const synapseHome = ensureSynapseHome();
-        const dnaDir = path.join(synapseHome, 'dna');
+        const symbioteHome = ensureSymbioteHome();
+        const dnaDir = path.join(symbioteHome, 'dna');
         const storage = new DnaStorage(dnaDir);
         storage.ensureDirectories();
         const engine = new DnaEngine(storage);
@@ -406,8 +406,8 @@ dnaCommand
     .command('reject <id>')
     .description('Reject a suggested DNA entry')
     .action(async (id: string) => {
-        const synapseHome = ensureSynapseHome();
-        const dnaDir = path.join(synapseHome, 'dna');
+        const symbioteHome = ensureSymbioteHome();
+        const dnaDir = path.join(symbioteHome, 'dna');
         const storage = new DnaStorage(dnaDir);
         storage.ensureDirectories();
         const engine = new DnaEngine(storage);
@@ -424,8 +424,8 @@ dnaCommand
     .command('show <id>')
     .description('Show a specific DNA entry')
     .action(async (id: string) => {
-        const synapseHome = ensureSynapseHome();
-        const dnaDir = path.join(synapseHome, 'dna');
+        const symbioteHome = ensureSymbioteHome();
+        const dnaDir = path.join(symbioteHome, 'dna');
         const storage = new DnaStorage(dnaDir);
         storage.ensureDirectories();
 
@@ -452,8 +452,8 @@ dnaCommand
     .command('delete <id>')
     .description('Delete a DNA entry')
     .action(async (id: string) => {
-        const synapseHome = ensureSynapseHome();
-        const dnaDir = path.join(synapseHome, 'dna');
+        const symbioteHome = ensureSymbioteHome();
+        const dnaDir = path.join(symbioteHome, 'dna');
         const storage = new DnaStorage(dnaDir);
         storage.ensureDirectories();
 
@@ -462,8 +462,8 @@ dnaCommand
     });
 
 dnaCommand.action(async () => {
-    const synapseHome = ensureSynapseHome();
-    const dnaDir = path.join(synapseHome, 'dna');
+    const symbioteHome = ensureSymbioteHome();
+    const dnaDir = path.join(symbioteHome, 'dna');
     const storage = new DnaStorage(dnaDir);
     storage.ensureDirectories();
 
@@ -505,7 +505,7 @@ program.action(async () => {
 
     const projectRoot = process.cwd();
 
-    const synapseHome = ensureSynapseHome();
+    const symbioteHome = ensureSymbioteHome();
     const brainDir = ensureBrainDir(projectRoot);
 
     const dbPath = getBrainDbPath(projectRoot);
@@ -519,7 +519,7 @@ program.action(async () => {
     console.log('Analyzing project...');
     const init = new SmartInit({
         projectRoot,
-        synapseHome,
+        symbioteHome,
         brainDir,
         scanResult,
     });

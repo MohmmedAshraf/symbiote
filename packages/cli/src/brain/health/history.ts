@@ -1,4 +1,4 @@
-import type { SynapseDB } from '../../storage/db.js';
+import type { SymbioteDB } from '../../storage/db.js';
 import type { HealthSnapshot } from './types.js';
 
 const HEALTH_SNAPSHOTS_SCHEMA = `
@@ -30,7 +30,7 @@ export interface SaveSnapshotInput {
 }
 
 export class HealthHistory {
-    constructor(private db: SynapseDB) {
+    constructor(private db: SymbioteDB) {
         this.db.exec(HEALTH_SNAPSHOTS_SCHEMA);
     }
 

@@ -28,7 +28,7 @@ export function createMcpServer(
     ctx: ServerContext
 ): { server: McpServer } {
     const server = new McpServer({
-        name: 'synapse',
+        name: 'symbiote',
         version: '0.1.0',
     });
 
@@ -316,7 +316,7 @@ export function createMcpServer(
 
     server.resource(
         'dna',
-        'synapse://dna',
+        'symbiote://dna',
         {
             description:
                 'Developer DNA summary — coding style, preferences, and anti-patterns',
@@ -324,7 +324,7 @@ export function createMcpServer(
         async () => ({
             contents: [
                 {
-                    uri: 'synapse://dna',
+                    uri: 'symbiote://dna',
                     text: handleDnaResource(ctx),
                     mimeType: 'text/plain',
                 },
@@ -334,7 +334,7 @@ export function createMcpServer(
 
     server.resource(
         'project-overview',
-        'synapse://project/overview',
+        'symbiote://project/overview',
         {
             description:
                 'Project summary: structure, stats, active constraints and decisions',
@@ -342,7 +342,7 @@ export function createMcpServer(
         async () => ({
             contents: [
                 {
-                    uri: 'synapse://project/overview',
+                    uri: 'symbiote://project/overview',
                     text: handleProjectOverviewResource(ctx),
                     mimeType: 'text/plain',
                 },
@@ -352,7 +352,7 @@ export function createMcpServer(
 
     server.resource(
         'project-health',
-        'synapse://project/health',
+        'symbiote://project/health',
         {
             description:
                 'Current project health: violations, warnings, and score',
@@ -360,7 +360,7 @@ export function createMcpServer(
         async () => ({
             contents: [
                 {
-                    uri: 'synapse://project/health',
+                    uri: 'symbiote://project/health',
                     text: handleProjectHealthResource(ctx),
                     mimeType: 'text/plain',
                 },

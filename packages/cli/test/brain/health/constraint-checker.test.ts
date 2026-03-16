@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
-import { createDatabase, type SynapseDB } from '../../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { Repository } from '../../../src/storage/repository.js';
 import { IntentStore } from '../../../src/brain/intent.js';
 import { Scanner } from '../../../src/core/scanner.js';
@@ -14,7 +14,7 @@ const FIXTURES = path.join(
 );
 
 describe('ConstraintChecker', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let repo: Repository;
     let intent: IntentStore;
     let checker: ConstraintChecker;
@@ -70,7 +70,7 @@ describe('ConstraintChecker', () => {
     it('handles constraints without patterns as descriptive', () => {
         const tmpBrain = path.join(
             os.tmpdir(),
-            `synapse-constraint-test-${Date.now()}`
+            `symbiote-constraint-test-${Date.now()}`
         );
         fs.mkdirSync(
             path.join(tmpBrain, 'intent', 'constraints'),

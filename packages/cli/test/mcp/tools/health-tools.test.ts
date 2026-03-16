@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SynapseDB } from '../../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { Scanner } from '../../../src/core/scanner.js';
 import {
     createServerContext,
@@ -20,7 +20,7 @@ const FIXTURES_BRAIN = path.join(
 );
 
 describe('Health Tools', () => {
-    let db: SynapseDB;
+    let db: SymbioteDB;
     let ctx: ServerContext;
     let tmpHome: string;
 
@@ -28,7 +28,7 @@ describe('Health Tools', () => {
         db = createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
-            `synapse-mcp-health-${Date.now()}`
+            `symbiote-mcp-health-${Date.now()}`
         );
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
@@ -50,7 +50,7 @@ describe('Health Tools', () => {
         ctx = createServerContext({
             db,
             brainDir: FIXTURES_BRAIN,
-            synapseHome: tmpHome,
+            symbioteHome: tmpHome,
         });
 
         const scanner = new Scanner(ctx.repo);

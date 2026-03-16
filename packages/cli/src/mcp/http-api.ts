@@ -279,7 +279,7 @@ function handleChat(
 
             res.write(
                 'Chat is not configured. Set an LLM provider in ' +
-                    '~/.synapse/config.json (supported: openai, anthropic, ollama). ' +
+                    '~/.symbiote/config.json (supported: openai, anthropic, ollama). ' +
                     `\n\nProject has ${overview.totalNodes} nodes and ${overview.totalEdges} edges.`
             );
             res.end();

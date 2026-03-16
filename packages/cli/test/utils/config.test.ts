@@ -5,7 +5,7 @@ import os from 'node:os';
 import { ensureBrainDir, getBrainDbPath } from '../../src/utils/config.js';
 
 describe('ensureBrainDir', () => {
-    const tmpDir = path.join(os.tmpdir(), `synapse-test-${Date.now()}`);
+    const tmpDir = path.join(os.tmpdir(), `symbiote-test-${Date.now()}`);
 
     afterEach(() => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -36,6 +36,6 @@ describe('ensureBrainDir', () => {
 describe('getBrainDbPath', () => {
     it('returns the correct path', () => {
         const dbPath = getBrainDbPath('/my/project');
-        expect(dbPath).toBe('/my/project/.brain/synapse.db');
+        expect(dbPath).toBe('/my/project/.brain/symbiote.db');
     });
 });

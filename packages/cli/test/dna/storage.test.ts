@@ -12,7 +12,7 @@ describe('DnaStorage', () => {
     let storage: DnaStorage;
 
     beforeEach(() => {
-        tmpDir = path.join(os.tmpdir(), `synapse-dna-test-${Date.now()}`);
+        tmpDir = path.join(os.tmpdir(), `symbiote-dna-test-${Date.now()}`);
         fs.mkdirSync(tmpDir, { recursive: true });
         storage = new DnaStorage(tmpDir);
         storage.ensureDirectories();

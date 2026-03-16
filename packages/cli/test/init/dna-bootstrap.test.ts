@@ -8,7 +8,7 @@ import { DnaEngine } from '../../src/dna/engine.js';
 import type { ClassifiedRule } from '../../src/init/parsers/types.js';
 
 function makeTmpDir(): string {
-    return mkdtempSync(join(tmpdir(), 'synapse-dna-test-'));
+    return mkdtempSync(join(tmpdir(), 'symbiote-dna-test-'));
 }
 
 function makeRule(text: string, target: 'dna' | 'intent' = 'dna'): ClassifiedRule {

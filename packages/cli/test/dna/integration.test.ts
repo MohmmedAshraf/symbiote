@@ -13,7 +13,7 @@ describe('DNA Integration', () => {
     beforeEach(() => {
         tmpDir = path.join(
             os.tmpdir(),
-            `synapse-integration-test-${Date.now()}`
+            `symbiote-integration-test-${Date.now()}`
         );
         fs.mkdirSync(tmpDir, { recursive: true });
         storage = new DnaStorage(tmpDir);

@@ -1,5 +1,5 @@
 import type { Repository } from '../../storage/repository.js';
-import type { SynapseDB } from '../../storage/db.js';
+import type { SymbioteDB } from '../../storage/db.js';
 import type { IntentStore } from '../intent.js';
 import type { HealthReport, HealthSnapshot } from './types.js';
 import { CycleDetector } from './cycle-detector.js';
@@ -22,7 +22,7 @@ export class HealthEngine {
     constructor(
         repo: Repository,
         intent: IntentStore,
-        db: SynapseDB
+        db: SymbioteDB
     ) {
         this.cycleDetector = new CycleDetector(repo);
         this.deadCodeDetector = new DeadCodeDetector(repo);
