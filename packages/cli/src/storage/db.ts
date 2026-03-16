@@ -45,6 +45,7 @@ export class SymbioteDB {
 
     async close(): Promise<void> {
         this.conn.closeSync();
+        this.instance.closeSync();
     }
 
     private bindParam(

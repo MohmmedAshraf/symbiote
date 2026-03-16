@@ -1083,7 +1083,24 @@ async function main(): Promise<void> {
     }
 }
 
-main().catch((err) => {
-    p.log.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
-});
+const LONG_RUNNING_COMMANDS = new Set(['serve', 'mcp', 'hook']);
+
+function forceExit(code: number): void {
+    try {
+        process.kill(process.pid, code === 0 ? 'SIGTERM' : 'SIGTERM');
+    } catch {
+        process.exit(code);
+    }
+}
+
+main()
+    .then(() => {
+        const { command } = parseArgs(process.argv);
+        if (!LONG_RUNNING_COMMANDS.has(command)) {
+            forceExit(0);
+        }
+    })
+    .catch((err) => {
+        p.log.error(err instanceof Error ? err.message : String(err));
+        forceExit(1);
+    });
