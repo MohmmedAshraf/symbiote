@@ -317,6 +317,21 @@ async function cmdHookPre(): Promise<void> {
 
     const response = handler.handle(payload);
     writeResponse(response);
+
+    const { fireHookEvent } = await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
+    const filePath = payload.tool_input.file_path as string | undefined;
+    if (filePath && payload.tool_name === 'Read') {
+        const relativePath = path.relative(projectRoot, filePath);
+        await fireHookEvent(
+            'file:read',
+            {
+                filePath: relativePath,
+                toolName: payload.tool_name,
+            },
+            getServerPort(),
+        );
+    }
 }
 
 async function cmdHookPost(): Promise<void> {
@@ -361,6 +376,21 @@ async function cmdHookPost(): Promise<void> {
 
     const response = await handler.handle(payload);
     writeResponse(response);
+
+    const { fireHookEvent } = await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
+    if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
+        const filePath = payload.tool_input.file_path as string | undefined;
+        if (filePath) {
+            const relativePath = path.relative(projectRoot, filePath);
+            const isCreate = payload.tool_name === 'Write';
+            await fireHookEvent(
+                isCreate ? 'file:create' : 'file:edit',
+                { filePath: relativePath, toolName: payload.tool_name },
+                getServerPort(),
+            );
+        }
+    }
 }
 
 async function cmdHooksInstall(): Promise<void> {
