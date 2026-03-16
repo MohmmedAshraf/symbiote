@@ -58,11 +58,10 @@ export {
     type DeadCodeEntry,
     type CouplingHotspot,
     type CategoryScore,
-    storeEmbedding,
-    deleteEmbeddingsForFile,
-    semanticSearch,
-    type SearchResult,
 } from './brain/index.js';
+
+export { EmbeddingService } from './core/embeddings.js';
+export { HybridSearch, type SearchResult, type SearchOptions } from './core/search.js';
 
 export {
     createMcpServer,

@@ -19,9 +19,3 @@ export {
     type CouplingHotspot,
     type CategoryScore,
 } from './health/index.js';
-export {
-    storeEmbedding,
-    deleteEmbeddingsForFile,
-    semanticSearch,
-    type SearchResult,
-} from './embeddings.js';
