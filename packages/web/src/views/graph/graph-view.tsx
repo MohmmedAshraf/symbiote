@@ -4,6 +4,8 @@ import type { GraphData, NodeContext } from '@/lib/types';
 import type { BrainSceneHandle } from './brain-scene';
 import { NodeSidebar } from './node-sidebar';
 import { GraphControls } from './graph-controls';
+import { StatusBar } from './status-bar';
+import { useEvents } from '@/lib/events-context';
 
 const BrainScene = lazy(() =>
     import('./brain-scene').then((m) => ({
@@ -14,6 +16,7 @@ const BrainScene = lazy(() =>
 export function GraphView() {
     const sceneRef = useRef<BrainSceneHandle>(null);
     const [graphData, setGraphData] = useState<GraphData | null>(null);
+    const { lastEvent, connectionState, eventCount } = useEvents();
     const [selectedNode, setSelectedNode] = useState<NodeContext | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -106,8 +109,12 @@ export function GraphView() {
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onResetView={handleResetView}
-                nodeCount={graphData?.nodes.length}
-                edgeCount={graphData?.edges.length}
+            />
+
+            <StatusBar
+                connectionState={connectionState}
+                lastEvent={lastEvent}
+                eventCount={eventCount}
             />
 
             {selectedNode && (

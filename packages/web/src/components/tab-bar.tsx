@@ -1,4 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
+import { useEvents } from '@/lib/events-context';
 
 const tabs = [
     { path: '/', label: 'Brain Graph', icon: BrainIcon },
@@ -8,6 +9,14 @@ const tabs = [
 
 export function TabBar() {
     const { location } = useRouterState();
+    const { connectionState } = useEvents();
+
+    const dotColor =
+        connectionState === 'connected'
+            ? 'bg-success'
+            : connectionState === 'idle'
+              ? 'bg-warning'
+              : 'bg-text-muted/30';
 
     return (
         <nav className="flex w-14 flex-col items-center gap-1 border-r border-border bg-surface-0 py-4">
@@ -32,7 +41,16 @@ export function TabBar() {
             })}
 
             <div className="mt-auto px-2">
-                <div className="size-2 rounded-full bg-success" title="Connected" />
+                <div
+                    className={`size-2 rounded-full ${dotColor}`}
+                    title={
+                        connectionState === 'connected'
+                            ? 'Bonded'
+                            : connectionState === 'idle'
+                              ? 'Idle'
+                              : 'Disconnected'
+                    }
+                />
             </div>
         </nav>
     );
