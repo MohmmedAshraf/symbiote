@@ -181,24 +181,29 @@ function parseArgs(argv: string[]): {
     return { command, args, flags };
 }
 
-async function killSymbioteProcesses(dbPath: string): Promise<boolean> {
+async function killSymbioteProcesses(): Promise<boolean> {
     const { execSync: exec } = await import('node:child_process');
     try {
-        const output = exec(`lsof -t "${dbPath}" 2>/dev/null`, { encoding: 'utf-8' }).trim();
+        const output = exec('pgrep -f "symbiote-cli mcp|symbiote mcp"', {
+            encoding: 'utf-8',
+        }).trim();
         if (!output) return false;
 
-        const pids = output.split('\n').filter((p) => p && p !== String(process.pid));
+        const pids = output
+            .split('\n')
+            .map((p) => parseInt(p, 10))
+            .filter((pid) => pid && pid !== process.pid);
         if (pids.length === 0) return false;
 
         for (const pid of pids) {
             try {
-                process.kill(parseInt(pid, 10), 'SIGTERM');
+                process.kill(pid, 'SIGTERM');
             } catch {
                 // already dead
             }
         }
 
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 1000));
         return true;
     } catch {
         return false;
@@ -212,9 +217,10 @@ async function createDatabaseWithRetry(dbPath: string): Promise<SymbioteDB> {
         const msg = err instanceof Error ? err.message : String(err);
         if (!msg.includes('lock')) throw err;
 
-        const killed = await killSymbioteProcesses(dbPath);
+        const killed = await killSymbioteProcesses();
         if (!killed) throw err;
 
+        await new Promise((r) => setTimeout(r, 500));
         return await createDatabase(dbPath);
     }
 }
