@@ -216,49 +216,32 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
             hooks?: Array<{ type?: string; command?: string; timeout?: number }>;
         }
 
-        const preHooks: HookEntry[] = Array.isArray(hooks.PreToolUse)
-            ? (hooks.PreToolUse as HookEntry[])
-            : [];
-        const postHooks: HookEntry[] = Array.isArray(hooks.PostToolUse)
-            ? (hooks.PostToolUse as HookEntry[])
-            : [];
+        const hookEvents = ['SessionStart', 'PreToolUse', 'PostToolUse'];
 
-        const hasPreHook = preHooks.some((h) =>
-            h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
-        );
+        for (const eventName of hookEvents) {
+            const existing: HookEntry[] = Array.isArray(hooks[eventName])
+                ? (hooks[eventName] as HookEntry[])
+                : [];
 
-        const hasPostHook = postHooks.some((h) =>
-            h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
-        );
+            const hasSymbiote = existing.some((h) =>
+                h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
+            );
 
-        if (!hasPreHook) {
-            preHooks.push({
-                matcher: '',
-                hooks: [
-                    {
-                        type: 'command',
-                        command: hookCommand,
-                        timeout: 10,
-                    },
-                ],
-            });
+            if (!hasSymbiote) {
+                existing.push({
+                    matcher: '',
+                    hooks: [
+                        {
+                            type: 'command',
+                            command: hookCommand,
+                            timeout: 10,
+                        },
+                    ],
+                });
+            }
+
+            hooks[eventName] = existing;
         }
-
-        if (!hasPostHook) {
-            postHooks.push({
-                matcher: '',
-                hooks: [
-                    {
-                        type: 'command',
-                        command: hookCommand,
-                        timeout: 10,
-                    },
-                ],
-            });
-        }
-
-        hooks.PreToolUse = preHooks;
-        hooks.PostToolUse = postHooks;
         settings.hooks = hooks;
 
         fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 4) + '\n');
@@ -283,7 +266,7 @@ function removeGlobalClaudeHooks(): { success: boolean; message: string } {
                     hooks?: Array<{ command?: string }>;
                 }
 
-                for (const eventName of ['PreToolUse', 'PostToolUse']) {
+                for (const eventName of ['SessionStart', 'PreToolUse', 'PostToolUse']) {
                     if (Array.isArray(hooks[eventName])) {
                         hooks[eventName] = (hooks[eventName] as HookEntry[]).filter(
                             (h) => !h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
@@ -327,65 +310,164 @@ function buildHookScript(): string {
     return `#!/usr/bin/env node
 "use strict";
 
-const { execSync, spawn } = require("child_process");
-const path = require("path");
+const { spawn } = require("child_process");
+const pathMod = require("path");
 const http = require("http");
+const fs = require("fs");
+
+function allow() {
+    process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+}
+
+function readPort(cwd) {
+    try {
+        const portFile = pathMod.join(cwd, ".brain", "port");
+        return parseInt(fs.readFileSync(portFile, "utf-8").trim(), 10) || 0;
+    } catch { return 0; }
+}
+
+function httpGet(url, timeout) {
+    return new Promise((resolve) => {
+        const req = http.get(url, { timeout }, (res) => {
+            let data = "";
+            res.on("data", (c) => { data += c; });
+            res.on("end", () => { try { resolve(JSON.parse(data)); } catch { resolve(null); } });
+        });
+        req.on("error", () => resolve(null));
+        req.on("timeout", () => { req.destroy(); resolve(null); });
+    });
+}
 
 let input = "";
 process.stdin.setEncoding("utf-8");
 process.stdin.on("data", (chunk) => { input += chunk; });
-process.stdin.on("end", () => {
+process.stdin.on("end", async () => {
     try {
         const payload = JSON.parse(input);
         const cwd = payload.cwd || process.cwd();
-        const brainDir = path.join(cwd, ".brain");
-        const fs = require("fs");
+        const brainDir = pathMod.join(cwd, ".brain");
 
-        if (!fs.existsSync(brainDir)) {
-            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+        if (!fs.existsSync(brainDir)) { allow(); return; }
+
+        const hookType = payload.type || payload.hook_event_name || "";
+
+        if (hookType === "SessionStart" || hookType === "session_start") {
+            const lines = [];
+            lines.push("=== Symbiote Project Brain ===");
+
+            const overviewPath = pathMod.join(brainDir, "intent", "overview.md");
+            if (fs.existsSync(overviewPath)) {
+                const overview = fs.readFileSync(overviewPath, "utf-8").trim();
+                if (overview) {
+                    lines.push("");
+                    lines.push(overview);
+                }
+            }
+
+            const homeDir = require("os").homedir();
+            const dnaDir = pathMod.join(homeDir, ".symbiote", "dna");
+            const indexPath = pathMod.join(dnaDir, "index.json");
+            if (fs.existsSync(indexPath)) {
+                try {
+                    const index = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+                    const entries = Array.isArray(index) ? index : index.entries || [];
+                    const approved = entries.filter(function(e) { return e.status === "approved"; });
+                    if (approved.length > 0) {
+                        lines.push("");
+                        lines.push("Developer DNA (your coding style — follow these):");
+                        approved.slice(0, 20).forEach(function(e) {
+                            const entryPath = pathMod.join(dnaDir, e.category || "style", e.id + ".md");
+                            if (fs.existsSync(entryPath)) {
+                                const raw = fs.readFileSync(entryPath, "utf-8");
+                                const contentMatch = raw.split("---").slice(2).join("---").trim();
+                                if (contentMatch) {
+                                    lines.push("  - [" + (e.category || "style") + "] " + contentMatch);
+                                }
+                            }
+                        });
+                    }
+                } catch {}
+            }
+
+            const constraintsDir = pathMod.join(brainDir, "intent", "constraints");
+            if (fs.existsSync(constraintsDir)) {
+                const constraintFiles = fs.readdirSync(constraintsDir).filter(function(f) { return f.endsWith(".md"); });
+                if (constraintFiles.length > 0) {
+                    lines.push("");
+                    lines.push("Project constraints (enforce these):");
+                    constraintFiles.forEach(function(f) {
+                        const raw = fs.readFileSync(pathMod.join(constraintsDir, f), "utf-8");
+                        const content = raw.split("---").slice(2).join("---").trim();
+                        if (content) lines.push("  - " + content);
+                    });
+                }
+            }
+
+            lines.push("");
+            lines.push("Symbiote MCP tools available: get_developer_dna, query_graph, semantic_search, get_context_for_file, get_health, get_impact, detect_changes, get_constraints, get_decisions, propose_decision, propose_constraint, record_instruction");
+            lines.push("Use these tools to query the project brain for deeper context when needed.");
+
+            process.stdout.write(JSON.stringify({
+                hookSpecificOutput: {
+                    hookEventName: "SessionStart",
+                    additionalContext: lines.join("\\n"),
+                }
+            }) + "\\n");
             return;
         }
 
-        const hookType = payload.type || payload.hook_event_name;
+        const port = readPort(cwd);
+        if (!port) { allow(); return; }
+
         const isPreHook = hookType === "pre_tool_use" || hookType === "PreToolUse";
 
-        const childPayload = {
-            type: isPreHook ? "pre_tool_use" : "post_tool_use",
-            tool_name: payload.tool_name,
-            tool_input: payload.tool_input || {},
-            tool_output: payload.tool_output || "",
-        };
+        if (isPreHook) {
+            const filePath = (payload.tool_input || {}).file_path;
+            const toolName = payload.tool_name || "";
+            const FILE_TOOLS = ["Read", "Edit", "Write"];
 
-        const subcommand = isPreHook ? "pre" : "post";
-        const child = spawn(
-            "${cliPath}",
-            ["hook", subcommand],
-            { cwd, stdio: ["pipe", "pipe", "ignore"] }
-        );
-
-        child.stdin.write(JSON.stringify(childPayload));
-        child.stdin.end();
-
-        let stdout = "";
-        child.stdout.on("data", (chunk) => { stdout += chunk; });
-        child.on("close", () => {
-            if (stdout.trim()) {
-                process.stdout.write(stdout);
-            } else {
-                process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+            if (filePath && FILE_TOOLS.indexOf(toolName) >= 0) {
+                const params = "file=" + encodeURIComponent(filePath) + "&tool=" + encodeURIComponent(toolName) + "&root=" + encodeURIComponent(cwd);
+                const result = await httpGet("http://127.0.0.1:" + port + "/internal/hook-context?" + params, 3000);
+                if (result && result.additionalContext) {
+                    process.stdout.write(JSON.stringify(result) + "\\n");
+                    return;
+                }
             }
-        });
+            allow();
+            return;
+        }
 
-        child.on("error", () => {
-            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
-        });
+        const isPostHook = hookType === "post_tool_use" || hookType === "PostToolUse";
 
-        setTimeout(() => {
-            try { child.kill(); } catch {}
-            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
-        }, 8000);
+        if (isPostHook) {
+            const childPayload = {
+                type: "post_tool_use",
+                tool_name: payload.tool_name,
+                tool_input: payload.tool_input || {},
+                tool_output: payload.tool_output || "",
+            };
+            const child = spawn(
+                "${cliPath}",
+                ["hook", "post"],
+                { cwd, stdio: ["pipe", "pipe", "ignore"] }
+            );
+            child.stdin.write(JSON.stringify(childPayload));
+            child.stdin.end();
+            let stdout = "";
+            child.stdout.on("data", (c) => { stdout += c; });
+            child.on("close", () => {
+                if (stdout.trim()) { process.stdout.write(stdout); }
+                else { allow(); }
+            });
+            child.on("error", () => { allow(); });
+            setTimeout(() => { try { child.kill(); } catch {} allow(); }, 8000);
+            return;
+        }
+
+        allow();
     } catch {
-        process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+        allow();
     }
 });
 `;
