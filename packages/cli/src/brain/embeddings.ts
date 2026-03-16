@@ -1,77 +1,55 @@
-import { createRequire } from 'node:module';
 import type { SymbioteDB } from '../storage/db.js';
-
-const require = createRequire(import.meta.url);
 
 export interface SearchResult {
     nodeId: string;
     distance: number;
 }
 
-export function ensureEmbeddingsTable(db: SymbioteDB): void {
-    try {
-        const sqliteVec = require('sqlite-vec');
-        sqliteVec.load(db);
-    } catch {
-        // sqlite-vec may already be loaded
-    }
-
-    db.exec(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vec0(
-            node_id TEXT PRIMARY KEY,
-            vector float[384]
-        );
-    `);
-}
-
-export function storeEmbedding(
+export async function storeEmbedding(
     db: SymbioteDB,
     nodeId: string,
     vector: number[]
-): void {
-    const blob = float32ArrayToBlob(vector);
-    db.prepare(
-        'INSERT OR REPLACE INTO embeddings (node_id, vector) VALUES (?, ?)'
-    ).run(nodeId, blob);
+): Promise<void> {
+    const arrayLiteral = `[${vector.join(',')}]`;
+    await db.run(
+        `INSERT OR REPLACE INTO embeddings (node_id, vector) VALUES ($1, $2::FLOAT[384])`,
+        nodeId,
+        arrayLiteral
+    );
 }
 
-export function deleteEmbeddingsForFile(
+export async function deleteEmbeddingsForFile(
     db: SymbioteDB,
     filePath: string
-): void {
-    db.prepare(
+): Promise<void> {
+    await db.run(
         `DELETE FROM embeddings WHERE node_id IN (
-            SELECT id FROM nodes WHERE file_path = ?
-        )`
-    ).run(filePath);
+            SELECT id FROM nodes WHERE file_path = $1
+        )`,
+        filePath
+    );
 }
 
-export function semanticSearch(
+export async function semanticSearch(
     db: SymbioteDB,
     queryVector: number[],
     limit: number = 10
-): SearchResult[] {
-    const blob = float32ArrayToBlob(queryVector);
-    const rows = db
-        .prepare(
-            `SELECT node_id, distance
-             FROM embeddings
-             WHERE vector MATCH ?
-             ORDER BY distance
-             LIMIT ?`
-        )
-        .all(blob, limit) as Array<{
-        node_id: string;
-        distance: number;
-    }>;
+): Promise<SearchResult[]> {
+    const arrayLiteral = `[${queryVector.join(',')}]`;
+    const rows = await db.all(
+        `SELECT
+            node_id,
+            array_cosine_similarity(vector, $1::FLOAT[384]) AS similarity
+         FROM embeddings
+         WHERE vector IS NOT NULL
+         ORDER BY similarity DESC
+         LIMIT $2`,
+        arrayLiteral,
+        limit
+    ) as Array<{ node_id: string; similarity: number }>;
 
     return rows.map((r) => ({
         nodeId: r.node_id,
-        distance: r.distance,
+        distance: 1 - r.similarity,
     }));
-}
-
-function float32ArrayToBlob(vector: number[]): Buffer {
-    const floats = new Float32Array(vector);
-    return Buffer.from(floats.buffer);
 }
