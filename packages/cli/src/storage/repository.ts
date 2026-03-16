@@ -41,24 +41,26 @@ interface EdgeRow {
 export class Repository {
     constructor(private db: SymbioteDB) {}
 
-    upsertFile(path: string, hash: string): void {
-        this.db
-            .prepare(
-                `INSERT INTO files (path, hash, last_scanned)
-                 VALUES (?, ?, datetime('now'))
-                 ON CONFLICT(path) DO UPDATE SET hash = ?, last_scanned = datetime('now')`
-            )
-            .run(path, hash, hash);
+    async upsertFile(path: string, hash: string): Promise<void> {
+        const now = new Date().toISOString();
+        await this.db.run(
+            `INSERT INTO files (path, hash, last_scanned)
+             VALUES ($1, $2, $3)
+             ON CONFLICT(path) DO UPDATE SET hash = $2, last_scanned = $3`,
+            path,
+            hash,
+            now
+        );
     }
 
-    getFile(filePath: string): FileRecord | undefined {
-        const row = this.db
-            .prepare('SELECT * FROM files WHERE path = ?')
-            .get(filePath) as
-            | { path: string; hash: string; last_scanned: string }
-            | undefined;
+    async getFile(filePath: string): Promise<FileRecord | undefined> {
+        const rows = await this.db.all(
+            'SELECT * FROM files WHERE path = $1',
+            filePath
+        );
 
-        if (!row) return undefined;
+        if (rows.length === 0) return undefined;
+        const row = rows[0] as { path: string; hash: string; last_scanned: string };
         return {
             path: row.path,
             hash: row.hash,
@@ -66,149 +68,137 @@ export class Repository {
         };
     }
 
-    isFileChanged(path: string, currentHash: string): boolean {
-        const file = this.getFile(path);
+    async isFileChanged(path: string, currentHash: string): Promise<boolean> {
+        const file = await this.getFile(path);
         if (!file) return true;
         return file.hash !== currentHash;
     }
 
-    insertNodes(nodes: NodeRecord[]): void {
-        const stmt = this.db.prepare(
-            `INSERT OR REPLACE INTO nodes (id, type, name, file_path, line_start, line_end, metadata)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
+    async insertNodes(nodes: NodeRecord[]): Promise<void> {
+        for (const node of nodes) {
+            await this.db.run(
+                `INSERT OR REPLACE INTO nodes (id, type, name, file_path, line_start, line_end, metadata)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                node.id,
+                node.type,
+                node.name,
+                node.filePath,
+                node.lineStart,
+                node.lineEnd,
+                JSON.stringify(node.metadata ?? {})
+            );
+        }
+    }
+
+    async clearNodesForFile(filePath: string): Promise<void> {
+        await this.db.run(
+            'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+            filePath
         );
-
-        const insertMany = this.db.transaction((items: NodeRecord[]) => {
-            for (const node of items) {
-                stmt.run(
-                    node.id,
-                    node.type,
-                    node.name,
-                    node.filePath,
-                    node.lineStart,
-                    node.lineEnd,
-                    JSON.stringify(node.metadata ?? {})
-                );
-            }
-        });
-
-        insertMany(nodes);
+        await this.db.run(
+            'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+            filePath
+        );
+        await this.db.run(
+            'DELETE FROM nodes WHERE file_path = $1',
+            filePath
+        );
     }
 
-    clearNodesForFile(filePath: string): void {
-        this.db
-            .prepare(
-                'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = ?)'
-            )
-            .run(filePath);
-        this.db
-            .prepare(
-                'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = ?)'
-            )
-            .run(filePath);
-        this.db.prepare('DELETE FROM nodes WHERE file_path = ?').run(filePath);
-    }
-
-    getNodesByFile(filePath: string): NodeRecord[] {
-        const rows = this.db
-            .prepare('SELECT * FROM nodes WHERE file_path = ?')
-            .all(filePath) as NodeRow[];
+    async getNodesByFile(filePath: string): Promise<NodeRecord[]> {
+        const rows = await this.db.all(
+            'SELECT * FROM nodes WHERE file_path = $1',
+            filePath
+        ) as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
 
-    getNodeById(id: string): NodeRecord | undefined {
-        const row = this.db
-            .prepare('SELECT * FROM nodes WHERE id = ?')
-            .get(id) as NodeRow | undefined;
+    async getNodeById(id: string): Promise<NodeRecord | undefined> {
+        const rows = await this.db.all(
+            'SELECT * FROM nodes WHERE id = $1',
+            id
+        ) as NodeRow[];
 
-        if (!row) return undefined;
-        return this.mapNodeRow(row);
+        if (rows.length === 0) return undefined;
+        return this.mapNodeRow(rows[0]);
     }
 
-    searchNodesByName(query: string): NodeRecord[] {
-        const rows = this.db
-            .prepare(
-                'SELECT * FROM nodes WHERE name LIKE ? COLLATE NOCASE LIMIT 50'
-            )
-            .all(`%${query}%`) as NodeRow[];
+    async searchNodesByName(query: string): Promise<NodeRecord[]> {
+        const rows = await this.db.all(
+            "SELECT * FROM nodes WHERE name ILIKE $1 LIMIT 50",
+            `%${query}%`
+        ) as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
 
-    insertEdges(edges: EdgeRecord[]): void {
-        const stmt = this.db.prepare(
-            'INSERT OR IGNORE INTO edges (source_id, target_id, type) VALUES (?, ?, ?)'
-        );
-
-        const insertMany = this.db.transaction((items: EdgeRecord[]) => {
-            for (const edge of items) {
-                stmt.run(edge.sourceId, edge.targetId, edge.type);
-            }
-        });
-
-        insertMany(edges);
+    async insertEdges(edges: EdgeRecord[]): Promise<void> {
+        for (const edge of edges) {
+            await this.db.run(
+                `INSERT INTO edges (source_id, target_id, type) VALUES ($1, $2, $3)
+                 ON CONFLICT DO NOTHING`,
+                edge.sourceId,
+                edge.targetId,
+                edge.type
+            );
+        }
     }
 
-    getDependencies(nodeId: string): EdgeRecord[] {
-        const rows = this.db
-            .prepare('SELECT * FROM edges WHERE source_id = ?')
-            .all(nodeId) as EdgeRow[];
+    async getDependencies(nodeId: string): Promise<EdgeRecord[]> {
+        const rows = await this.db.all(
+            'SELECT * FROM edges WHERE source_id = $1',
+            nodeId
+        ) as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
 
-    getDependents(nodeId: string): EdgeRecord[] {
-        const rows = this.db
-            .prepare('SELECT * FROM edges WHERE target_id = ?')
-            .all(nodeId) as EdgeRow[];
+    async getDependents(nodeId: string): Promise<EdgeRecord[]> {
+        const rows = await this.db.all(
+            'SELECT * FROM edges WHERE target_id = $1',
+            nodeId
+        ) as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
 
-    getStats(): { nodes: number; edges: number; files: number } {
-        const nodes = (
-            this.db.prepare('SELECT COUNT(*) as count FROM nodes').get() as {
-                count: number;
-            }
-        ).count;
-        const edges = (
-            this.db.prepare('SELECT COUNT(*) as count FROM edges').get() as {
-                count: number;
-            }
-        ).count;
-        const files = (
-            this.db.prepare('SELECT COUNT(*) as count FROM files').get() as {
-                count: number;
-            }
-        ).count;
-        return { nodes, edges, files };
+    async getStats(): Promise<{ nodes: number; edges: number; files: number }> {
+        const nodeResult = await this.db.all('SELECT COUNT(*) as count FROM nodes');
+        const edgeResult = await this.db.all('SELECT COUNT(*) as count FROM edges');
+        const fileResult = await this.db.all('SELECT COUNT(*) as count FROM files');
+
+        return {
+            nodes: Number((nodeResult[0] as { count: number | bigint }).count),
+            edges: Number((edgeResult[0] as { count: number | bigint }).count),
+            files: Number((fileResult[0] as { count: number | bigint }).count),
+        };
     }
 
-    getNodeCountByType(): Record<string, number> {
-        const rows = this.db
-            .prepare('SELECT type, COUNT(*) as count FROM nodes GROUP BY type')
-            .all() as Array<{ type: string; count: number }>;
+    async getNodeCountByType(): Promise<Record<string, number>> {
+        const rows = await this.db.all(
+            'SELECT type, COUNT(*) as count FROM nodes GROUP BY type'
+        ) as Array<{ type: string; count: number | bigint }>;
 
         const result: Record<string, number> = {};
         for (const row of rows) {
-            result[row.type] = row.count;
+            result[row.type] = Number(row.count);
         }
         return result;
     }
 
-    getAllNodes(): NodeRecord[] {
-        const rows = this.db
-            .prepare('SELECT * FROM nodes')
-            .all() as NodeRow[];
+    async getAllNodes(): Promise<NodeRecord[]> {
+        const rows = await this.db.all(
+            'SELECT * FROM nodes'
+        ) as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
 
-    getAllEdges(): EdgeRecord[] {
-        const rows = this.db
-            .prepare('SELECT * FROM edges')
-            .all() as EdgeRow[];
+    async getAllEdges(): Promise<EdgeRecord[]> {
+        const rows = await this.db.all(
+            'SELECT * FROM edges'
+        ) as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }

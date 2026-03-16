@@ -40,8 +40,7 @@ export class SymbioteDB {
             this.bindParam(prepared, i + 1, params[i]);
         }
         const result = await prepared.run();
-        const reader = await result.readAll();
-        return reader.getRowObjects() as Record<string, unknown>[];
+        return await result.getRowObjects() as Record<string, unknown>[];
     }
 
     async close(): Promise<void> {
