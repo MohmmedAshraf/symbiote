@@ -223,11 +223,12 @@ export async function handleHookContext(
 
     try {
         const path = await import('node:path');
-        const relativePath = path.default.isAbsolute(filePath)
-            ? path.default.relative(projectRoot, filePath)
-            : filePath;
+        const absolutePath = path.default.isAbsolute(filePath)
+            ? filePath
+            : path.default.join(projectRoot, filePath);
+        const relativePath = path.default.relative(projectRoot, absolutePath);
 
-        const fileNodeId = `file:${relativePath}`;
+        const fileNodeId = `file:${absolutePath}`;
 
         if (!ctx.graphology.hasNode(fileNodeId)) {
             res.writeHead(200);
