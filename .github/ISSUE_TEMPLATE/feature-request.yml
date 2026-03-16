@@ -1,0 +1,49 @@
+name: Feature Request
+description: Suggest an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd like to hear it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What's the pain point? What's missing or frustrating?
+      placeholder: When I'm working on X, I need to manually do Y because Symbiote doesn't...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you solve it? Be as specific as you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches you thought about and why they don't work.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Symbiote does this affect?
+      options:
+        - CLI
+        - MCP Server / Tools
+        - Developer DNA
+        - Project Brain / Graph
+        - Health Engine
+        - Web UI / Brain Visualization
+        - Hooks / Host Integration
+        - Language Support
+        - Other
+    validations:
+      required: true

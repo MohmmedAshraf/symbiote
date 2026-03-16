@@ -1,0 +1,52 @@
+name: Host Integration Request
+description: Request support for a new AI coding tool
+labels: ["host-integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want Symbiote to bond with a new AI tool? Tell us about it.
+
+  - type: input
+    id: host-name
+    attributes:
+      label: AI Tool Name
+      placeholder: e.g., Aider, Continue, Zed AI
+    validations:
+      required: true
+
+  - type: input
+    id: host-url
+    attributes:
+      label: Link
+      description: Official website or repo
+      placeholder: https://...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mcp-support
+    attributes:
+      label: Does it support MCP?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hooks-support
+    attributes:
+      label: Does it support hooks / middleware?
+      description: Pre/post tool-use hooks, similar to Claude Code
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Anything else about how this tool works that would help with integration.

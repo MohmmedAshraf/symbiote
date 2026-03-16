@@ -1,0 +1,85 @@
+name: Bug Report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The more detail you provide, the faster we can fix it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+      placeholder: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Run `symbiote init` in a TypeScript project
+        2. Select Claude Code as host
+        3. Run `symbiote serve`
+        4. Open localhost:3333
+        5. See error in console
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Symbiote Version
+      description: Run `symbiote --version`
+      placeholder: "0.1.0"
+
+  - type: dropdown
+    id: host
+    attributes:
+      label: AI Host
+      description: Which AI tool are you using with Symbiote?
+      options:
+        - Claude Code
+        - Cursor
+        - Windsurf
+        - GitHub Copilot
+        - OpenCode
+        - Other
+        - Not applicable
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Output
+      description: Any error messages or logs.
+      render: shell
