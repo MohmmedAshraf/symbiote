@@ -14,6 +14,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { GraphData, GraphNode, LayoutNode } from '@/lib/types';
+import type { NodeEffect } from './event-effects';
 
 export interface BrainSceneHandle {
     zoomIn: () => void;
@@ -27,6 +28,7 @@ interface BrainSceneProps {
     data: GraphData;
     onNodeClick: (nodeId: string) => void;
     selectedNodeId: string | null;
+    getActiveEffects?: () => Map<string, NodeEffect>;
 }
 
 const BRAIN_COLOR = new THREE.Color('#7b5fff');
@@ -204,9 +206,16 @@ interface CodeNodesProps {
     selectedId: string | null;
     onNodeClick: (id: string) => void;
     onNodeHover: (id: string | null, pos: { x: number; y: number } | null) => void;
+    getActiveEffects?: () => Map<string, NodeEffect>;
 }
 
-function CodeNodes({ data, selectedId, onNodeClick, onNodeHover }: CodeNodesProps) {
+function CodeNodes({
+    data,
+    selectedId,
+    onNodeClick,
+    onNodeHover,
+    getActiveEffects,
+}: CodeNodesProps) {
     const meshRef = useRef<THREE.InstancedMesh>(null);
     const { camera, raycaster, pointer } = useThree();
 
@@ -235,6 +244,42 @@ function CodeNodes({ data, selectedId, onNodeClick, onNodeHover }: CodeNodesProp
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }, [mapped]);
+
+    useFrame(() => {
+        const mesh = meshRef.current;
+        if (!mesh || !getActiveEffects) return;
+
+        const activeEffects = getActiveEffects();
+        if (activeEffects.size === 0) return;
+
+        const dummy = new THREE.Object3D();
+        const color = new THREE.Color();
+        let needsUpdate = false;
+
+        for (let i = 0; i < mapped.length; i++) {
+            const m = mapped[i];
+            const effect = activeEffects.get(m.node.id);
+
+            if (effect) {
+                needsUpdate = true;
+                const scale = 1 + effect.intensity * 3;
+                dummy.position.copy(m.position);
+                dummy.scale.setScalar(0.001 * scale);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+
+                const glowColor = effect.type === 'pulse' ? '#ffffff' : '#7b5fff';
+                const baseColor = m.node.type === 'file' ? '#4a90d9' : '#c084fc';
+                color.set(baseColor).lerp(new THREE.Color(glowColor), effect.intensity * 0.7);
+                mesh.setColorAt(i, color);
+            }
+        }
+
+        if (needsUpdate) {
+            mesh.instanceMatrix.needsUpdate = true;
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        }
+    });
 
     const handleClick = useCallback(
         (e: { stopPropagation: () => void }) => {
@@ -354,7 +399,7 @@ const SceneContent = forwardRef<
     BrainSceneProps & {
         onHover: (id: string | null, pos: { x: number; y: number } | null) => void;
     }
->(function SceneContent({ data, onNodeClick, selectedNodeId, onHover }, ref) {
+>(function SceneContent({ data, onNodeClick, selectedNodeId, onHover, getActiveEffects }, ref) {
     const { camera } = useThree();
 
     useImperativeHandle(ref, () => ({
@@ -395,6 +440,7 @@ const SceneContent = forwardRef<
                 selectedId={selectedNodeId}
                 onNodeClick={onNodeClick}
                 onNodeHover={onHover}
+                getActiveEffects={getActiveEffects}
             />
         </>
     );
@@ -421,7 +467,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode }, { error: str
 }
 
 export const BrainScene = forwardRef<BrainSceneHandle, BrainSceneProps>(function BrainScene(
-    { data, onNodeClick, selectedNodeId },
+    { data, onNodeClick, selectedNodeId, getActiveEffects },
     ref,
 ) {
     const sceneRef = useRef<BrainSceneHandle>(null);
@@ -482,6 +528,7 @@ export const BrainScene = forwardRef<BrainSceneHandle, BrainSceneProps>(function
                             onNodeClick={onNodeClick}
                             selectedNodeId={selectedNodeId}
                             onHover={handleHover}
+                            getActiveEffects={getActiveEffects}
                         />
                     </Suspense>
                 </Canvas>

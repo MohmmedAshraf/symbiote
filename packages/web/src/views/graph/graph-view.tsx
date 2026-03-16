@@ -86,35 +86,6 @@ export function GraphView() {
         if (lastEvent) processEvent(lastEvent);
     }, [lastEvent, processEvent]);
 
-    const lastReadFile = useRef<string | null>(null);
-    const [triggeredEdgeIndices, setTriggeredEdgeIndices] = useState<Set<number>>(new Set());
-
-    useEffect(() => {
-        if (!lastEvent || !graphData) return;
-
-        if (lastEvent.type === 'file:read' && lastEvent.data.filePath) {
-            lastReadFile.current = lastEvent.data.filePath;
-            return;
-        }
-
-        if (lastEvent.type === 'file:edit' && lastEvent.data.filePath && lastReadFile.current) {
-            const readFile = lastReadFile.current;
-            const editFile = lastEvent.data.filePath;
-            lastReadFile.current = null;
-
-            const edgeIndex = graphData.edges.findIndex(
-                (e) =>
-                    (e.sourceId.includes(readFile) && e.targetId.includes(editFile)) ||
-                    (e.targetId.includes(readFile) && e.sourceId.includes(editFile)),
-            );
-
-            if (edgeIndex >= 0) {
-                setTriggeredEdgeIndices(new Set([edgeIndex]));
-                setTimeout(() => setTriggeredEdgeIndices(new Set()), 500);
-            }
-        }
-    }, [lastEvent, graphData]);
-
     async function handleNodeClick(nodeId: string) {
         try {
             const context = await api.graph.getNodeContext(nodeId);
