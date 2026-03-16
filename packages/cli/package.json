@@ -18,11 +18,10 @@
         "@clack/prompts": "^0.10.0",
         "@huggingface/transformers": "^3.8.1",
         "@modelcontextprotocol/sdk": "^1.27.1",
-        "better-sqlite3": "^12.8.0",
         "chokidar": "^4.0.0",
+        "@duckdb/node-api": "1.5.0-r.1",
         "glob": "^11.0.0",
         "picocolors": "^1.1.0",
-        "sqlite-vec": "^0.1.0",
         "tree-sitter": "^0.22.0",
         "tree-sitter-c": "^0.23.0",
         "tree-sitter-cpp": "^0.23.0",
@@ -37,7 +36,6 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@types/better-sqlite3": "^7.6.0",
         "@types/node": "^22.0.0",
         "typescript": "^5.7.0",
         "vitest": "^3.0.0"
