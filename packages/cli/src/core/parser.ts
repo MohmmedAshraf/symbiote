@@ -7,11 +7,19 @@ import type { NodeRecord, EdgeRecord } from '../storage/repository.js';
 const require = createRequire(import.meta.url);
 const Parser = require('tree-sitter');
 
+export interface SymbolEntry {
+    localName: string;
+    originalName: string;
+    sourcePath: string;
+    resolvedSourcePath: string;
+}
+
 export interface ParseResult {
     filePath: string;
     language: string;
     nodes: NodeRecord[];
     edges: EdgeRecord[];
+    symbolTable?: Map<string, SymbolEntry>;
 }
 
 interface SyntaxNode {
@@ -62,6 +70,9 @@ export function parseFile(filePath: string): ParseResult | null {
     extractNodes(tree.rootNode, filePath, nodes);
     extractImports(tree.rootNode, filePath, edges);
 
+    const symbolTable = buildSymbolTable(tree.rootNode, filePath);
+    extractImportBindings(symbolTable, filePath, edges);
+
     for (const node of nodes) {
         if (node.type !== 'file') {
             edges.push({
@@ -72,7 +83,7 @@ export function parseFile(filePath: string): ParseResult | null {
         }
     }
 
-    return { filePath, language, nodes, edges };
+    return { filePath, language, nodes, edges, symbolTable };
 }
 
 function extractNodes(root: SyntaxNode, filePath: string, nodes: NodeRecord[]): void {
@@ -229,6 +240,70 @@ function getFunctionName(node: SyntaxNode): string | null {
 function getClassName(node: SyntaxNode): string | null {
     const nameNode = node.childForFieldName('name');
     return nameNode?.text ?? null;
+}
+
+function buildSymbolTable(root: SyntaxNode, filePath: string): Map<string, SymbolEntry> {
+    const table = new Map<string, SymbolEntry>();
+
+    for (const child of root.children) {
+        if (child.type !== 'import_statement') continue;
+        const source = child.childForFieldName('source');
+        if (!source) continue;
+
+        const importPath = source.text.replace(/['"]/g, '');
+        const resolvedPath = resolveImportPath(filePath, importPath);
+        const importClause = child.children.find((c) => c.type === 'import_clause');
+        if (!importClause) continue;
+
+        for (const clause of importClause.children) {
+            if (clause.type === 'named_imports') {
+                for (const spec of clause.children) {
+                    if (spec.type !== 'import_specifier') continue;
+                    const nameNode = spec.childForFieldName('name');
+                    const aliasNode = spec.childForFieldName('alias');
+                    if (!nameNode) continue;
+                    const originalName = nameNode.text;
+                    const localName = aliasNode?.text ?? originalName;
+                    table.set(localName, {
+                        localName,
+                        originalName,
+                        sourcePath: importPath,
+                        resolvedSourcePath: resolvedPath,
+                    });
+                }
+            }
+            if (clause.type === 'identifier') {
+                table.set(clause.text, {
+                    localName: clause.text,
+                    originalName: 'default',
+                    sourcePath: importPath,
+                    resolvedSourcePath: resolvedPath,
+                });
+            }
+        }
+    }
+    return table;
+}
+
+function extractImportBindings(
+    symbolTable: Map<string, SymbolEntry>,
+    filePath: string,
+    edges: EdgeRecord[],
+): void {
+    for (const [, entry] of symbolTable) {
+        const prefix = guessNodePrefix(entry.originalName);
+        edges.push({
+            sourceId: `file:${filePath}`,
+            targetId: `${prefix}:${entry.resolvedSourcePath}:${entry.originalName}`,
+            type: 'imports_symbol',
+        });
+    }
+}
+
+function guessNodePrefix(name: string): string {
+    if (name === 'default') return 'fn';
+    if (name[0] === name[0].toUpperCase() && !name.includes('_')) return 'class';
+    return 'fn';
 }
 
 function resolveImportPath(fromFile: string, importPath: string): string {

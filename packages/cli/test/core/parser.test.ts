@@ -80,3 +80,27 @@ describe('type node extraction', () => {
         expect(enums[0].name).toBe('UserRole');
     });
 });
+
+describe('import binding resolution', () => {
+    it('extracts named import specifiers as import_binding edges', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'service.ts'));
+        const bindings = result!.edges.filter((e) => e.type === 'imports_symbol');
+        expect(bindings.length).toBeGreaterThanOrEqual(2);
+        expect(bindings.find((e) => e.targetId.includes(':validateEmail'))).toBeDefined();
+    });
+
+    it('builds a symbol table accessible via parseFile result', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'service.ts'));
+        expect(result!.symbolTable).toBeDefined();
+        const entry = result!.symbolTable!.get('validateEmail');
+        expect(entry).toBeDefined();
+        expect(entry!.sourcePath).toContain('utils');
+    });
+
+    it('resolves type-only imports in the symbol table', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'service.ts'));
+        const userEntry = result!.symbolTable!.get('User');
+        expect(userEntry).toBeDefined();
+        expect(userEntry!.sourcePath).toContain('types');
+    });
+});
