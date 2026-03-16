@@ -1,6 +1,6 @@
 export interface GraphNode {
     id: string;
-    type: 'file' | 'function' | 'class' | 'interface' | 'variable';
+    type: string;
     name: string;
     filePath: string;
     lineStart: number;

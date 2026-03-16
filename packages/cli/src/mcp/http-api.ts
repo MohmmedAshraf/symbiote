@@ -76,7 +76,10 @@ function handleGetGraph(
     res: ServerResponse
 ): boolean {
     const nodes = ctx.repo.getAllNodes();
-    const edges = ctx.repo.getAllEdges();
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const edges = ctx.repo
+        .getAllEdges()
+        .filter((e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId));
     return json(res, { nodes, edges });
 }
 
@@ -121,7 +124,62 @@ function handleGetHealthApi(
     res: ServerResponse
 ): boolean {
     const report = ctx.health.analyze();
-    return json(res, report);
+
+    const toIssues = (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items: any[],
+        category: string,
+        severity: 'error' | 'warning' | 'info'
+    ) =>
+        items.map((item) => ({
+            severity,
+            message: item.message ?? item.chain?.join(' → ') ?? item.name ?? String(item),
+            filePath: item.filePath ?? item.file ?? '',
+            line: item.line ?? item.lineStart,
+            category,
+        }));
+
+    return json(res, {
+        score: report.score,
+        categories: {
+            constraintViolations: {
+                score: report.categories.constraints.score,
+                weight: report.categories.constraints.weight,
+                issues: toIssues(
+                    report.constraintViolations ?? [],
+                    'constraint',
+                    'error'
+                ),
+            },
+            circularDeps: {
+                score: report.categories.circularDeps.score,
+                weight: report.categories.circularDeps.weight,
+                issues: toIssues(
+                    report.circularDeps ?? [],
+                    'circular-dep',
+                    'warning'
+                ),
+            },
+            deadCode: {
+                score: report.categories.deadCode.score,
+                weight: report.categories.deadCode.weight,
+                issues: toIssues(
+                    report.deadCode ?? [],
+                    'dead-code',
+                    'info'
+                ),
+            },
+            coupling: {
+                score: report.categories.coupling.score,
+                weight: report.categories.coupling.weight,
+                issues: toIssues(
+                    report.couplingHotspots ?? [],
+                    'coupling',
+                    'warning'
+                ),
+            },
+        },
+    });
 }
 
 function handleListDna(

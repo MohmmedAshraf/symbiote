@@ -216,7 +216,7 @@ program
 
             const webDistDir = path.resolve(
                 __dirname,
-                '../../web/dist'
+                '../../../web/dist'
             );
             if (fs.existsSync(webDistDir)) {
                 if (

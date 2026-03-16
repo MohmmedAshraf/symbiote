@@ -49,8 +49,28 @@ export function parseFile(filePath: string): ParseResult | null {
     const nodes: NodeRecord[] = [];
     const edges: EdgeRecord[] = [];
 
+    const lineCount = source.split('\n').length;
+    nodes.push({
+        id: `file:${filePath}`,
+        type: 'file',
+        name: path.basename(filePath),
+        filePath,
+        lineStart: 1,
+        lineEnd: lineCount,
+    });
+
     extractNodes(tree.rootNode, filePath, nodes);
     extractImports(tree.rootNode, filePath, edges);
+
+    for (const node of nodes) {
+        if (node.type !== 'file') {
+            edges.push({
+                sourceId: `file:${filePath}`,
+                targetId: node.id,
+                type: 'contains',
+            });
+        }
+    }
 
     return { filePath, language, nodes, edges };
 }

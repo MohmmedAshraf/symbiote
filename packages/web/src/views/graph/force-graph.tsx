@@ -1,15 +1,13 @@
-import { useRef, useEffect, useMemo, useCallback } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import ForceGraph3D from 'three-forcegraph';
-import * as THREE from 'three';
+import { useCallback, useMemo, useRef, useEffect } from 'react';
+import ForceGraph3D from 'react-force-graph-3d';
 import type { GraphData } from '@/lib/types';
-import { GraphControls } from './graph-controls';
+import * as THREE from 'three';
 
 const NODE_COLORS: Record<string, string> = {
     file: '#5b8dea',
     function: '#34d399',
     class: '#c084fc',
+    method: '#a78bfa',
     interface: '#f59e0b',
     variable: '#94a3b8',
 };
@@ -27,40 +25,9 @@ export function ForceGraph({
     onNodeClick,
     highlightedNodes,
 }: ForceGraphProps) {
-    return (
-        <div className="h-full w-full">
-            <Canvas camera={{ position: [0, 0, 300], fov: 60 }}>
-                <ambientLight intensity={0.6} />
-                <pointLight
-                    position={[200, 200, 200]}
-                    intensity={0.8}
-                />
-                <ForceGraphScene
-                    data={data}
-                    onNodeClick={onNodeClick}
-                    highlightedNodes={highlightedNodes}
-                />
-                <OrbitControls
-                    enableDamping
-                    dampingFactor={0.1}
-                />
-            </Canvas>
-            <GraphControls />
-        </div>
-    );
-}
-
-function ForceGraphScene({
-    data,
-    onNodeClick,
-    highlightedNodes,
-}: ForceGraphProps) {
-    const graphRef = useRef<ForceGraph3D | null>(null);
-    const groupRef = useRef<THREE.Group>(null);
-
     const highlightSet = useMemo(
         () => new Set(highlightedNodes),
-        [highlightedNodes]
+        [highlightedNodes],
     );
 
     const graphData = useMemo(
@@ -75,10 +42,12 @@ function ForceGraphScene({
                     : (NODE_COLORS[n.type] ?? '#94a3b8'),
                 val:
                     n.type === 'file'
-                        ? 3
+                        ? 8
                         : n.type === 'class'
-                          ? 2
-                          : 1,
+                            ? 6
+                            : n.type === 'method'
+                                ? 3
+                                : 4,
             })),
             links: data.edges.map((e) => ({
                 source: e.sourceId,
@@ -86,63 +55,72 @@ function ForceGraphScene({
                 type: e.type,
             })),
         }),
-        [data]
+        [data],
     );
 
     const handleClick = useCallback(
-        (node: { id?: string }) => {
-            if (node.id) onNodeClick(node.id as string);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (node: any) => {
+            if (node?.id) onNodeClick(String(node.id));
         },
-        [onNodeClick]
+        [onNodeClick],
     );
 
-    useEffect(() => {
-        if (!groupRef.current) return;
+    const nodeThreeObject = useCallback(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (node: any) => {
+            const nodeVal = node.val ?? 4;
+            const size = Math.cbrt(nodeVal) * 2.5;
+            const isHighlighted = highlightSet.has(node.id);
+            const color = isHighlighted ? '#fbbf24' : (node.color ?? '#94a3b8');
 
-        const graph = new ForceGraph3D()
-            .graphData(graphData)
-            .nodeLabel('name')
-            .nodeColor(
-                (node: { color?: string }) =>
-                    node.color ?? '#94a3b8'
-            )
-            .nodeVal(
-                (node: { val?: number }) => node.val ?? 1
-            )
-            .nodeOpacity(0.9)
-            .linkColor(() => 'rgba(148, 163, 184, 0.15)')
-            .linkWidth(0.3)
-            .linkDirectionalArrowLength(2)
-            .linkDirectionalArrowRelPos(1)
-            .onNodeClick(handleClick)
-            .warmupTicks(80)
-            .cooldownTime(3000);
+            const geometry = new THREE.SphereGeometry(size, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color,
+                transparent: true,
+                opacity: 0.85,
+                shininess: 80,
+                emissive: new THREE.Color(color),
+                emissiveIntensity: isHighlighted ? 0.4 : 0.15,
+            });
+            return new THREE.Mesh(geometry, material);
+        },
+        [highlightSet],
+    );
 
-        graphRef.current = graph;
-        groupRef.current.add(graph);
-
-        return () => {
-            if (groupRef.current && graph) {
-                groupRef.current.remove(graph);
-            }
-        };
-    }, [graphData, handleClick]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fgRef = useRef<any>(null);
 
     useEffect(() => {
-        if (!graphRef.current) return;
+        const fg = fgRef.current;
+        if (!fg) return;
 
-        graphRef.current.nodeColor(
-            (node: { id?: string; color?: string }) => {
-                if (highlightSet.has(node.id ?? ''))
-                    return '#fbbf24';
-                return node.color ?? '#94a3b8';
-            }
-        );
-    }, [highlightSet]);
+        fg.d3Force('charge')?.strength(-250);
+        fg.d3Force('link')?.distance(60);
+        fg.d3Force('center')?.strength(0.03);
+    }, [graphData]);
 
-    useFrame(() => {
-        graphRef.current?.tickFrame();
-    });
-
-    return <group ref={groupRef} />;
+    return (
+        <div className="h-full w-full">
+            <ForceGraph3D
+                ref={fgRef}
+                graphData={graphData}
+                nodeLabel="name"
+                nodeThreeObject={nodeThreeObject}
+                nodeThreeObjectExtend={false}
+                linkColor={() => 'rgba(100, 130, 180, 0.15)'}
+                linkWidth={0.4}
+                linkDirectionalArrowLength={3}
+                linkDirectionalArrowRelPos={1}
+                linkDirectionalParticles={1}
+                linkDirectionalParticleWidth={1.5}
+                linkDirectionalParticleSpeed={0.004}
+                onNodeClick={handleClick}
+                warmupTicks={120}
+                cooldownTime={5000}
+                backgroundColor="#0a0a0a"
+                showNavInfo={false}
+            />
+        </div>
+    );
 }
