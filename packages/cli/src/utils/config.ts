@@ -20,7 +20,7 @@ export function ensureBrainDir(projectRoot: string): string {
 
     const gitignorePath = path.join(brainDir, '.gitignore');
     if (!fs.existsSync(gitignorePath)) {
-        fs.writeFileSync(gitignorePath, 'symbiote.db\n');
+        fs.writeFileSync(gitignorePath, 'symbiote.db\nport\n');
     }
 
     const configPath = path.join(brainDir, 'config.json');
@@ -70,6 +70,39 @@ export function getBrainDbPath(projectRoot: string): string {
 }
 
 export const DEFAULT_PORT = 3333;
+const PORT_RANGE_START = 3334;
+const PORT_RANGE_END = 3999;
+
+export function getProjectPort(projectRoot: string): number {
+    const envPort = process.env.SYMBIOTE_PORT;
+    if (envPort) {
+        const parsed = parseInt(envPort, 10);
+        if (!isNaN(parsed)) return parsed;
+    }
+
+    const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
+    if (fs.existsSync(portFile)) {
+        const stored = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10);
+        if (!isNaN(stored)) return stored;
+    }
+
+    return portFromPath(projectRoot);
+}
+
+export function writePortFile(projectRoot: string, port: number): void {
+    const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
+    fs.mkdirSync(path.dirname(portFile), { recursive: true });
+    fs.writeFileSync(portFile, String(port) + '\n');
+}
+
+export function clearPortFile(projectRoot: string): void {
+    const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
+    try {
+        fs.unlinkSync(portFile);
+    } catch {
+        // Already gone
+    }
+}
 
 export function getServerPort(): number {
     const envPort = process.env.SYMBIOTE_PORT;
@@ -77,5 +110,21 @@ export function getServerPort(): number {
         const parsed = parseInt(envPort, 10);
         if (!isNaN(parsed)) return parsed;
     }
+
+    const projectRoot = process.cwd();
+    const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
+    if (fs.existsSync(portFile)) {
+        const stored = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10);
+        if (!isNaN(stored)) return stored;
+    }
+
     return DEFAULT_PORT;
+}
+
+function portFromPath(projectRoot: string): number {
+    let hash = 0;
+    for (let i = 0; i < projectRoot.length; i++) {
+        hash = ((hash << 5) - hash + projectRoot.charCodeAt(i)) | 0;
+    }
+    return PORT_RANGE_START + (Math.abs(hash) % (PORT_RANGE_END - PORT_RANGE_START));
 }

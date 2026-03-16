@@ -11,6 +11,9 @@ export interface AgentInfo {
     configType: 'cli-command' | 'json-file';
 }
 
+const CLAUDE_SETTINGS_PATH = path.join(homedir(), '.claude', 'settings.json');
+const CLAUDE_HOOKS_DIR = path.join(homedir(), '.claude', 'hooks', 'symbiote');
+
 const AGENTS: Omit<AgentInfo, 'installed'>[] = [
     {
         name: 'Claude Code',
@@ -155,10 +158,7 @@ export function isBonded(agent: AgentInfo): boolean {
     return false;
 }
 
-export function connectWithHooks(
-    agent: AgentInfo,
-    projectRoot: string,
-): {
+export function connectWithHooks(agent: AgentInfo): {
     mcp: { success: boolean; message: string };
     hooks: { success: boolean; message: string };
 } {
@@ -168,14 +168,11 @@ export function connectWithHooks(
         return { mcp, hooks: { success: true, message: 'Hooks not available' } };
     }
 
-    const hooks = writeClaudeHooks(projectRoot);
+    const hooks = installGlobalClaudeHooks();
     return { mcp, hooks };
 }
 
-export function disconnectWithHooks(
-    agent: AgentInfo,
-    projectRoot: string,
-): {
+export function disconnectWithHooks(agent: AgentInfo): {
     mcp: { success: boolean; message: string };
     hooks: { success: boolean; message: string };
 } {
@@ -185,21 +182,24 @@ export function disconnectWithHooks(
         return { mcp, hooks: { success: true, message: 'No hooks to remove' } };
     }
 
-    const hooks = removeClaudeHooks(projectRoot);
+    const hooks = removeGlobalClaudeHooks();
     return { mcp, hooks };
 }
 
-function writeClaudeHooks(projectRoot: string): { success: boolean; message: string } {
+function installGlobalClaudeHooks(): { success: boolean; message: string } {
     try {
-        const claudeDir = path.join(projectRoot, '.claude');
-        fs.mkdirSync(claudeDir, { recursive: true });
+        fs.mkdirSync(CLAUDE_HOOKS_DIR, { recursive: true });
 
-        const settingsPath = path.join(claudeDir, 'settings.local.json');
+        const hookScript = buildHookScript();
+        const hookScriptPath = path.join(CLAUDE_HOOKS_DIR, 'symbiote-hook.cjs');
+        fs.writeFileSync(hookScriptPath, hookScript, { mode: 0o755 });
+
+        const hookCommand = `node "${hookScriptPath}"`;
+
         let settings: Record<string, unknown> = {};
-
-        if (fs.existsSync(settingsPath)) {
+        if (fs.existsSync(CLAUDE_SETTINGS_PATH)) {
             try {
-                settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+                settings = JSON.parse(fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
             } catch {
                 settings = {};
             }
@@ -207,22 +207,57 @@ function writeClaudeHooks(projectRoot: string): { success: boolean; message: str
 
         const hooks = (settings.hooks as Record<string, unknown[]>) ?? {};
 
-        hooks.PreToolUse = [
-            {
-                matcher: '',
-                hooks: [{ type: 'command', command: 'npx symbiote-cli hook pre' }],
-            },
-        ];
+        interface HookEntry {
+            matcher?: string;
+            hooks?: Array<{ type?: string; command?: string; timeout?: number }>;
+        }
 
-        hooks.PostToolUse = [
-            {
-                matcher: '',
-                hooks: [{ type: 'command', command: 'npx symbiote-cli hook post' }],
-            },
-        ];
+        const preHooks: HookEntry[] = Array.isArray(hooks.PreToolUse)
+            ? (hooks.PreToolUse as HookEntry[])
+            : [];
+        const postHooks: HookEntry[] = Array.isArray(hooks.PostToolUse)
+            ? (hooks.PostToolUse as HookEntry[])
+            : [];
 
+        const hasPreHook = preHooks.some((h) =>
+            h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
+        );
+
+        const hasPostHook = postHooks.some((h) =>
+            h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
+        );
+
+        if (!hasPreHook) {
+            preHooks.push({
+                matcher: '',
+                hooks: [
+                    {
+                        type: 'command',
+                        command: hookCommand,
+                        timeout: 10,
+                    },
+                ],
+            });
+        }
+
+        if (!hasPostHook) {
+            postHooks.push({
+                matcher: '',
+                hooks: [
+                    {
+                        type: 'command',
+                        command: hookCommand,
+                        timeout: 10,
+                    },
+                ],
+            });
+        }
+
+        hooks.PreToolUse = preHooks;
+        hooks.PostToolUse = postHooks;
         settings.hooks = hooks;
-        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+
+        fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 4) + '\n');
 
         return { success: true, message: 'Hooks installed' };
     } catch (err) {
@@ -233,30 +268,38 @@ function writeClaudeHooks(projectRoot: string): { success: boolean; message: str
     }
 }
 
-function removeClaudeHooks(projectRoot: string): { success: boolean; message: string } {
+function removeGlobalClaudeHooks(): { success: boolean; message: string } {
     try {
-        const settingsPath = path.join(projectRoot, '.claude', 'settings.local.json');
+        if (fs.existsSync(CLAUDE_SETTINGS_PATH)) {
+            const settings = JSON.parse(fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8'));
+            const hooks = settings.hooks as Record<string, unknown[]> | undefined;
 
-        if (!fs.existsSync(settingsPath)) {
-            return { success: true, message: 'No hooks to remove' };
-        }
+            if (hooks) {
+                interface HookEntry {
+                    hooks?: Array<{ command?: string }>;
+                }
 
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-        const hooks = settings.hooks as Record<string, unknown[]> | undefined;
+                for (const eventName of ['PreToolUse', 'PostToolUse']) {
+                    if (Array.isArray(hooks[eventName])) {
+                        hooks[eventName] = (hooks[eventName] as HookEntry[]).filter(
+                            (h) => !h.hooks?.some((hh) => hh.command?.includes('symbiote-hook')),
+                        );
+                        if ((hooks[eventName] as unknown[]).length === 0) {
+                            delete hooks[eventName];
+                        }
+                    }
+                }
 
-        if (hooks) {
-            delete hooks.PreToolUse;
-            delete hooks.PostToolUse;
+                if (Object.keys(hooks).length === 0) {
+                    delete settings.hooks;
+                }
 
-            if (Object.keys(hooks).length === 0) {
-                delete settings.hooks;
+                fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 4) + '\n');
             }
         }
 
-        if (Object.keys(settings).length === 0) {
-            fs.unlinkSync(settingsPath);
-        } else {
-            fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+        if (fs.existsSync(CLAUDE_HOOKS_DIR)) {
+            fs.rmSync(CLAUDE_HOOKS_DIR, { recursive: true });
         }
 
         return { success: true, message: 'Hooks removed' };
@@ -266,6 +309,82 @@ function removeClaudeHooks(projectRoot: string): { success: boolean; message: st
             message: err instanceof Error ? err.message : 'Hook removal failed',
         };
     }
+}
+
+function buildHookScript(): string {
+    let cliPath: string;
+    try {
+        const resolved = execSync('which symbiote-cli', { encoding: 'utf-8' }).trim();
+        cliPath = resolved;
+    } catch {
+        cliPath = 'npx symbiote-cli';
+    }
+
+    return `#!/usr/bin/env node
+"use strict";
+
+const { execSync, spawn } = require("child_process");
+const path = require("path");
+const http = require("http");
+
+let input = "";
+process.stdin.setEncoding("utf-8");
+process.stdin.on("data", (chunk) => { input += chunk; });
+process.stdin.on("end", () => {
+    try {
+        const payload = JSON.parse(input);
+        const cwd = payload.cwd || process.cwd();
+        const brainDir = path.join(cwd, ".brain");
+        const fs = require("fs");
+
+        if (!fs.existsSync(brainDir)) {
+            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+            return;
+        }
+
+        const hookType = payload.type || payload.hook_event_name;
+        const isPreHook = hookType === "pre_tool_use" || hookType === "PreToolUse";
+
+        const childPayload = {
+            type: isPreHook ? "pre_tool_use" : "post_tool_use",
+            tool_name: payload.tool_name,
+            tool_input: payload.tool_input || {},
+            tool_output: payload.tool_output || "",
+        };
+
+        const subcommand = isPreHook ? "pre" : "post";
+        const child = spawn(
+            "${cliPath}",
+            ["hook", subcommand],
+            { cwd, stdio: ["pipe", "pipe", "ignore"] }
+        );
+
+        child.stdin.write(JSON.stringify(childPayload));
+        child.stdin.end();
+
+        let stdout = "";
+        child.stdout.on("data", (chunk) => { stdout += chunk; });
+        child.on("close", () => {
+            if (stdout.trim()) {
+                process.stdout.write(stdout);
+            } else {
+                process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+            }
+        });
+
+        child.on("error", () => {
+            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+        });
+
+        setTimeout(() => {
+            try { child.kill(); } catch {}
+            process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+        }, 8000);
+    } catch {
+        process.stdout.write(JSON.stringify({ decision: "allow" }) + "\\n");
+    }
+});
+`;
 }
 
 export function disconnectAgent(agent: AgentInfo): {

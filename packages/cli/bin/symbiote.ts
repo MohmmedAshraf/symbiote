@@ -297,7 +297,7 @@ async function cmdInit(): Promise<void> {
                 for (const agent of toBond) {
                     const s3 = p.spinner();
                     s3.start(`Bonding with ${agent.name}...`);
-                    const result = connectWithHooks(agent, projectRoot);
+                    const result = connectWithHooks(agent);
                     if (result.mcp.success && result.hooks.success) {
                         const detail =
                             agent.id === 'claude-code'
@@ -955,8 +955,6 @@ async function cmdUnbond(targetId?: string): Promise<void> {
     const { detectInstalledAgents, isBonded, disconnectWithHooks } =
         await import('../src/init/agent-connector.js');
 
-    const projectRoot = process.cwd();
-
     p.intro(pc.bold('Symbiote') + pc.dim(' — Detaching'));
 
     const agents = detectInstalledAgents();
@@ -976,7 +974,7 @@ async function cmdUnbond(targetId?: string): Promise<void> {
     }
 
     for (const agent of toUnbond) {
-        const result = disconnectWithHooks(agent, projectRoot);
+        const result = disconnectWithHooks(agent);
         if (result.mcp.success) {
             p.log.success(`Detached from ${agent.name}`);
         } else {
