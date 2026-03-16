@@ -94,6 +94,14 @@ function showHelp(): void {
         `  ${pc.bold('$')} ${pc.cyan('symbiote impact')}        Analyze impact of working changes`,
     );
     console.log();
+    console.log(pc.dim('  Claude Code Hooks:'));
+    console.log(
+        `  ${pc.bold('$')} ${pc.cyan('symbiote hooks install')}  Register hooks with Claude Code`,
+    );
+    console.log(
+        `  ${pc.bold('$')} ${pc.cyan('symbiote hooks uninstall')} Remove hooks from Claude Code`,
+    );
+    console.log();
     console.log(pc.dim('  Connect to Claude Code:'));
     console.log(`    ${pc.dim('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
     console.log();
@@ -261,6 +269,146 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
                 ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}${embeddingsInfo}`,
             ),
     );
+}
+
+async function cmdHookPre(): Promise<void> {
+    const { readStdinPayload, writeResponse } = await import('../src/hooks/types.js');
+    const { PreToolUseHandler } = await import('../src/hooks/pre-tool-use.js');
+
+    const projectRoot = process.cwd();
+    const dbPath = getBrainDbPath(projectRoot);
+
+    let graph;
+    try {
+        const db = await createDatabase(dbPath);
+        const { buildGraphFromDb } = await import('../src/core/graph-builder.js');
+        graph = await buildGraphFromDb(db);
+        await db.close();
+    } catch {
+        const { writeResponse: wr } = await import('../src/hooks/types.js');
+        wr({ decision: 'allow' });
+        return;
+    }
+
+    const brainDir = path.join(projectRoot, '.brain');
+    let constraints: Array<{ scope: string; content: string }> = [];
+    try {
+        const { IntentStore } = await import('../src/brain/intent.js');
+        const intent = new IntentStore(brainDir);
+        constraints = intent
+            .listEntries('constraint', { status: 'active' })
+            .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
+    } catch {
+        // No intent store
+    }
+
+    const handler = new PreToolUseHandler({
+        graph,
+        projectRoot,
+        constraints,
+        dnaEntries: [],
+    });
+
+    const payload = await readStdinPayload();
+    if (payload.type !== 'pre_tool_use') {
+        writeResponse({ decision: 'allow' });
+        return;
+    }
+
+    const response = handler.handle(payload);
+    writeResponse(response);
+}
+
+async function cmdHookPost(): Promise<void> {
+    const { readStdinPayload, writeResponse } = await import('../src/hooks/types.js');
+    const { PostToolUseHandler } = await import('../src/hooks/post-tool-use.js');
+
+    const projectRoot = process.cwd();
+    const dbPath = getBrainDbPath(projectRoot);
+
+    const handler = new PostToolUseHandler({
+        projectRoot,
+        onReindexFile: async (relativePath: string) => {
+            try {
+                const db = await createDatabase(dbPath);
+                const repo = new Repository(db);
+                const fullPath = path.join(projectRoot, relativePath);
+                const { parseFile } = await import('../src/core/parser.js');
+                const { hashFileContent } = await import('../src/utils/files.js');
+                const hash = hashFileContent(fullPath);
+                const parsed = parseFile(fullPath);
+                if (parsed) {
+                    await repo.clearNodesForFile(fullPath);
+                    await repo.insertNodes(parsed.nodes);
+                    await repo.insertEdges(parsed.edges);
+                    await repo.upsertFile(fullPath, hash);
+                }
+                await db.close();
+            } catch {
+                // Silently fail
+            }
+        },
+        onFullRescan: async () => {
+            // Full rescan too slow for hook — next scan will catch up
+        },
+    });
+
+    const payload = await readStdinPayload();
+    if (payload.type !== 'post_tool_use') {
+        writeResponse({ decision: 'allow' });
+        return;
+    }
+
+    const response = await handler.handle(payload);
+    writeResponse(response);
+}
+
+async function cmdHooksInstall(): Promise<void> {
+    const { execSync } = await import('node:child_process');
+
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Installing Claude Code hooks'));
+
+    try {
+        execSync('claude hooks add pre_tool_use symbiote -- npx symbiote-cli hook pre', {
+            stdio: 'inherit',
+        });
+        p.log.success('Registered pre_tool_use hook');
+    } catch {
+        p.log.error('Failed to register pre_tool_use hook');
+    }
+
+    try {
+        execSync('claude hooks add post_tool_use symbiote -- npx symbiote-cli hook post', {
+            stdio: 'inherit',
+        });
+        p.log.success('Registered post_tool_use hook');
+    } catch {
+        p.log.error('Failed to register post_tool_use hook');
+    }
+
+    p.outro('Hooks installed. Symbiote will inject context on every tool call.');
+}
+
+async function cmdHooksUninstall(): Promise<void> {
+    const { execSync } = await import('node:child_process');
+
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Uninstalling Claude Code hooks'));
+
+    try {
+        execSync('claude hooks remove pre_tool_use symbiote', { stdio: 'inherit' });
+        p.log.success('Removed pre_tool_use hook');
+    } catch {
+        p.log.error('Failed to remove pre_tool_use hook');
+    }
+
+    try {
+        execSync('claude hooks remove post_tool_use symbiote', { stdio: 'inherit' });
+        p.log.success('Removed post_tool_use hook');
+    } catch {
+        p.log.error('Failed to remove post_tool_use hook');
+    }
+
+    p.outro('Hooks uninstalled.');
 }
 
 async function cmdImpact(): Promise<void> {
@@ -628,6 +776,32 @@ async function main(): Promise<void> {
         case 'impact':
             await cmdImpact();
             break;
+        case 'hook': {
+            const subcommand = args[0];
+            if (subcommand === 'pre') {
+                await cmdHookPre();
+            } else if (subcommand === 'post') {
+                await cmdHookPost();
+            } else {
+                p.log.error(`Unknown hook subcommand: ${subcommand}`);
+                console.log(pc.dim('  Available: pre, post'));
+                process.exit(1);
+            }
+            break;
+        }
+        case 'hooks': {
+            const subcommand = args[0];
+            if (subcommand === 'install') {
+                await cmdHooksInstall();
+            } else if (subcommand === 'uninstall') {
+                await cmdHooksUninstall();
+            } else {
+                p.log.error(`Unknown hooks subcommand: ${subcommand}`);
+                console.log(pc.dim('  Available: install, uninstall'));
+                process.exit(1);
+            }
+            break;
+        }
         case 'dna': {
             const subcommand = args[0];
             const subArgs = args.slice(1);
