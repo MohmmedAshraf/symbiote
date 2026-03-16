@@ -22,36 +22,42 @@ export interface ProjectOverview {
 export class GraphQuery {
     constructor(private repo: Repository) {}
 
-    getDependencies(nodeId: string): NodeRecord[] {
-        const edges = this.repo.getDependencies(nodeId);
-        return edges
-            .map((e) => this.repo.getNodeById(e.targetId))
-            .filter((n): n is NodeRecord => n !== undefined);
+    async getDependencies(nodeId: string): Promise<NodeRecord[]> {
+        const edges = await this.repo.getDependencies(nodeId);
+        const nodes: NodeRecord[] = [];
+        for (const e of edges) {
+            const node = await this.repo.getNodeById(e.targetId);
+            if (node) nodes.push(node);
+        }
+        return nodes;
     }
 
-    getDependents(nodeId: string): NodeRecord[] {
-        const edges = this.repo.getDependents(nodeId);
-        return edges
-            .map((e) => this.repo.getNodeById(e.sourceId))
-            .filter((n): n is NodeRecord => n !== undefined);
+    async getDependents(nodeId: string): Promise<NodeRecord[]> {
+        const edges = await this.repo.getDependents(nodeId);
+        const nodes: NodeRecord[] = [];
+        for (const e of edges) {
+            const node = await this.repo.getNodeById(e.sourceId);
+            if (node) nodes.push(node);
+        }
+        return nodes;
     }
 
-    searchNodes(query: string): NodeRecord[] {
+    async searchNodes(query: string): Promise<NodeRecord[]> {
         return this.repo.searchNodesByName(query);
     }
 
-    getFileContext(filePath: string): FileContext {
-        const nodes = this.repo.getNodesByFile(filePath);
+    async getFileContext(filePath: string): Promise<FileContext> {
+        const nodes = await this.repo.getNodesByFile(filePath);
         const dependencies: FileContext['dependencies'] = [];
         const dependents: FileContext['dependents'] = [];
 
         for (const node of nodes) {
-            for (const edge of this.repo.getDependencies(node.id)) {
-                const target = this.repo.getNodeById(edge.targetId);
+            for (const edge of await this.repo.getDependencies(node.id)) {
+                const target = await this.repo.getNodeById(edge.targetId);
                 if (target) dependencies.push({ node: target, edge });
             }
-            for (const edge of this.repo.getDependents(node.id)) {
-                const source = this.repo.getNodeById(edge.sourceId);
+            for (const edge of await this.repo.getDependents(node.id)) {
+                const source = await this.repo.getNodeById(edge.sourceId);
                 if (source) dependents.push({ node: source, edge });
             }
         }
@@ -59,9 +65,9 @@ export class GraphQuery {
         return { filePath, nodes, dependencies, dependents };
     }
 
-    getOverview(): ProjectOverview {
-        const stats = this.repo.getStats();
-        const nodesByType = this.repo.getNodeCountByType();
+    async getOverview(): Promise<ProjectOverview> {
+        const stats = await this.repo.getStats();
+        const nodesByType = await this.repo.getNodeCountByType();
         return {
             totalNodes: stats.nodes,
             totalEdges: stats.edges,
