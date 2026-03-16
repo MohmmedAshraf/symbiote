@@ -9,6 +9,7 @@ import { HealthEngine } from '../brain/health/index.js';
 import { DnaStorage } from '../dna/storage.js';
 import { DnaEngine } from '../dna/engine.js';
 import { EventBus } from '../events/bus.js';
+import { SessionTracker } from '../events/session.js';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -33,6 +34,7 @@ export interface ServerContext {
     dnaStorage: DnaStorage;
     dnaEngine: DnaEngine;
     eventBus: EventBus;
+    sessionTracker: SessionTracker;
 }
 
 export async function createServerContext(options: ServerContextOptions): Promise<ServerContext> {
@@ -47,6 +49,11 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const dnaStorage = new DnaStorage(dnaDir);
     const dnaEngine = new DnaEngine(dnaStorage);
     const eventBus = new EventBus();
+    const sessionTracker = new SessionTracker();
+
+    eventBus.on('*', (event) => {
+        sessionTracker.processEvent(event);
+    });
 
     return {
         db: options.db,
@@ -59,5 +66,6 @@ export async function createServerContext(options: ServerContextOptions): Promis
         dnaStorage,
         dnaEngine,
         eventBus,
+        sessionTracker,
     };
 }
