@@ -1,7 +1,6 @@
 import type { ServerContext } from '../context.js';
 import type { NodeRecord } from '../../storage/repository.js';
 import type { IntentEntry } from '../../brain/intent.js';
-import { semanticSearch } from '../../brain/embeddings.js';
 
 export interface ProjectOverviewOutput {
     totalNodes: number;
@@ -94,8 +93,10 @@ export async function handleQueryGraph(
     input: QueryGraphInput,
 ): Promise<QueryGraphOutput> {
     switch (input.type) {
-        case 'search':
-            return { results: await ctx.graph.searchNodes(input.query) };
+        case 'search': {
+            const results = await ctx.search.textSearch(input.query);
+            return { results: results.map((r) => r.node) };
+        }
         case 'dependencies':
             return {
                 results: await ctx.graph.getDependencies(input.query),
@@ -121,17 +122,15 @@ export async function handleSemanticSearch(
     input: SemanticSearchInput,
 ): Promise<SemanticSearchOutput> {
     try {
-        const queryVector = new Array(384).fill(0);
-        const searchResults = await semanticSearch(ctx.db, queryVector, input.limit ?? 10);
-
-        const results = await Promise.all(
-            searchResults.map(async (r) => ({
-                node: (await ctx.repo.getNodeById(r.nodeId)) ?? null,
-                distance: r.distance,
+        const results = await ctx.search.search(input.query, {
+            limit: input.limit ?? 10,
+        });
+        return {
+            results: results.map((r) => ({
+                node: r.node,
+                distance: 1 - r.score,
             })),
-        );
-
-        return { results };
+        };
     } catch {
         return { results: [] };
     }

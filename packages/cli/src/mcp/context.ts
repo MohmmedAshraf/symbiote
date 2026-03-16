@@ -1,6 +1,7 @@
 import type { SymbioteDB } from '../storage/db.js';
 import { Repository } from '../storage/repository.js';
 import { GraphQuery } from '../core/graph.js';
+import { HybridSearch } from '../core/search.js';
 import { IntentStore } from '../brain/intent.js';
 import { HealthEngine } from '../brain/health/index.js';
 import { DnaStorage } from '../dna/storage.js';
@@ -17,6 +18,7 @@ export interface ServerContext {
     db: SymbioteDB;
     repo: Repository;
     graph: GraphQuery;
+    search: HybridSearch;
     intent: IntentStore;
     health: HealthEngine;
     dnaStorage: DnaStorage;
@@ -26,6 +28,7 @@ export interface ServerContext {
 export function createServerContext(options: ServerContextOptions): ServerContext {
     const repo = new Repository(options.db);
     const graph = new GraphQuery(repo);
+    const search = new HybridSearch(options.db, repo);
     const intent = new IntentStore(options.brainDir);
     const health = new HealthEngine(repo, intent, options.db);
 
@@ -37,6 +40,7 @@ export function createServerContext(options: ServerContextOptions): ServerContex
         db: options.db,
         repo,
         graph,
+        search,
         intent,
         health,
         dnaStorage,
