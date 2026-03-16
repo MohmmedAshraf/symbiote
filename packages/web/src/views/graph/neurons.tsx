@@ -3,8 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { LayoutNode } from '@/lib/types';
 import { getClusterColor } from './brain-layout';
-import neuronVert from './shaders/neuron.vert';
-import neuronFrag from './shaders/neuron.frag';
 
 interface NeuronsProps {
     nodes: LayoutNode[];
@@ -24,111 +22,72 @@ export function Neurons({
     onNodeHover,
 }: NeuronsProps) {
     const meshRef = useRef<THREE.InstancedMesh>(null);
-    const firingRef = useRef<Float32Array>(new Float32Array(0));
-    const { camera, size, raycaster } = useThree();
+    const { camera, raycaster, pointer } = useThree();
+
+    const clusterColors = useMemo(() => {
+        const colors: THREE.Color[] = [];
+        for (let i = 0; i < MAX_CLUSTERS; i++) {
+            colors.push(new THREE.Color(getClusterColor(i)));
+        }
+        return colors;
+    }, []);
+
+    const phases = useMemo(() => nodes.map(() => Math.random() * Math.PI * 2), [nodes]);
 
     const geometry = useMemo(() => new THREE.SphereGeometry(1, 12, 12), []);
-
-    const { clusterAttr, pagerankAttr, centralityAttr, phaseAttr, firingAttr } = useMemo(() => {
-        const count = nodes.length;
-        const cluster = new Float32Array(count);
-        const pagerank = new Float32Array(count);
-        const centrality = new Float32Array(count);
-        const phase = new Float32Array(count);
-        const firing = new Float32Array(count);
-
-        for (let i = 0; i < count; i++) {
-            cluster[i] = nodes[i].cluster;
-            pagerank[i] = nodes[i].pagerank;
-            centrality[i] = nodes[i].centrality;
-            phase[i] = Math.random();
-            firing[i] = 0;
-        }
-
-        firingRef.current = firing;
-
-        return {
-            clusterAttr: new THREE.InstancedBufferAttribute(cluster, 1),
-            pagerankAttr: new THREE.InstancedBufferAttribute(pagerank, 1),
-            centralityAttr: new THREE.InstancedBufferAttribute(centrality, 1),
-            phaseAttr: new THREE.InstancedBufferAttribute(phase, 1),
-            firingAttr: new THREE.InstancedBufferAttribute(firing, 1),
-        };
-    }, [nodes]);
-
-    const material = useMemo(() => {
-        const clusterColors: THREE.Vector3[] = [];
-        for (let i = 0; i < MAX_CLUSTERS; i++) {
-            const c = new THREE.Color(getClusterColor(i));
-            clusterColors.push(new THREE.Vector3(c.r, c.g, c.b));
-        }
-
-        return new THREE.ShaderMaterial({
-            vertexShader: neuronVert,
-            fragmentShader: neuronFrag,
-            uniforms: {
-                uTime: { value: 0 },
-                uClusterColors: { value: clusterColors },
-                uDimAmount: { value: 0 },
-                uSelectedIndex: { value: -1 },
-            },
-            transparent: true,
-        });
-    }, []);
 
     useEffect(() => {
         const mesh = meshRef.current;
         if (!mesh) return;
 
         const dummy = new THREE.Object3D();
+        const color = new THREE.Color();
+
         for (let i = 0; i < nodes.length; i++) {
-            dummy.position.set(nodes[i].x, nodes[i].y, nodes[i].z);
+            const n = nodes[i];
+            const size = 0.5 + n.pagerank * 6;
+            dummy.position.set(n.x, n.y, n.z);
+            dummy.scale.setScalar(size);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+
+            color.copy(clusterColors[n.cluster % MAX_CLUSTERS]);
+            mesh.setColorAt(i, color);
+        }
+
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }, [nodes, clusterColors]);
+
+    useFrame(({ clock }) => {
+        const mesh = meshRef.current;
+        if (!mesh) return;
+
+        const time = clock.getElapsedTime();
+        const dummy = new THREE.Object3D();
+
+        for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            const baseSize = 0.5 + n.pagerank * 6;
+            const pulse = 1.0 + Math.sin(time * 1.5 + phases[i]) * 0.08;
+            let scale = baseSize * pulse;
+
+            if (selectedId) {
+                if (n.id === selectedId) {
+                    scale *= 1.5;
+                } else if (connectedIds.has(n.id)) {
+                    scale *= 1.1;
+                } else {
+                    scale *= 0.5;
+                }
+            }
+
+            dummy.position.set(n.x, n.y, n.z);
+            dummy.scale.setScalar(scale);
             dummy.updateMatrix();
             mesh.setMatrixAt(i, dummy.matrix);
         }
         mesh.instanceMatrix.needsUpdate = true;
-    }, [nodes]);
-
-    useEffect(() => {
-        const geo = meshRef.current?.geometry;
-        if (!geo) return;
-
-        geo.setAttribute('aCluster', clusterAttr);
-        geo.setAttribute('aPagerank', pagerankAttr);
-        geo.setAttribute('aCentrality', centralityAttr);
-        geo.setAttribute('aPhase', phaseAttr);
-        geo.setAttribute('aFiring', firingAttr);
-    }, [clusterAttr, pagerankAttr, centralityAttr, phaseAttr, firingAttr]);
-
-    useFrame((_, delta) => {
-        material.uniforms.uTime.value += delta;
-
-        if (selectedId) {
-            const idx = nodes.findIndex((n) => n.id === selectedId);
-            material.uniforms.uSelectedIndex.value = idx;
-            material.uniforms.uDimAmount.value = Math.min(
-                material.uniforms.uDimAmount.value + delta * 3,
-                1,
-            );
-        } else {
-            material.uniforms.uSelectedIndex.value = -1;
-            material.uniforms.uDimAmount.value = Math.max(
-                material.uniforms.uDimAmount.value - delta * 3,
-                0,
-            );
-        }
-
-        const firing = firingRef.current;
-        let needsUpdate = false;
-        for (let i = 0; i < firing.length; i++) {
-            if (firing[i] > 0) {
-                firing[i] = Math.max(0, firing[i] - delta * 2);
-                needsUpdate = true;
-            }
-        }
-        if (needsUpdate) {
-            firingAttr.needsUpdate = true;
-        }
     });
 
     const handleClick = useCallback(
@@ -137,50 +96,44 @@ export function Neurons({
             const mesh = meshRef.current;
             if (!mesh) return;
 
-            const intersects = raycaster.intersectObject(mesh);
-            if (intersects.length > 0 && intersects[0].instanceId !== undefined) {
-                const id = intersects[0].instanceId;
-                firingRef.current[id] = 1;
-                firingAttr.needsUpdate = true;
-                onNodeClick(nodes[id].id);
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObject(mesh);
+            if (hits.length > 0 && hits[0].instanceId !== undefined) {
+                onNodeClick(nodes[hits[0].instanceId].id);
             }
         },
-        [nodes, onNodeClick, raycaster, firingAttr],
+        [nodes, onNodeClick, raycaster, pointer, camera],
     );
 
-    const handlePointerMove = useCallback(
-        (e: { stopPropagation: () => void }) => {
-            e.stopPropagation();
-            const mesh = meshRef.current;
-            if (!mesh) return;
+    const handlePointerMove = useCallback(() => {
+        const mesh = meshRef.current;
+        if (!mesh) return;
 
-            const intersects = raycaster.intersectObject(mesh);
-            if (intersects.length > 0 && intersects[0].instanceId !== undefined) {
-                const id = intersects[0].instanceId;
-                const point = intersects[0].point;
-                const projected = point.clone().project(camera);
-                const x = (projected.x * 0.5 + 0.5) * size.width;
-                const y = (-projected.y * 0.5 + 0.5) * size.height;
-                onNodeHover(nodes[id].id, { x, y });
-            } else {
-                onNodeHover(null, null);
-            }
-        },
-        [nodes, onNodeHover, raycaster, camera, size],
-    );
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObject(mesh);
+        if (hits.length > 0 && hits[0].instanceId !== undefined) {
+            const idx = hits[0].instanceId;
+            const screenPos = hits[0].point.clone().project(camera);
+            const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+            onNodeHover(nodes[idx].id, { x, y });
+        } else {
+            onNodeHover(null, null);
+        }
+    }, [nodes, onNodeHover, raycaster, pointer, camera]);
 
-    const handlePointerLeave = useCallback(() => {
-        onNodeHover(null, null);
-    }, [onNodeHover]);
+    if (nodes.length === 0) return null;
 
     return (
         <instancedMesh
             ref={meshRef}
-            args={[geometry, material, nodes.length]}
-            frustumCulled={false}
+            args={[geometry, undefined!, nodes.length]}
             onClick={handleClick}
             onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
-        />
+            onPointerLeave={() => onNodeHover(null, null)}
+            frustumCulled={false}
+        >
+            <meshBasicMaterial attach="material" transparent opacity={0.9} />
+        </instancedMesh>
     );
 }

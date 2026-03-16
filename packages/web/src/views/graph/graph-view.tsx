@@ -1,6 +1,7 @@
-import { Suspense, lazy, useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { GraphData, NodeContext } from '@/lib/types';
+import type { BrainSceneHandle } from './brain-scene';
 import { NodeSidebar } from './node-sidebar';
 import { GraphControls } from './graph-controls';
 
@@ -11,6 +12,7 @@ const BrainScene = lazy(() =>
 );
 
 export function GraphView() {
+    const sceneRef = useRef<BrainSceneHandle>(null);
     const [graphData, setGraphData] = useState<GraphData | null>(null);
     const [selectedNode, setSelectedNode] = useState<NodeContext | null>(null);
     const [loading, setLoading] = useState(true);
@@ -23,6 +25,36 @@ export function GraphView() {
             .catch((e) => setError(e.message))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+            switch (e.key) {
+                case '+':
+                case '=':
+                    sceneRef.current?.zoomIn();
+                    break;
+                case '-':
+                case '_':
+                    sceneRef.current?.zoomOut();
+                    break;
+                case '0':
+                    sceneRef.current?.resetView();
+                    break;
+                case 'Escape':
+                    setSelectedNode(null);
+                    break;
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleZoomIn = useCallback(() => sceneRef.current?.zoomIn(), []);
+    const handleZoomOut = useCallback(() => sceneRef.current?.zoomOut(), []);
+    const handleResetView = useCallback(() => sceneRef.current?.resetView(), []);
 
     async function handleNodeClick(nodeId: string) {
         try {
@@ -54,7 +86,7 @@ export function GraphView() {
             {graphData && (
                 <Suspense
                     fallback={
-                        <div className="flex h-full items-center justify-center bg-[#050508]">
+                        <div className="flex h-full items-center justify-center bg-[#050510]">
                             <div className="text-sm text-text-muted">
                                 Initializing neural network...
                             </div>
@@ -62,6 +94,7 @@ export function GraphView() {
                     }
                 >
                     <BrainScene
+                        ref={sceneRef}
                         data={graphData}
                         onNodeClick={handleNodeClick}
                         selectedNodeId={selectedNode?.node.id ?? null}
@@ -69,7 +102,13 @@ export function GraphView() {
                 </Suspense>
             )}
 
-            <GraphControls />
+            <GraphControls
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onResetView={handleResetView}
+                nodeCount={graphData?.nodes.length}
+                edgeCount={graphData?.edges.length}
+            />
 
             {selectedNode && (
                 <NodeSidebar context={selectedNode} onClose={() => setSelectedNode(null)} />

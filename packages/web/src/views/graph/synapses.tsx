@@ -68,8 +68,8 @@ export function Synapses({
         return edges.map((edge, i) => {
             const curve = curves[i];
             const isCall = edge.type === 'calls';
-            const radius = isCall ? 0.18 : 0.08;
-            const baseOpacity = isCall ? 0.25 : 0.12;
+            const radius = isCall ? 0.25 : 0.12;
+            const baseOpacity = isCall ? 0.45 : 0.25;
 
             const dimmed =
                 selectedId !== null &&

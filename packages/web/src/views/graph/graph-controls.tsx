@@ -1,33 +1,62 @@
-export function GraphControls() {
+interface GraphControlsProps {
+    onZoomIn: () => void;
+    onZoomOut: () => void;
+    onResetView: () => void;
+    nodeCount?: number;
+    edgeCount?: number;
+}
+
+export function GraphControls({
+    onZoomIn,
+    onZoomOut,
+    onResetView,
+    nodeCount,
+    edgeCount,
+}: GraphControlsProps) {
     return (
-        <div className="absolute bottom-4 left-4 flex gap-2">
-            <div className="flex items-center gap-4 rounded-lg bg-surface-1/90 px-3 py-2 text-xs text-text-secondary backdrop-blur-sm">
-                <LegendItem type="pulse" label="Neuron" />
-                <LegendItem type="line" label="Synapse" />
-                <LegendItem type="dot" label="Impulse" />
+        <>
+            <div className="absolute right-4 top-4 flex flex-col gap-1.5">
+                <ControlButton label="+" onClick={onZoomIn} title="Zoom in" />
+                <ControlButton label="-" onClick={onZoomOut} title="Zoom out" />
+                <ControlButton label="0" onClick={onResetView} title="Reset view" />
             </div>
-            <div className="flex items-center gap-3 rounded-lg bg-surface-1/90 px-3 py-2 text-xs text-text-muted backdrop-blur-sm">
+
+            <div className="absolute bottom-4 left-4 flex items-center gap-3 rounded-lg bg-surface-1/80 px-3 py-2 text-xs text-text-muted backdrop-blur-sm">
+                {nodeCount !== undefined && (
+                    <span>
+                        <span className="text-text-secondary">{nodeCount}</span> nodes
+                    </span>
+                )}
+                {edgeCount !== undefined && (
+                    <span>
+                        <span className="text-text-secondary">{edgeCount}</span> edges
+                    </span>
+                )}
+                <span className="text-text-muted/50">|</span>
                 <span>Scroll: zoom</span>
                 <span>Drag: orbit</span>
                 <span>Click: inspect</span>
             </div>
-        </div>
+        </>
     );
 }
 
-function LegendItem({ type, label }: { type: 'pulse' | 'line' | 'dot'; label: string }) {
+function ControlButton({
+    label,
+    onClick,
+    title,
+}: {
+    label: string;
+    onClick: () => void;
+    title: string;
+}) {
     return (
-        <span className="flex items-center gap-1.5">
-            {type === 'pulse' && (
-                <span className="inline-block size-2.5 animate-pulse rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.6)]" />
-            )}
-            {type === 'line' && (
-                <span className="inline-block h-px w-4 bg-gradient-to-r from-blue-400/60 to-transparent" />
-            )}
-            {type === 'dot' && (
-                <span className="inline-block size-1.5 rounded-full bg-white shadow-[0_0_4px_rgba(255,255,255,0.8)]" />
-            )}
+        <button
+            onClick={onClick}
+            title={title}
+            className="flex size-8 items-center justify-center rounded-md bg-surface-1/80 text-sm text-text-secondary backdrop-blur-sm transition-colors hover:bg-surface-1 hover:text-text-primary"
+        >
             {label}
-        </span>
+        </button>
     );
 }

@@ -7,7 +7,7 @@ interface AtmosphereProps {
     spread?: number;
 }
 
-export function Atmosphere({ count = 800, spread = 300 }: AtmosphereProps) {
+export function Atmosphere({ count = 1000, spread = 500 }: AtmosphereProps) {
     const pointsRef = useRef<THREE.Points>(null);
 
     const { positions, velocities } = useMemo(() => {

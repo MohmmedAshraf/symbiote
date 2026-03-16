@@ -11,25 +11,25 @@ import * as THREE from 'three';
 import type { GraphData, LayoutNode, LayoutEdge, BrainLayoutResult } from '@/lib/types';
 
 const CLUSTER_PALETTE = [
-    '#5b8dea',
+    '#60a5fa',
     '#34d399',
     '#c084fc',
-    '#f59e0b',
-    '#ef4444',
-    '#06b6d4',
-    '#ec4899',
-    '#84cc16',
-    '#f97316',
-    '#8b5cf6',
-    '#14b8a6',
+    '#fbbf24',
+    '#f87171',
+    '#22d3ee',
+    '#f472b6',
+    '#a3e635',
+    '#fb923c',
+    '#a78bfa',
+    '#2dd4bf',
     '#e879f9',
     '#facc15',
-    '#fb923c',
-    '#a3e635',
-    '#2dd4bf',
+    '#fb7185',
+    '#86efac',
+    '#67e8f9',
     '#c4b5fd',
     '#fca5a5',
-    '#67e8f9',
+    '#38bdf8',
     '#fde68a',
 ];
 
@@ -50,21 +50,98 @@ interface SimNode {
     filePath: string;
 }
 
+function autoCluster(
+    nodes: { id: string; filePath: string; metadata?: { cluster?: number } }[],
+): Map<string, number> {
+    const clusterMap = new Map<string, number>();
+    const dirToCluster = new Map<string, number>();
+    let nextCluster = 0;
+
+    for (const n of nodes) {
+        if (n.metadata?.cluster !== undefined) {
+            clusterMap.set(n.id, n.metadata.cluster);
+            continue;
+        }
+
+        const parts = n.filePath.replace(/^\//, '').split('/');
+        const dir = parts.length > 2 ? parts.slice(0, 2).join('/') : (parts[0] ?? 'root');
+
+        if (!dirToCluster.has(dir)) {
+            dirToCluster.set(dir, nextCluster++);
+        }
+        clusterMap.set(n.id, dirToCluster.get(dir)!);
+    }
+
+    return clusterMap;
+}
+
+function brainShapedClusterCenters(
+    clusterIds: number[],
+): Map<number, { x: number; y: number; z: number }> {
+    const centers = new Map<number, { x: number; y: number; z: number }>();
+    const count = clusterIds.length;
+    if (count === 0) return centers;
+
+    const brainWidth = 120;
+    const brainHeight = 70;
+    const brainDepth = 90;
+
+    for (let i = 0; i < count; i++) {
+        const hemisphere = i % 2 === 0 ? 1 : -1;
+        const t = i / Math.max(count - 1, 1);
+
+        const yAngle = (t - 0.3) * Math.PI * 0.8;
+        let y = Math.sin(yAngle) * brainHeight * 0.4;
+
+        const lobe = Math.floor(i / 2) % 4;
+        let x: number, z: number;
+
+        switch (lobe) {
+            case 0:
+                x = hemisphere * brainWidth * (0.3 + t * 0.2);
+                z = brainDepth * (0.3 - t * 0.1);
+                break;
+            case 1:
+                x = hemisphere * brainWidth * (0.2 + t * 0.3);
+                z = -brainDepth * (0.1 + t * 0.2);
+                break;
+            case 2:
+                x = hemisphere * brainWidth * (0.15 + t * 0.15);
+                z = -brainDepth * (0.25 + t * 0.1);
+                break;
+            default:
+                x = hemisphere * brainWidth * (0.35 + t * 0.1);
+                z = brainDepth * (0.1 + t * 0.15);
+                break;
+        }
+
+        const jitterScale = 8;
+        x += (Math.random() - 0.5) * jitterScale;
+        y += (Math.random() - 0.5) * jitterScale;
+        z += (Math.random() - 0.5) * jitterScale;
+
+        centers.set(clusterIds[i], { x, y, z });
+    }
+
+    return centers;
+}
+
 export function computeBrainLayout(data: GraphData): BrainLayoutResult {
+    const clusterAssignments = autoCluster(data.nodes);
     const clusters = new Set<number>();
     const nodeMap = new Map<string, SimNode>();
 
     const simNodes: SimNode[] = data.nodes.map((n) => {
-        const cluster = n.metadata?.cluster ?? 0;
+        const cluster = clusterAssignments.get(n.id) ?? 0;
         clusters.add(cluster);
         const node: SimNode = {
             id: n.id,
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200,
-            z: (Math.random() - 0.5) * 200,
+            x: (Math.random() - 0.5) * 80,
+            y: (Math.random() - 0.5) * 50,
+            z: (Math.random() - 0.5) * 60,
             cluster,
-            pagerank: n.metadata?.pagerank ?? 0.001,
-            centrality: n.metadata?.centrality ?? 0,
+            pagerank: n.metadata?.pagerank ?? 0.01,
+            centrality: n.metadata?.centrality ?? 0.15,
             type: n.type,
             name: n.name,
             filePath: n.filePath,
@@ -81,62 +158,45 @@ export function computeBrainLayout(data: GraphData): BrainLayoutResult {
             type: e.type,
         }));
 
-    const clusterCenters = new Map<number, { x: number; y: number; z: number }>();
-    const clusterArr = [...clusters];
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    clusterArr.forEach((c, i) => {
-        const theta = goldenAngle * i;
-        const phi = Math.acos(1 - (2 * (i + 0.5)) / clusterArr.length);
-        const r = 120;
-        clusterCenters.set(c, {
-            x: r * Math.sin(phi) * Math.cos(theta),
-            y: r * Math.sin(phi) * Math.sin(theta),
-            z: r * Math.cos(phi),
-        });
-    });
+    const clusterCenters = brainShapedClusterCenters([...clusters]);
 
     const simulation = forceSimulation(simNodes, 3)
-        .force(
-            'charge',
-            forceManyBody().strength((d: unknown) => {
-                return -30 - (d as SimNode).pagerank * 500;
-            }),
-        )
+        .force('charge', forceManyBody().strength(-8))
         .force(
             'link',
             forceLink(simLinks)
                 .id((d: unknown) => (d as SimNode).id)
-                .distance(40)
+                .distance(12)
                 .strength((link: unknown) => {
                     const l = link as { source: SimNode; target: SimNode };
-                    return l.source.cluster === l.target.cluster ? 0.8 : 0.1;
+                    return l.source.cluster === l.target.cluster ? 1.2 : 0.05;
                 }),
         )
-        .force('center', forceCenter(0, 0, 0).strength(0.02))
+        .force('center', forceCenter(0, 0, 0).strength(0.05))
         .force(
             'clusterX',
             forceX((d: unknown) => clusterCenters.get((d as SimNode).cluster)?.x ?? 0).strength(
-                0.15,
+                0.4,
             ),
         )
         .force(
             'clusterY',
             forceY((d: unknown) => clusterCenters.get((d as SimNode).cluster)?.y ?? 0).strength(
-                0.15,
+                0.4,
             ),
         )
         .force(
             'clusterZ',
             forceZ((d: unknown) => clusterCenters.get((d as SimNode).cluster)?.z ?? 0).strength(
-                0.15,
+                0.4,
             ),
         )
         .alpha(1)
-        .alphaDecay(0.02)
-        .velocityDecay(0.3)
+        .alphaDecay(0.03)
+        .velocityDecay(0.4)
         .stop();
 
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 200; i++) {
         simulation.tick();
     }
 

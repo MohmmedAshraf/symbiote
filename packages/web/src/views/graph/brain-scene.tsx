@@ -1,15 +1,27 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import {
+    useState,
+    useMemo,
+    useCallback,
+    useRef,
+    useEffect,
+    useImperativeHandle,
+    forwardRef,
+    Suspense,
+    Component,
+    type ReactNode,
+} from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import type { GraphData, LayoutNode } from '@/lib/types';
-import { computeBrainLayout, buildCurve } from './brain-layout';
-import { Neurons } from './neurons';
-import { Synapses } from './synapses';
-import { Impulses } from './impulses';
-import { Atmosphere } from './atmosphere';
+import type { GraphData, GraphNode, LayoutNode } from '@/lib/types';
+
+export interface BrainSceneHandle {
+    zoomIn: () => void;
+    zoomOut: () => void;
+    resetView: () => void;
+}
 import { NodeLabel } from './node-label';
+import brainCurvesData from './brain-curves.json';
 
 interface BrainSceneProps {
     data: GraphData;
@@ -17,166 +29,435 @@ interface BrainSceneProps {
     selectedNodeId: string | null;
 }
 
-const MAX_RENDERED_EDGES = 3000;
+const BRAIN_COLOR = new THREE.Color('#7b5fff');
+const FLASH_AMP = 3;
+const MOUSE_AMP = 0.016;
+const OP_RAMP = 0.05;
 
-function CameraController({ target }: { target: THREE.Vector3 | null }) {
-    const { camera } = useThree();
-    const targetRef = useRef<THREE.Vector3 | null>(null);
-    const progressRef = useRef(0);
+function BrainTubes() {
+    const groupRef = useRef<THREE.Group>(null);
+    const materialRef = useRef<THREE.ShaderMaterial>(null);
+    const mouseTarget = useRef(new THREE.Vector4(0, 0, 0, 0));
+    const mouseSmoothed = useRef(new THREE.Vector4(0, 0, 0, 0));
+    const { camera, raycaster, pointer } = useThree();
 
-    useEffect(() => {
-        if (target) {
-            targetRef.current = target.clone();
-            progressRef.current = 0;
-        }
-    }, [target]);
+    const colliderSphere = useMemo(() => {
+        const geo = new THREE.SphereGeometry(0.085, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ visible: false });
+        return new THREE.Mesh(geo, mat);
+    }, []);
 
-    useFrame((_, delta) => {
-        if (!targetRef.current || progressRef.current >= 1) return;
+    const { geometries, material } = useMemo(() => {
+        const paths = brainCurvesData as number[][];
+        const geos: THREE.BufferGeometry[] = [];
 
-        progressRef.current = Math.min(progressRef.current + delta * 1.2, 1);
-        const t = 1 - Math.pow(1 - progressRef.current, 3);
+        for (const flat of paths) {
+            const pts: THREE.Vector3[] = [];
+            for (let i = 0; i < flat.length; i += 3) {
+                pts.push(new THREE.Vector3(flat[i], flat[i + 1], flat[i + 2]));
+            }
+            const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5);
+            const tubeGeo = new THREE.TubeGeometry(curve, 64, 0.00025, 3, false);
 
-        const offset = new THREE.Vector3(30, 20, 30);
-        const destination = targetRef.current.clone().add(offset);
-        camera.position.lerp(destination, t);
-        camera.lookAt(targetRef.current);
-    });
+            const posCount = tubeGeo.attributes.position.count;
+            const progressAttr = new Float32Array(posCount * 2);
+            const uvs = tubeGeo.attributes.uv;
 
-    return null;
-}
-
-function SceneContent({
-    data,
-    onNodeClick,
-    selectedNodeId,
-    onHover,
-}: BrainSceneProps & {
-    onHover: (id: string | null, pos: { x: number; y: number } | null) => void;
-}) {
-    const layout = useMemo(() => computeBrainLayout(data), [data]);
-
-    const nodeClusterMap = useMemo(() => {
-        const map = new Map<string, number>();
-        for (const n of layout.nodes) {
-            map.set(n.id, n.cluster);
-        }
-        return map;
-    }, [layout]);
-
-    const connectedIds = useMemo(() => {
-        if (!selectedNodeId) return new Set<string>();
-        const ids = new Set<string>();
-        for (const e of layout.edges) {
-            if (e.sourceId === selectedNodeId) ids.add(e.targetId);
-            if (e.targetId === selectedNodeId) ids.add(e.sourceId);
-        }
-        return ids;
-    }, [selectedNodeId, layout.edges]);
-
-    const cameraTarget = useMemo(() => {
-        if (!selectedNodeId) return null;
-        const nodeMap = new Map(layout.nodes.map((n) => [n.id, n]));
-        const node = nodeMap.get(selectedNodeId);
-        if (!node) return null;
-        return new THREE.Vector3(node.x, node.y, node.z);
-    }, [selectedNodeId, layout.nodes]);
-
-    const culledEdges = useMemo(() => {
-        if (layout.edges.length <= MAX_RENDERED_EDGES) return layout.edges;
-
-        const nodePagerank = new Map<string, number>();
-        for (const n of layout.nodes) {
-            nodePagerank.set(n.id, n.pagerank);
+            for (let i = 0; i < posCount; i++) {
+                progressAttr[i * 2] = uvs.getX(i);
+                progressAttr[i * 2 + 1] = Math.random() * Math.PI * 2;
+            }
+            tubeGeo.setAttribute('progress', new THREE.BufferAttribute(progressAttr, 2));
+            geos.push(tubeGeo);
         }
 
-        const scored = layout.edges.map((e) => {
-            const srcRank = nodePagerank.get(e.sourceId) ?? 0;
-            const tgtRank = nodePagerank.get(e.targetId) ?? 0;
-            const typeBonus = e.type === 'calls' ? 0.5 : 0;
-            return { edge: e, score: srcRank + tgtRank + typeBonus };
+        const mat = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            vertexShader: /* glsl */ `
+                attribute vec2 progress;
+
+                uniform float time;
+                uniform vec4 mouseT;
+                uniform float flashAmp;
+                uniform float mouseAmp;
+
+                varying float vProg;
+                varying float vProgress;
+                varying float d;
+
+                void main() {
+                    vec3 p = position;
+
+                    vProg = smoothstep(-1.0, 1.0, sin(progress.y + progress.x * 6.0 + time * flashAmp));
+                    vProgress = progress.x;
+
+                    float dist = distance(p, mouseT.xyz);
+                    if (dist < mouseT.w) {
+                        vec3 v = normalize(p - mouseT.xyz);
+                        v *= (1.0 - dist / mouseT.w);
+                        p += v * mouseAmp;
+                    }
+
+                    vec4 mvPos = modelViewMatrix * vec4(p, 1.0);
+                    gl_Position = projectionMatrix * mvPos;
+
+                    d = 0.0;
+                }
+            `,
+            fragmentShader: /* glsl */ `
+                uniform vec3 color;
+                uniform float opRamp;
+                uniform bool glow;
+
+                varying float d;
+                varying float vProg;
+                varying float vProgress;
+
+                void main() {
+                    vec3 c = mix(color * 0.15, color * 2.5, vProg);
+
+                    float opacity = 0.9 * min(
+                        smoothstep(0.0, opRamp, vProgress),
+                        1.0 - smoothstep(1.0 - opRamp, 1.0, vProgress)
+                    );
+
+                    gl_FragColor = vec4(c * opacity, opacity);
+                }
+            `,
+            uniforms: {
+                time: { value: 0 },
+                mouseT: { value: new THREE.Vector4(0, 0, 0, 0) },
+                color: { value: new THREE.Vector3(BRAIN_COLOR.r, BRAIN_COLOR.g, BRAIN_COLOR.b) },
+                flashAmp: { value: FLASH_AMP },
+                mouseAmp: { value: MOUSE_AMP },
+                opRamp: { value: OP_RAMP },
+                glow: { value: false },
+            },
         });
 
-        scored.sort((a, b) => b.score - a.score);
-        return scored.slice(0, MAX_RENDERED_EDGES).map((s) => s.edge);
-    }, [layout]);
+        return { geometries: geos, material: mat };
+    }, []);
 
-    const curves = useMemo(() => {
-        return culledEdges.map((e) => buildCurve(e.sourcePos, e.targetPos));
-    }, [culledEdges]);
+    useFrame(({ clock }) => {
+        if (materialRef.current) {
+            materialRef.current.uniforms.time.value = clock.getElapsedTime();
+        }
+
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObject(colliderSphere);
+        if (hits.length > 0) {
+            const p = hits[0].point;
+            mouseTarget.current.set(p.x, p.y, p.z, 0.04);
+        } else {
+            mouseTarget.current.w *= 0.95;
+        }
+
+        mouseSmoothed.current.lerp(mouseTarget.current, 0.1);
+        if (materialRef.current) {
+            materialRef.current.uniforms.mouseT.value.copy(mouseSmoothed.current);
+        }
+    });
+
+    return (
+        <group ref={groupRef}>
+            <primitive object={colliderSphere} />
+            {geometries.map((geo, i) => (
+                <mesh key={i} geometry={geo}>
+                    <primitive
+                        object={material}
+                        ref={i === 0 ? materialRef : undefined}
+                        attach="material"
+                    />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+interface MappedNode {
+    node: GraphNode;
+    position: THREE.Vector3;
+}
+
+function mapNodesToBrain(nodes: GraphNode[]): MappedNode[] {
+    const paths = brainCurvesData as number[][];
+    const curves: THREE.CatmullRomCurve3[] = paths.map((flat) => {
+        const pts: THREE.Vector3[] = [];
+        for (let i = 0; i < flat.length; i += 3) {
+            pts.push(new THREE.Vector3(flat[i], flat[i + 1], flat[i + 2]));
+        }
+        return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5);
+    });
+
+    return nodes.map((node, i) => {
+        const curveIdx = i % curves.length;
+        const t = (i / nodes.length) * 0.9 + 0.05;
+        const pos = curves[curveIdx].getPointAt(t);
+        return { node, position: pos };
+    });
+}
+
+interface CodeNodesProps {
+    data: GraphData;
+    selectedId: string | null;
+    onNodeClick: (id: string) => void;
+    onNodeHover: (id: string | null, pos: { x: number; y: number } | null) => void;
+}
+
+function CodeNodes({ data, selectedId, onNodeClick, onNodeHover }: CodeNodesProps) {
+    const meshRef = useRef<THREE.InstancedMesh>(null);
+    const { camera, raycaster, pointer } = useThree();
+
+    const mapped = useMemo(() => mapNodesToBrain(data.nodes), [data.nodes]);
+
+    const geometry = useMemo(() => new THREE.SphereGeometry(0.001, 8, 8), []);
+
+    useEffect(() => {
+        const mesh = meshRef.current;
+        if (!mesh) return;
+
+        const dummy = new THREE.Object3D();
+        const color = new THREE.Color();
+
+        for (let i = 0; i < mapped.length; i++) {
+            const m = mapped[i];
+            dummy.position.copy(m.position);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+
+            const isFile = m.node.type === 'file';
+            color.set(isFile ? '#4a90d9' : '#c084fc');
+            mesh.setColorAt(i, color);
+        }
+
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }, [mapped]);
+
+    const handleClick = useCallback(
+        (e: { stopPropagation: () => void }) => {
+            e.stopPropagation();
+            const mesh = meshRef.current;
+            if (!mesh) return;
+
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObject(mesh);
+            if (hits.length > 0 && hits[0].instanceId !== undefined) {
+                onNodeClick(mapped[hits[0].instanceId].node.id);
+            }
+        },
+        [mapped, onNodeClick, raycaster, pointer, camera],
+    );
+
+    const handlePointerMove = useCallback(() => {
+        const mesh = meshRef.current;
+        if (!mesh) return;
+
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObject(mesh);
+        if (hits.length > 0 && hits[0].instanceId !== undefined) {
+            const idx = hits[0].instanceId;
+            const screenPos = hits[0].point.clone().project(camera);
+            const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+            const m = mapped[idx];
+            onNodeHover(m.node.id, { x, y });
+        } else {
+            onNodeHover(null, null);
+        }
+    }, [mapped, onNodeHover, raycaster, pointer, camera]);
+
+    if (mapped.length === 0) return null;
+
+    return (
+        <instancedMesh
+            ref={meshRef}
+            args={[geometry, undefined!, mapped.length]}
+            onClick={handleClick}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={() => onNodeHover(null, null)}
+            frustumCulled={false}
+        >
+            <meshBasicMaterial
+                attach="material"
+                transparent
+                opacity={0.8}
+                depthWrite={false}
+                blending={THREE.AdditiveBlending}
+            />
+        </instancedMesh>
+    );
+}
+
+function Particles({ count = 1200, spread = 0.2 }: { count?: number; spread?: number }) {
+    const pointsRef = useRef<THREE.Points>(null);
+
+    const positions = useMemo(() => {
+        const pos = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+            const i3 = i * 3;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 0.01 + Math.random() * spread;
+            pos[i3] = r * Math.sin(phi) * Math.cos(theta);
+            pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            pos[i3 + 2] = r * Math.cos(phi);
+        }
+        return pos;
+    }, [count, spread]);
+
+    useFrame(({ clock }) => {
+        const pts = pointsRef.current;
+        if (!pts) return;
+        pts.rotation.y = clock.getElapsedTime() * 0.015;
+        pts.rotation.x = Math.sin(clock.getElapsedTime() * 0.01) * 0.05;
+    });
+
+    const particleMaterial = useMemo(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d')!;
+        const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+        gradient.addColorStop(0, 'rgba(180, 140, 255, 1)');
+        gradient.addColorStop(0.3, 'rgba(140, 100, 200, 0.6)');
+        gradient.addColorStop(1, 'rgba(100, 60, 160, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 32, 32);
+        const texture = new THREE.CanvasTexture(canvas);
+        return new THREE.PointsMaterial({
+            size: 0.0015,
+            map: texture,
+            transparent: true,
+            opacity: 0.7,
+            sizeAttenuation: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+        });
+    }, []);
+
+    return (
+        <points ref={pointsRef} material={particleMaterial}>
+            <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+            </bufferGeometry>
+        </points>
+    );
+}
+
+const DEFAULT_CAM_Z = 0.2;
+
+const SceneContent = forwardRef<
+    BrainSceneHandle,
+    BrainSceneProps & {
+        onHover: (id: string | null, pos: { x: number; y: number } | null) => void;
+    }
+>(function SceneContent({ data, onNodeClick, selectedNodeId, onHover }, ref) {
+    const { camera } = useThree();
+
+    useImperativeHandle(ref, () => ({
+        zoomIn: () => {
+            camera.position.z = Math.max(0.08, camera.position.z * 0.85);
+        },
+        zoomOut: () => {
+            camera.position.z = Math.min(0.4, camera.position.z * 1.15);
+        },
+        resetView: () => {
+            camera.position.set(0, 0.01, DEFAULT_CAM_Z);
+        },
+    }));
+
+    useFrame(({ pointer }) => {
+        camera.position.x += (pointer.x * 0.015 - camera.position.x) * 0.03;
+        camera.position.y += (-pointer.y * 0.015 + 0.01 - camera.position.y) * 0.03;
+        camera.lookAt(0, 0, 0);
+    });
 
     return (
         <>
-            <color attach="background" args={['#050508']} />
-            <fogExp2 attach="fog" args={['#050508', 0.003]} />
+            <color attach="background" args={['#050510']} />
 
-            <ambientLight intensity={0.15} />
-            <directionalLight position={[50, 80, 30]} intensity={0.3} />
-
-            <CameraController target={cameraTarget} />
             <OrbitControls
                 makeDefault
                 enableDamping
                 dampingFactor={0.05}
-                minDistance={20}
-                maxDistance={500}
+                enableZoom
+                minDistance={0.08}
+                maxDistance={0.4}
+                enablePan={false}
             />
 
-            <Neurons
-                nodes={layout.nodes}
+            <BrainTubes />
+            <CodeNodes
+                data={data}
                 selectedId={selectedNodeId}
-                connectedIds={connectedIds}
                 onNodeClick={onNodeClick}
                 onNodeHover={onHover}
             />
-
-            <Synapses
-                edges={culledEdges}
-                curves={curves}
-                nodeClusterMap={nodeClusterMap}
-                selectedId={selectedNodeId}
-                connectedIds={connectedIds}
-            />
-
-            <Impulses
-                edges={culledEdges}
-                curves={curves}
-                nodeClusterMap={nodeClusterMap}
-                selectedId={selectedNodeId}
-            />
-
-            <Atmosphere />
-
-            <EffectComposer>
-                <Bloom
-                    intensity={1.5}
-                    luminanceThreshold={0.6}
-                    luminanceSmoothing={0.4}
-                    mipmapBlur
-                />
-                <Vignette offset={0.3} darkness={0.7} />
-            </EffectComposer>
         </>
     );
+});
+
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+    state = { error: null as string | null };
+    static getDerivedStateFromError(err: Error) {
+        return { error: err.message };
+    }
+    render() {
+        if (this.state.error) {
+            return (
+                <div className="flex h-full items-center justify-center bg-[#050510] text-red-400 text-sm p-4">
+                    <div>
+                        <div className="font-medium mb-1">Scene error</div>
+                        <div className="text-text-muted text-xs">{this.state.error}</div>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
 }
 
-export function BrainScene({ data, onNodeClick, selectedNodeId }: BrainSceneProps) {
+export const BrainScene = forwardRef<BrainSceneHandle, BrainSceneProps>(function BrainScene(
+    { data, onNodeClick, selectedNodeId },
+    ref,
+) {
+    const sceneRef = useRef<BrainSceneHandle>(null);
     const [hoveredNode, setHoveredNode] = useState<LayoutNode | null>(null);
     const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
 
-    const layout = useMemo(() => computeBrainLayout(data), [data]);
+    useImperativeHandle(ref, () => ({
+        zoomIn: () => sceneRef.current?.zoomIn(),
+        zoomOut: () => sceneRef.current?.zoomOut(),
+        resetView: () => sceneRef.current?.resetView(),
+    }));
+
     const nodeMap = useMemo(() => {
-        const map = new Map<string, LayoutNode>();
-        for (const n of layout.nodes) {
-            map.set(n.id, n);
-        }
+        const map = new Map<string, GraphNode>();
+        for (const n of data.nodes) map.set(n.id, n);
         return map;
-    }, [layout]);
+    }, [data.nodes]);
 
     const handleHover = useCallback(
         (id: string | null, pos: { x: number; y: number } | null) => {
             if (id) {
-                setHoveredNode(nodeMap.get(id) ?? null);
+                const node = nodeMap.get(id);
+                if (node) {
+                    setHoveredNode({
+                        id: node.id,
+                        x: 0,
+                        y: 0,
+                        z: 0,
+                        cluster: 0,
+                        pagerank: 0,
+                        centrality: 0,
+                        type: node.type,
+                        name: node.name,
+                        filePath: node.filePath,
+                    });
+                }
                 setHoverPos(pos);
             } else {
                 setHoveredNode(null);
@@ -187,25 +468,25 @@ export function BrainScene({ data, onNodeClick, selectedNodeId }: BrainSceneProp
     );
 
     return (
-        <div className="relative h-full w-full">
-            <Canvas
-                camera={{ position: [0, 80, 200], fov: 60, near: 0.1, far: 2000 }}
-                gl={{
-                    antialias: true,
-                    toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: 1.2,
-                }}
-                dpr={[1, 2]}
-            >
-                <SceneContent
-                    data={data}
-                    onNodeClick={onNodeClick}
-                    selectedNodeId={selectedNodeId}
-                    onHover={handleHover}
-                />
-            </Canvas>
-
-            <NodeLabel node={hoveredNode} position={hoverPos} />
-        </div>
+        <SceneErrorBoundary>
+            <div className="relative h-full w-full">
+                <Canvas
+                    camera={{ position: [0, 0.01, 0.2], fov: 75, near: 0.001, far: 10 }}
+                    gl={{ antialias: true, alpha: true }}
+                    dpr={[1, 1.5]}
+                >
+                    <Suspense fallback={null}>
+                        <SceneContent
+                            ref={sceneRef}
+                            data={data}
+                            onNodeClick={onNodeClick}
+                            selectedNodeId={selectedNodeId}
+                            onHover={handleHover}
+                        />
+                    </Suspense>
+                </Canvas>
+                <NodeLabel node={hoveredNode} position={hoverPos} />
+            </div>
+        </SceneErrorBoundary>
     );
-}
+});
