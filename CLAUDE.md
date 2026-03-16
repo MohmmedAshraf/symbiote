@@ -1,4 +1,4 @@
-# Synapse
+# Symbiote
 
 AI-powered project brain and developer DNA engine. A living, queryable knowledge layer for your codebase.
 
@@ -20,18 +20,18 @@ AI-powered project brain and developer DNA engine. A living, queryable knowledge
 ## Architecture
 
 - `packages/cli/` — Core engine, CLI, MCP server
-  - `src/core/` — Scanner, parser, graph queries, language detection
-  - `src/storage/` — SQLite database, repository (CRUD)
-  - `src/dna/` — Developer DNA engine (capture, propose, manage)
-  - `src/mcp/` — MCP server (tools, resources, transports)
-  - `src/brain/` — Project brain (intent layer, health analysis)
-  - `src/utils/` — File walking, hashing, config
-  - `bin/` — CLI entry point
+    - `src/core/` — Scanner, parser, graph queries, language detection
+    - `src/storage/` — SQLite database, repository (CRUD)
+    - `src/dna/` — Developer DNA engine (capture, propose, manage)
+    - `src/mcp/` — MCP server (tools, resources, transports)
+    - `src/brain/` — Project brain (intent layer, health analysis)
+    - `src/utils/` — File walking, hashing, config
+    - `bin/` — CLI entry point
 - `packages/web/` — Web UI (Vite + React)
-  - `src/views/graph/` — 3D brain graph
-  - `src/views/chat/` — Ask Your Project
-  - `src/views/health/` — Health Pulse dashboard
-  - `src/views/dna/` — DNA Lab
+    - `src/views/graph/` — 3D brain graph
+    - `src/views/chat/` — Ask Your Project
+    - `src/views/health/` — Health Pulse dashboard
+    - `src/views/dna/` — DNA Lab
 
 ## Conventions
 
@@ -62,8 +62,8 @@ AI-powered project brain and developer DNA engine. A living, queryable knowledge
 ## Key Files
 
 - `.brain/` — Per-project brain directory (gitignored, auto-generated)
-- `~/.synapse/` — Global developer DNA
-- `~/.synapse/dna/` — DNA entries (style, preferences, anti-patterns, decisions)
+- `~/.symbiote/` — Global developer DNA
+- `~/.symbiote/dna/` — DNA entries (style, preferences, anti-patterns, decisions)
 
 ## Testing
 
@@ -75,19 +75,19 @@ AI-powered project brain and developer DNA engine. A living, queryable knowledge
 ## CLI Commands
 
 ```
-npx synapse              # Scan + launch server + UI
-npx synapse init         # First-time setup
-npx synapse scan         # Rescan codebase
-npx synapse scan --force # Full rescan
-npx synapse serve        # MCP server + web UI
-npx synapse mcp          # MCP server only (stdio)
-npx synapse dna          # View/manage DNA
+npx symbiote              # Scan + launch server + UI
+npx symbiote init         # First-time setup
+npx symbiote scan         # Rescan codebase
+npx symbiote scan --force # Full rescan
+npx symbiote serve        # MCP server + web UI
+npx symbiote mcp          # MCP server only (stdio)
+npx symbiote dna          # View/manage DNA
 ```
 
 ## MCP Server
 
 - 11 tools: get_developer_dna, get_project_overview, get_context_for_file, query_graph, semantic_search, get_constraints, get_decisions, get_health, propose_decision, propose_constraint, record_instruction
-- 3 resources: synapse://dna, synapse://project/overview, synapse://project/health
+- 3 resources: symbiote://dna, symbiote://project/overview, symbiote://project/health
 - stdio transport for editor integration, HTTP for web UI
 - Zod schemas for all tool inputs
 
@@ -109,8 +109,9 @@ When implementing from plans, convert indentation and quote style accordingly.
 
 Design specs and implementation plans are in `docs/` (gitignored).
 Read them for full architecture context:
-- `docs/superpowers/specs/2026-03-16-synapse-design.md`
-- `docs/superpowers/plans/2026-03-16-synapse-plan-{1..5}-*.md`
+
+- `docs/superpowers/specs/2026-03-16-symbiote-design.md`
+- `docs/superpowers/plans/2026-03-16-symbiote-plan-{1..5}-*.md`
 
 ## Author
 

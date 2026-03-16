@@ -7,7 +7,7 @@
 A living, queryable knowledge layer for your codebase that makes every AI coding tool understand your project and your style.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/synapse.svg)](https://www.npmjs.com/package/synapse)
+[![npm version](https://img.shields.io/npm/v/symbiote-cli.svg)](https://www.npmjs.com/package/symbiote-cli)
 
 </div>
 
@@ -22,10 +22,10 @@ AI coding assistants lose context every session. They hallucinate, ignore your c
 One command. Every AI tool. Zero cold start.
 
 ```bash
-npx synapse
+npx symbiote
 ```
 
-Synapse scans your codebase and builds a **living project brain** — a knowledge graph of every function, class, import, and dependency. Then it layers on your **Developer DNA** — your personal coding style, preferences, and patterns learned from your corrections and instructions across every project you work on.
+Symbiote scans your codebase and builds a **living project brain** — a knowledge graph of every function, class, import, and dependency. Then it layers on your **Developer DNA** — your personal coding style, preferences, and patterns learned from your corrections and instructions across every project you work on.
 
 Any AI tool that connects via MCP instantly understands both your project and you.
 
@@ -42,7 +42,7 @@ Any AI tool that connects via MCP instantly understands both your project and yo
 
 - **Learned From You** — Built from your corrections and instructions to AI, not from AI-generated code
 - **Follows You Everywhere** — One DNA across all your projects, zero cold start
-- **Always Evolving** — Synapse proposes DNA updates as you work, you approve or reject
+- **Always Evolving** — Symbiote proposes DNA updates as you work, you approve or reject
 - **Non-Blocking** — Review DNA proposals in the dashboard when you feel like it, or don't
 
 ### Visual Brain
@@ -56,17 +56,17 @@ Any AI tool that connects via MCP instantly understands both your project and yo
 
 ```bash
 # Initialize in any project
-npx synapse
+npx symbiote
 
 # Connect to Claude Code
-claude mcp add synapse -- npx synapse mcp
+claude mcp add symbiote -- npx symbiote mcp
 
 # Connect to Cursor (~/.cursor/mcp.json)
 {
     "mcpServers": {
-        "synapse": {
+        "symbiote": {
             "command": "npx",
-            "args": ["synapse", "mcp"]
+            "args": ["symbiote", "mcp"]
         }
     }
 }
@@ -75,13 +75,13 @@ claude mcp add synapse -- npx synapse mcp
 ## CLI
 
 ```bash
-npx synapse              # Scan + launch server + UI
-npx synapse init         # First-time project setup
-npx synapse scan         # Rescan codebase
-npx synapse scan --force # Full rescan (ignore cache)
-npx synapse serve        # MCP server + web UI
-npx synapse mcp          # MCP server only (stdio, for editors)
-npx synapse dna          # View and manage your Developer DNA
+npx symbiote              # Scan + launch server + UI
+npx symbiote init         # First-time project setup
+npx symbiote scan         # Rescan codebase
+npx symbiote scan --force # Full rescan (ignore cache)
+npx symbiote serve        # MCP server + web UI
+npx symbiote mcp          # MCP server only (stdio, for editors)
+npx symbiote dna          # View and manage your Developer DNA
 ```
 
 ## How It Works
@@ -89,34 +89,34 @@ npx synapse dna          # View and manage your Developer DNA
 ```
 You code normally
     ↓
-Synapse watches, builds a knowledge graph of your codebase
+Symbiote watches, builds a knowledge graph of your codebase
     ↓
 AI tool connects via MCP
     ↓
-Synapse provides: project architecture + your coding style + active constraints
+Symbiote provides: project architecture + your coding style + active constraints
     ↓
 AI writes code that actually fits your project and your preferences
     ↓
-You correct the AI? Synapse captures it as a DNA update
+You correct the AI? Symbiote captures it as a DNA update
     ↓
 Next session, any project → AI already knows
 ```
 
 ## MCP Tools
 
-| Tool | Description |
-|---|---|
-| `get_developer_dna` | Your coding style, preferences, and anti-patterns |
-| `get_project_overview` | Tech stack, structure, key modules, entry points |
-| `get_context_for_file` | Dependencies, dependents, related constraints |
-| `query_graph` | Search symbols, trace call chains |
-| `semantic_search` | Natural language search over your codebase |
-| `get_constraints` | Active project constraints and rules |
-| `get_decisions` | Architectural decisions and rationale |
-| `get_health` | Code health: dead code, cycles, violations |
-| `propose_decision` | AI writes back a decision it discovered |
-| `propose_constraint` | AI writes back a constraint it inferred |
-| `record_instruction` | Captures your corrections for DNA learning |
+| Tool                   | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| `get_developer_dna`    | Your coding style, preferences, and anti-patterns |
+| `get_project_overview` | Tech stack, structure, key modules, entry points  |
+| `get_context_for_file` | Dependencies, dependents, related constraints     |
+| `query_graph`          | Search symbols, trace call chains                 |
+| `semantic_search`      | Natural language search over your codebase        |
+| `get_constraints`      | Active project constraints and rules              |
+| `get_decisions`        | Architectural decisions and rationale             |
+| `get_health`           | Code health: dead code, cycles, violations        |
+| `propose_decision`     | AI writes back a decision it discovered           |
+| `propose_constraint`   | AI writes back a constraint it inferred           |
+| `record_instruction`   | Captures your corrections for DNA learning        |
 
 ## Language Support
 
@@ -127,7 +127,7 @@ Next session, any project → AI already knows
 ## What Gets Created
 
 ```
-~/.synapse/                  # Global (your Developer DNA)
+~/.symbiote/                 # Global (your Developer DNA)
 ├── config.json
 └── dna/
     ├── style/               # Coding patterns
@@ -137,7 +137,7 @@ Next session, any project → AI already knows
 
 your-project/.brain/         # Per-project (the brain)
 ├── config.json
-├── synapse.db               # Code graph (gitignored)
+├── symbiote.db              # Code graph (gitignored)
 └── intent/
     ├── overview.md          # Auto-generated project summary
     ├── decisions/           # Architectural decisions
