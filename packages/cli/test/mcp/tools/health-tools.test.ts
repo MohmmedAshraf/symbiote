@@ -25,7 +25,7 @@ describe('Health Tools', () => {
     let tmpHome: string;
 
     beforeEach(async () => {
-        db = createDatabase(':memory:');
+        db = await createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
             `symbiote-mcp-health-${Date.now()}`
@@ -57,44 +57,44 @@ describe('Health Tools', () => {
         await scanner.scan(FIXTURES_SRC);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
         fs.rmSync(tmpHome, { recursive: true, force: true });
     });
 
-    it('returns a health report with score', () => {
-        const result = handleGetHealth(ctx);
+    it('returns a health report with score', async () => {
+        const result = await handleGetHealth(ctx);
         expect(result.score).toBeGreaterThanOrEqual(0);
         expect(result.score).toBeLessThanOrEqual(100);
     });
 
-    it('returns category breakdowns', () => {
-        const result = handleGetHealth(ctx);
+    it('returns category breakdowns', async () => {
+        const result = await handleGetHealth(ctx);
         expect(result.categories.constraints).toBeDefined();
         expect(result.categories.circularDeps).toBeDefined();
         expect(result.categories.deadCode).toBeDefined();
         expect(result.categories.coupling).toBeDefined();
     });
 
-    it('returns constraint violations array', () => {
-        const result = handleGetHealth(ctx);
+    it('returns constraint violations array', async () => {
+        const result = await handleGetHealth(ctx);
         expect(Array.isArray(result.constraintViolations)).toBe(true);
     });
 
-    it('returns circular deps array', () => {
-        const result = handleGetHealth(ctx);
+    it('returns circular deps array', async () => {
+        const result = await handleGetHealth(ctx);
         expect(Array.isArray(result.circularDeps)).toBe(true);
     });
 
-    it('returns dead code array', () => {
-        const result = handleGetHealth(ctx);
+    it('returns dead code array', async () => {
+        const result = await handleGetHealth(ctx);
         expect(Array.isArray(result.deadCode)).toBe(true);
     });
 
-    it('saves a snapshot on each call', () => {
-        handleGetHealth(ctx);
-        handleGetHealth(ctx);
-        const history = ctx.health.getHistory(10);
+    it('saves a snapshot on each call', async () => {
+        await handleGetHealth(ctx);
+        await handleGetHealth(ctx);
+        const history = await ctx.health.getHistory(10);
         expect(history.length).toBe(2);
     });
 });

@@ -25,10 +25,10 @@ export function handleDnaResource(ctx: ServerContext): string {
     return lines.join('\n');
 }
 
-export function handleProjectOverviewResource(
+export async function handleProjectOverviewResource(
     ctx: ServerContext
-): string {
-    const overview = handleGetProjectOverview(ctx);
+): Promise<string> {
+    const overview = await handleGetProjectOverview(ctx);
 
     const lines = [
         'Project Overview',
@@ -66,10 +66,10 @@ export function handleProjectOverviewResource(
     return lines.join('\n');
 }
 
-export function handleProjectHealthResource(
+export async function handleProjectHealthResource(
     ctx: ServerContext
-): string {
-    const report = ctx.health.analyze();
+): Promise<string> {
+    const report = await ctx.health.analyze();
 
     const lines = [
         `Health Score: ${report.score}/100`,

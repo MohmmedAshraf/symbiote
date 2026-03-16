@@ -30,7 +30,7 @@ describe('Project Tools', () => {
     let tmpHome: string;
 
     beforeEach(async () => {
-        db = createDatabase(':memory:');
+        db = await createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
             `symbiote-mcp-proj-${Date.now()}`
@@ -62,47 +62,45 @@ describe('Project Tools', () => {
         await scanner.scan(FIXTURES_SRC);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
         fs.rmSync(tmpHome, { recursive: true, force: true });
     });
 
     describe('handleGetProjectOverview', () => {
-        it('returns project stats', () => {
-            const result = handleGetProjectOverview(ctx);
+        it('returns project stats', async () => {
+            const result = await handleGetProjectOverview(ctx);
             expect(result.totalNodes).toBeGreaterThan(0);
             expect(result.totalEdges).toBeGreaterThanOrEqual(0);
             expect(result.nodesByType).toBeDefined();
         });
 
-        it('includes active constraints in overview', () => {
-            const result = handleGetProjectOverview(ctx);
+        it('includes active constraints in overview', async () => {
+            const result = await handleGetProjectOverview(ctx);
             expect(result.constraints).toBeDefined();
             expect(Array.isArray(result.constraints)).toBe(true);
         });
     });
 
     describe('handleGetContextForFile', () => {
-        it('returns file context with nodes and edges', () => {
-            const files = ctx.repo
-                .getAllNodes()
-                .map((n) => n.filePath);
+        it('returns file context with nodes and edges', async () => {
+            const allNodes = await ctx.repo.getAllNodes();
+            const files = allNodes.map((n) => n.filePath);
             const testFile = files[0];
 
-            const result = handleGetContextForFile(ctx, {
+            const result = await handleGetContextForFile(ctx, {
                 filePath: testFile,
             });
             expect(result.filePath).toBe(testFile);
             expect(result.nodes).toBeDefined();
         });
 
-        it('includes related constraints and decisions', () => {
-            const files = ctx.repo
-                .getAllNodes()
-                .map((n) => n.filePath);
+        it('includes related constraints and decisions', async () => {
+            const allNodes = await ctx.repo.getAllNodes();
+            const files = allNodes.map((n) => n.filePath);
             const testFile = files[0];
 
-            const result = handleGetContextForFile(ctx, {
+            const result = await handleGetContextForFile(ctx, {
                 filePath: testFile,
             });
             expect(result.constraints).toBeDefined();
@@ -111,30 +109,30 @@ describe('Project Tools', () => {
     });
 
     describe('handleQueryGraph', () => {
-        it('searches nodes by name', () => {
-            const result = handleQueryGraph(ctx, {
+        it('searches nodes by name', async () => {
+            const result = await handleQueryGraph(ctx, {
                 query: 'format',
                 type: 'search',
             });
             expect(result.results.length).toBeGreaterThanOrEqual(1);
         });
 
-        it('finds dependencies for a node', () => {
-            const allNodes = ctx.repo.getAllNodes();
+        it('finds dependencies for a node', async () => {
+            const allNodes = await ctx.repo.getAllNodes();
             const nodeWithDeps = allNodes[0];
 
-            const result = handleQueryGraph(ctx, {
+            const result = await handleQueryGraph(ctx, {
                 query: nodeWithDeps.id,
                 type: 'dependencies',
             });
             expect(result.results).toBeDefined();
         });
 
-        it('finds dependents for a node', () => {
-            const allNodes = ctx.repo.getAllNodes();
+        it('finds dependents for a node', async () => {
+            const allNodes = await ctx.repo.getAllNodes();
             const node = allNodes[0];
 
-            const result = handleQueryGraph(ctx, {
+            const result = await handleQueryGraph(ctx, {
                 query: node.id,
                 type: 'dependents',
             });
@@ -143,8 +141,8 @@ describe('Project Tools', () => {
     });
 
     describe('handleSemanticSearch', () => {
-        it('returns empty results when no embeddings exist', () => {
-            const result = handleSemanticSearch(ctx, {
+        it('returns empty results when no embeddings exist', async () => {
+            const result = await handleSemanticSearch(ctx, {
                 query: 'authentication',
                 limit: 5,
             });

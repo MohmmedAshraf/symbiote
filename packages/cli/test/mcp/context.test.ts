@@ -8,12 +8,12 @@ import { createDatabase } from '../../src/storage/db.js';
 describe('createServerContext', () => {
     let ctx: ServerContext;
 
-    afterEach(() => {
-        ctx?.db.close();
+    afterEach(async () => {
+        await ctx?.db.close();
     });
 
-    it('creates a context with all required services', () => {
-        const db = createDatabase(':memory:');
+    it('creates a context with all required services', async () => {
+        const db = await createDatabase(':memory:');
         ctx = createServerContext({
             db,
             brainDir: '/tmp/test-brain',
@@ -27,8 +27,8 @@ describe('createServerContext', () => {
         expect(ctx.health).toBeDefined();
     });
 
-    it('exposes dna engine when symbioteHome is provided', () => {
-        const db = createDatabase(':memory:');
+    it('exposes dna engine when symbioteHome is provided', async () => {
+        const db = await createDatabase(':memory:');
         ctx = createServerContext({
             db,
             brainDir: '/tmp/test-brain',

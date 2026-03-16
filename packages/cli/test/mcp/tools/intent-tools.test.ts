@@ -20,8 +20,8 @@ describe('Intent Tools', () => {
     let tmpHome: string;
     let tmpBrain: string;
 
-    beforeEach(() => {
-        db = createDatabase(':memory:');
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
             `symbiote-mcp-intent-home-${Date.now()}`
@@ -60,8 +60,8 @@ describe('Intent Tools', () => {
         });
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
         fs.rmSync(tmpHome, { recursive: true, force: true });
         fs.rmSync(tmpBrain, { recursive: true, force: true });
     });

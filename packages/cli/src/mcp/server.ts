@@ -72,7 +72,7 @@ export function createMcpServer(
                 {
                     type: 'text' as const,
                     text: JSON.stringify(
-                        handleGetProjectOverview(ctx),
+                        await handleGetProjectOverview(ctx),
                         null,
                         2
                     ),
@@ -94,7 +94,7 @@ export function createMcpServer(
                 {
                     type: 'text' as const,
                     text: JSON.stringify(
-                        handleGetContextForFile(ctx, input),
+                        await handleGetContextForFile(ctx, input),
                         null,
                         2
                     ),
@@ -121,7 +121,7 @@ export function createMcpServer(
                 {
                     type: 'text' as const,
                     text: JSON.stringify(
-                        handleQueryGraph(ctx, input),
+                        await handleQueryGraph(ctx, input),
                         null,
                         2
                     ),
@@ -150,7 +150,7 @@ export function createMcpServer(
                 {
                     type: 'text' as const,
                     text: JSON.stringify(
-                        handleSemanticSearch(ctx, input),
+                        await handleSemanticSearch(ctx, input),
                         null,
                         2
                     ),
@@ -218,7 +218,7 @@ export function createMcpServer(
                 {
                     type: 'text' as const,
                     text: JSON.stringify(
-                        handleGetHealth(ctx),
+                        await handleGetHealth(ctx),
                         null,
                         2
                     ),
@@ -343,7 +343,7 @@ export function createMcpServer(
             contents: [
                 {
                     uri: 'symbiote://project/overview',
-                    text: handleProjectOverviewResource(ctx),
+                    text: await handleProjectOverviewResource(ctx),
                     mimeType: 'text/plain',
                 },
             ],
@@ -361,7 +361,7 @@ export function createMcpServer(
             contents: [
                 {
                     uri: 'symbiote://project/health',
-                    text: handleProjectHealthResource(ctx),
+                    text: await handleProjectHealthResource(ctx),
                     mimeType: 'text/plain',
                 },
             ],

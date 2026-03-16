@@ -19,8 +19,8 @@ describe('MCP Resources', () => {
     let tmpHome: string;
     let tmpBrain: string;
 
-    beforeEach(() => {
-        db = createDatabase(':memory:');
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         tmpHome = path.join(
             os.tmpdir(),
             `symbiote-mcp-res-home-${Date.now()}`
@@ -59,8 +59,8 @@ describe('MCP Resources', () => {
         });
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
         fs.rmSync(tmpHome, { recursive: true, force: true });
         fs.rmSync(tmpBrain, { recursive: true, force: true });
     });
@@ -84,8 +84,8 @@ describe('MCP Resources', () => {
     });
 
     describe('handleProjectOverviewResource', () => {
-        it('returns a text summary of the project', () => {
-            const result = handleProjectOverviewResource(ctx);
+        it('returns a text summary of the project', async () => {
+            const result = await handleProjectOverviewResource(ctx);
             expect(result).toBeDefined();
             expect(typeof result).toBe('string');
             expect(result).toContain('Nodes:');
@@ -93,8 +93,8 @@ describe('MCP Resources', () => {
     });
 
     describe('handleProjectHealthResource', () => {
-        it('returns a text summary of project health', () => {
-            const result = handleProjectHealthResource(ctx);
+        it('returns a text summary of project health', async () => {
+            const result = await handleProjectHealthResource(ctx);
             expect(result).toBeDefined();
             expect(typeof result).toBe('string');
             expect(result).toContain('Health Score:');

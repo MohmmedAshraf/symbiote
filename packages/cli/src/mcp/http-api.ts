@@ -1,12 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ServerContext } from './context.js';
 
-export function handleApiRequest(
+export async function handleApiRequest(
     ctx: ServerContext,
     pathname: string,
     req: IncomingMessage,
     res: ServerResponse
-): boolean {
+): Promise<boolean> {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader(
         'Access-Control-Allow-Methods',
@@ -21,7 +21,7 @@ export function handleApiRequest(
     }
 
     if (pathname === '/api/graph' && req.method === 'GET') {
-        return handleGetGraph(ctx, res);
+        return await handleGetGraph(ctx, res);
     }
 
     if (
@@ -31,11 +31,11 @@ export function handleApiRequest(
         const nodeId = decodeURIComponent(
             pathname.slice('/api/graph/nodes/'.length)
         );
-        return handleGetNodeContext(ctx, nodeId, res);
+        return await handleGetNodeContext(ctx, nodeId, res);
     }
 
     if (pathname === '/api/health' && req.method === 'GET') {
-        return handleGetHealthApi(ctx, res);
+        return await handleGetHealthApi(ctx, res);
     }
 
     if (pathname === '/api/dna' && req.method === 'GET') {
@@ -71,30 +71,29 @@ function json(
     return true;
 }
 
-function handleGetGraph(
+async function handleGetGraph(
     ctx: ServerContext,
     res: ServerResponse
-): boolean {
-    const nodes = ctx.repo.getAllNodes();
+): Promise<boolean> {
+    const nodes = await ctx.repo.getAllNodes();
     const nodeIds = new Set(nodes.map((n) => n.id));
-    const edges = ctx.repo
-        .getAllEdges()
+    const edges = (await ctx.repo.getAllEdges())
         .filter((e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId));
     return json(res, { nodes, edges });
 }
 
-function handleGetNodeContext(
+async function handleGetNodeContext(
     ctx: ServerContext,
     nodeId: string,
     res: ServerResponse
-): boolean {
-    const node = ctx.repo.getNodeById(nodeId);
+): Promise<boolean> {
+    const node = await ctx.repo.getNodeById(nodeId);
     if (!node) {
         return json(res, { error: 'Node not found' }, 404);
     }
 
-    const dependencies = ctx.graph.getDependencies(nodeId);
-    const dependents = ctx.graph.getDependents(nodeId);
+    const dependencies = await ctx.graph.getDependencies(nodeId);
+    const dependents = await ctx.graph.getDependents(nodeId);
     const constraints = ctx.intent
         .listEntries('constraint')
         .filter(
@@ -119,11 +118,11 @@ function handleGetNodeContext(
     });
 }
 
-function handleGetHealthApi(
+async function handleGetHealthApi(
     ctx: ServerContext,
     res: ServerResponse
-): boolean {
-    const report = ctx.health.analyze();
+): Promise<boolean> {
+    const report = await ctx.health.analyze();
 
     const toIssues = (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -257,7 +256,7 @@ function handleChat(
     req.on('data', (chunk) => {
         body += chunk;
     });
-    req.on('end', () => {
+    req.on('end', async () => {
         try {
             const { message } = JSON.parse(body);
             if (!message || typeof message !== 'string') {
@@ -269,7 +268,7 @@ function handleChat(
                 return;
             }
 
-            const overview = ctx.graph.getOverview();
+            const overview = await ctx.graph.getOverview();
 
             res.writeHead(200, {
                 'Content-Type': 'text/plain; charset=utf-8',
