@@ -388,42 +388,12 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
 }
 
 async function cmdHookPre(): Promise<void> {
-    const { readStdinPayload, writeResponse } = await import('../src/hooks/types.js');
-    const { PreToolUseHandler } = await import('../src/hooks/pre-tool-use.js');
+    const { readStdinPayload, writeResponse, fireHookEvent } =
+        await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
 
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
-
-    let graph;
-    try {
-        const db = await createDatabase(dbPath);
-        const { buildGraphFromDb } = await import('../src/core/graph-builder.js');
-        graph = await buildGraphFromDb(db);
-        await db.close();
-    } catch {
-        const { writeResponse: wr } = await import('../src/hooks/types.js');
-        wr({ decision: 'allow' });
-        return;
-    }
-
-    const brainDir = path.join(projectRoot, '.brain');
-    let constraints: Array<{ scope: string; content: string }> = [];
-    try {
-        const { IntentStore } = await import('../src/brain/intent.js');
-        const intent = new IntentStore(brainDir);
-        constraints = intent
-            .listEntries('constraint', { status: 'active' })
-            .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
-    } catch {
-        // No intent store
-    }
-
-    const handler = new PreToolUseHandler({
-        graph,
-        projectRoot,
-        constraints,
-        dnaEntries: [],
-    });
 
     const payload = await readStdinPayload();
     if (payload.type !== 'pre_tool_use') {
@@ -431,31 +401,65 @@ async function cmdHookPre(): Promise<void> {
         return;
     }
 
-    const response = handler.handle(payload);
+    let response: { decision: 'allow' | 'block'; message?: string } = { decision: 'allow' };
+
+    try {
+        const db = await createDatabase(dbPath);
+        const { buildGraphFromDb } = await import('../src/core/graph-builder.js');
+        const graph = await buildGraphFromDb(db);
+        await db.close();
+
+        const brainDir = path.join(projectRoot, '.brain');
+        let constraints: Array<{ scope: string; content: string }> = [];
+        try {
+            const { IntentStore } = await import('../src/brain/intent.js');
+            const intent = new IntentStore(brainDir);
+            constraints = intent
+                .listEntries('constraint', { status: 'active' })
+                .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
+        } catch {
+            // No intent store
+        }
+
+        const { PreToolUseHandler } = await import('../src/hooks/pre-tool-use.js');
+        const handler = new PreToolUseHandler({
+            graph,
+            projectRoot,
+            constraints,
+            dnaEntries: [],
+        });
+        response = handler.handle(payload);
+    } catch {
+        // DB locked or unavailable — skip context injection, still fire IPC
+    }
+
     writeResponse(response);
 
-    const { fireHookEvent } = await import('../src/hooks/types.js');
-    const { getServerPort } = await import('../src/utils/config.js');
     const filePath = payload.tool_input.file_path as string | undefined;
     if (filePath && payload.tool_name === 'Read') {
         const relativePath = path.relative(projectRoot, filePath);
         await fireHookEvent(
             'file:read',
-            {
-                filePath: relativePath,
-                toolName: payload.tool_name,
-            },
+            { filePath: relativePath, toolName: payload.tool_name },
             getServerPort(),
         );
     }
 }
 
 async function cmdHookPost(): Promise<void> {
-    const { readStdinPayload, writeResponse } = await import('../src/hooks/types.js');
+    const { readStdinPayload, writeResponse, fireHookEvent } =
+        await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
     const { PostToolUseHandler } = await import('../src/hooks/post-tool-use.js');
 
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
+
+    const payload = await readStdinPayload();
+    if (payload.type !== 'post_tool_use') {
+        writeResponse({ decision: 'allow' });
+        return;
+    }
 
     const handler = new PostToolUseHandler({
         projectRoot,
@@ -476,7 +480,7 @@ async function cmdHookPost(): Promise<void> {
                 }
                 await db.close();
             } catch {
-                // Silently fail
+                // DB locked or unavailable — skip reindex
             }
         },
         onFullRescan: async () => {
@@ -484,17 +488,9 @@ async function cmdHookPost(): Promise<void> {
         },
     });
 
-    const payload = await readStdinPayload();
-    if (payload.type !== 'post_tool_use') {
-        writeResponse({ decision: 'allow' });
-        return;
-    }
-
     const response = await handler.handle(payload);
     writeResponse(response);
 
-    const { fireHookEvent } = await import('../src/hooks/types.js');
-    const { getServerPort } = await import('../src/utils/config.js');
     if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
         const filePath = payload.tool_input.file_path as string | undefined;
         if (filePath) {
