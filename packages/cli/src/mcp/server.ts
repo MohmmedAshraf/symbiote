@@ -15,7 +15,7 @@ import {
     handleProposeConstraint,
 } from './tools/intent-tools.js';
 import { handleGetHealth } from './tools/health-tools.js';
-import { handleGetImpact } from './tools/impact-tools.js';
+import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
 import { ImpactAnalyzer } from '../core/impact.js';
 import {
     handleDnaResource,
@@ -235,6 +235,24 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         async (input) => {
             const impact = new ImpactAnalyzer(ctx.graphology);
             const result = handleGetImpact({ graph: ctx.graphology, impact }, input);
+            return {
+                content: [
+                    {
+                        type: 'text' as const,
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
+            };
+        },
+    );
+
+    server.tool(
+        'detect_changes',
+        'Analyze uncommitted git changes: maps modified files to affected modules with risk assessment.',
+        {},
+        async () => {
+            const impact = new ImpactAnalyzer(ctx.graphology);
+            const result = handleDetectChanges({ graph: ctx.graphology, impact }, {});
             return {
                 content: [
                     {

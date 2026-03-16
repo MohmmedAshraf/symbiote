@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import { ImpactAnalyzer } from '../../core/impact.js';
+import { GitImpactAnalyzer } from '../../core/git-impact.js';
 import type { ImpactResult } from '../../core/impact.js';
+import type { GitImpactResult } from '../../core/git-impact.js';
 
 const require = createRequire(import.meta.url);
 const Graph = require('graphology');
@@ -30,4 +32,16 @@ export function handleGetImpact(ctx: ImpactToolContext, input: GetImpactInput): 
     }
 
     return ctx.impact.getBlastRadius(input.target, maxDepth);
+}
+
+export interface DetectChangesInput {
+    cwd?: string;
+}
+
+export function handleDetectChanges(
+    ctx: ImpactToolContext,
+    input: DetectChangesInput,
+): GitImpactResult {
+    const gitImpact = new GitImpactAnalyzer(ctx.graph);
+    return gitImpact.analyzeWorkingChanges(input.cwd);
 }

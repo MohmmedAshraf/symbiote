@@ -90,6 +90,9 @@ function showHelp(): void {
         `  ${pc.bold('$')} ${pc.cyan('symbiote mcp')}           MCP server only (for editors)`,
     );
     console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna')}           View your developer DNA`);
+    console.log(
+        `  ${pc.bold('$')} ${pc.cyan('symbiote impact')}        Analyze impact of working changes`,
+    );
     console.log();
     console.log(pc.dim('  Connect to Claude Code:'));
     console.log(`    ${pc.dim('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
@@ -258,6 +261,67 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
                 ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}${embeddingsInfo}`,
             ),
     );
+}
+
+async function cmdImpact(): Promise<void> {
+    const projectRoot = process.cwd();
+    const dbPath = getBrainDbPath(projectRoot);
+    const db = await createDatabase(dbPath);
+
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Impact Analysis'));
+
+    const s = p.spinner();
+    s.start('Loading graph...');
+
+    const { buildGraphFromDb } = await import('../src/core/graph-builder.js');
+    const graph = await buildGraphFromDb(db);
+
+    s.stop('Graph loaded');
+
+    const s2 = p.spinner();
+    s2.start('Analyzing working changes...');
+
+    const { GitImpactAnalyzer } = await import('../src/core/git-impact.js');
+    const gitImpact = new GitImpactAnalyzer(graph);
+    let result;
+    try {
+        result = gitImpact.analyzeWorkingChanges(projectRoot);
+    } catch {
+        s2.stop('No git changes detected');
+        await db.close();
+        p.outro('Working tree is clean.');
+        return;
+    }
+
+    s2.stop('Analysis complete');
+    await db.close();
+
+    if (result.changedFiles.length === 0) {
+        p.outro('Working tree is clean.');
+        return;
+    }
+
+    p.log.info(
+        `${pc.dim('Changed files:')}  ${result.changedFiles.length}\n` +
+            `${pc.dim('Affected nodes:')} ${result.affectedNodes.length}\n` +
+            `${pc.dim('Affected files:')} ${result.affectedFiles.length}\n` +
+            `${pc.dim('Risk level:')}     ${result.riskLevel === 'HIGH' ? pc.red(result.riskLevel) : result.riskLevel === 'MEDIUM' ? pc.yellow(result.riskLevel) : pc.green(result.riskLevel)}`,
+    );
+
+    if (result.affectedFiles.length > 0) {
+        console.log();
+        console.log(pc.bold('  Affected files:'));
+        for (const file of result.affectedFiles.sort((a, b) => b.maxConfidence - a.maxConfidence)) {
+            const conf = (file.maxConfidence * 100).toFixed(0);
+            const color =
+                file.maxConfidence > 0.7 ? pc.red : file.maxConfidence > 0.4 ? pc.yellow : pc.dim;
+            console.log(
+                `    ${color(`${conf}%`)} ${file.filePath} ${pc.dim(`(${file.nodes.length} symbols)`)}`,
+            );
+        }
+    }
+
+    p.outro(result.summary);
 }
 
 async function cmdServe(flags: Record<string, string | boolean>): Promise<void> {
@@ -560,6 +624,9 @@ async function main(): Promise<void> {
             break;
         case 'mcp':
             await cmdMcp();
+            break;
+        case 'impact':
+            await cmdImpact();
             break;
         case 'dna': {
             const subcommand = args[0];
