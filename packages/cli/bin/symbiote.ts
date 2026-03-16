@@ -14,7 +14,7 @@ import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import { createServerContext } from '../src/mcp/context.js';
-import { handleApiRequest } from '../src/mcp/http-api.js';
+import { handleApiRequest, handleInternalEvent, handleSseConnection } from '../src/mcp/http-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -533,6 +533,16 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
                 'Content-Type': 'application/json',
             });
             res.end(JSON.stringify({ status: 'ok' }));
+            return;
+        }
+
+        if (url.pathname === '/internal/events' && req.method === 'POST') {
+            handleInternalEvent(ctx.eventBus, req, res);
+            return;
+        }
+
+        if (url.pathname === '/events' && req.method === 'GET') {
+            handleSseConnection(ctx.eventBus, req, res);
             return;
         }
 

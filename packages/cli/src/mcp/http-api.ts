@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ServerContext } from './context.js';
+import type { EventBus } from '../events/bus.js';
+import type { SymbioteEvent } from '../events/types.js';
+import { EVENT_TYPES } from '../events/types.js';
 
 export async function handleApiRequest(
     ctx: ServerContext,
@@ -200,4 +203,56 @@ function handleUpdateDna(
         }
     });
     return true;
+}
+
+export function handleInternalEvent(
+    bus: EventBus,
+    req: IncomingMessage,
+    res: ServerResponse,
+): void {
+    let body = '';
+    req.on('data', (chunk) => {
+        body += chunk;
+    });
+    req.on('end', () => {
+        try {
+            const event = JSON.parse(body) as SymbioteEvent;
+            if (!EVENT_TYPES.includes(event.type as (typeof EVENT_TYPES)[number])) {
+                res.writeHead(400);
+                res.end();
+                return;
+            }
+            bus.emit(event);
+            res.writeHead(200);
+            res.end();
+        } catch {
+            res.writeHead(400);
+            res.end();
+        }
+    });
+}
+
+export function handleSseConnection(
+    bus: EventBus,
+    _req: IncomingMessage,
+    res: ServerResponse,
+): void {
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+    });
+
+    res.write('data: {"type":"connected"}\n\n');
+
+    const handler = (event: SymbioteEvent): void => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    bus.on('*', handler);
+
+    res.on('close', () => {
+        bus.off('*', handler);
+    });
 }
