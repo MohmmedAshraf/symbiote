@@ -130,6 +130,7 @@ function parseArgs(argv: string[]): {
             const short = arg[1];
             const longMap: Record<string, string> = {
                 f: 'force',
+                e: 'embeddings',
                 p: 'port',
                 s: 'status',
                 c: 'category',
@@ -164,7 +165,7 @@ async function cmdInit(): Promise<void> {
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabase(dbPath);
     const repo = new Repository(db);
-    const scanner = new Scanner(repo);
+    const scanner = new Scanner(repo, db);
 
     const s1 = p.spinner();
     s1.start('Scanning codebase...');
@@ -239,19 +240,22 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabase(dbPath);
     const repo = new Repository(db);
-    const scanner = new Scanner(repo);
+    const scanner = new Scanner(repo, db);
 
     const s = p.spinner();
     s.start('Scanning codebase...');
     const result = await scanner.scan(projectRoot, {
         force: flags.force === true,
+        embeddings: flags.embeddings === true,
     });
     await db.close();
 
+    const embeddingsInfo =
+        result.embeddingsGenerated > 0 ? ` · Embeddings: ${result.embeddingsGenerated}` : '';
     s.stop(
         `Scanned: ${result.filesScanned}` +
             pc.dim(
-                ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}`,
+                ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}${embeddingsInfo}`,
             ),
     );
 }
