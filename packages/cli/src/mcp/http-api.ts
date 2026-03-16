@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ServerContext } from './context.js';
+import type { EventBus } from '../events/bus.js';
+import type { SymbioteEvent } from '../events/types.js';
+import { EVENT_TYPES } from '../events/types.js';
 
 export async function handleApiRequest(
     ctx: ServerContext,
@@ -37,10 +40,6 @@ export async function handleApiRequest(
     if (pathname.startsWith('/api/dna/') && req.method === 'PATCH') {
         const entryId = decodeURIComponent(pathname.slice('/api/dna/'.length));
         return handleUpdateDna(ctx, entryId, req, res);
-    }
-
-    if (pathname === '/api/chat' && req.method === 'POST') {
-        return handleChat(ctx, req, res);
     }
 
     return false;
@@ -206,38 +205,54 @@ function handleUpdateDna(
     return true;
 }
 
-function handleChat(ctx: ServerContext, req: IncomingMessage, res: ServerResponse): boolean {
+export function handleInternalEvent(
+    bus: EventBus,
+    req: IncomingMessage,
+    res: ServerResponse,
+): void {
     let body = '';
     req.on('data', (chunk) => {
         body += chunk;
     });
-    req.on('end', async () => {
+    req.on('end', () => {
         try {
-            const { message } = JSON.parse(body);
-            if (!message || typeof message !== 'string') {
-                json(res, { error: 'Missing message field' }, 400);
+            const event = JSON.parse(body) as SymbioteEvent;
+            if (!EVENT_TYPES.includes(event.type as (typeof EVENT_TYPES)[number])) {
+                res.writeHead(400);
+                res.end();
                 return;
             }
-
-            const overview = await ctx.graph.getOverview();
-
-            res.writeHead(200, {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-                'Cache-Control': 'no-cache',
-            });
-
-            res.write(
-                'Chat is not configured. Set an LLM provider in ' +
-                    '~/.symbiote/config.json (supported: openai, anthropic, ollama). ' +
-                    `\n\nProject has ${overview.totalNodes} nodes and ${overview.totalEdges} edges.`,
-            );
+            bus.emit(event);
+            res.writeHead(200);
             res.end();
         } catch {
-            if (!res.headersSent) {
-                json(res, { error: 'Chat failed' }, 500);
-            }
+            res.writeHead(400);
+            res.end();
         }
     });
-    return true;
+}
+
+export function handleSseConnection(
+    bus: EventBus,
+    _req: IncomingMessage,
+    res: ServerResponse,
+): void {
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+    });
+
+    res.write('data: {"type":"connected"}\n\n');
+
+    const handler = (event: SymbioteEvent): void => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    bus.on('*', handler);
+
+    res.on('close', () => {
+        bus.off('*', handler);
+    });
 }

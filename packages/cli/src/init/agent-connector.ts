@@ -133,6 +133,80 @@ function writeJsonMcpConfig(agent: AgentInfo): {
     };
 }
 
+export function isBonded(agent: AgentInfo): boolean {
+    if (agent.id === 'claude-code') {
+        try {
+            const output = execSync('claude mcp list', { encoding: 'utf-8' });
+            return output.includes('symbiote');
+        } catch {
+            return false;
+        }
+    }
+
+    if (agent.configType === 'json-file' && fs.existsSync(agent.configPath)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(agent.configPath, 'utf-8'));
+            return !!config.mcpServers?.symbiote;
+        } catch {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+export function connectWithHooks(agent: AgentInfo): {
+    mcp: { success: boolean; message: string };
+    hooks: { success: boolean; message: string };
+} {
+    const mcp = connectAgent(agent);
+
+    if (agent.id !== 'claude-code') {
+        return { mcp, hooks: { success: true, message: 'Hooks not available' } };
+    }
+
+    let hooks = { success: true, message: 'Hooks installed' };
+    try {
+        execSync('claude hooks add pre_tool_use symbiote -- npx symbiote-cli hook pre', {
+            stdio: 'ignore',
+        });
+        execSync('claude hooks add post_tool_use symbiote -- npx symbiote-cli hook post', {
+            stdio: 'ignore',
+        });
+    } catch (err) {
+        hooks = {
+            success: false,
+            message: err instanceof Error ? err.message : 'Hook install failed',
+        };
+    }
+
+    return { mcp, hooks };
+}
+
+export function disconnectWithHooks(agent: AgentInfo): {
+    mcp: { success: boolean; message: string };
+    hooks: { success: boolean; message: string };
+} {
+    const mcp = disconnectAgent(agent);
+
+    if (agent.id !== 'claude-code') {
+        return { mcp, hooks: { success: true, message: 'No hooks to remove' } };
+    }
+
+    let hooks = { success: true, message: 'Hooks removed' };
+    try {
+        execSync('claude hooks remove pre_tool_use symbiote', { stdio: 'ignore' });
+        execSync('claude hooks remove post_tool_use symbiote', { stdio: 'ignore' });
+    } catch (err) {
+        hooks = {
+            success: false,
+            message: err instanceof Error ? err.message : 'Hook removal failed',
+        };
+    }
+
+    return { mcp, hooks };
+}
+
 export function disconnectAgent(agent: AgentInfo): {
     success: boolean;
     message: string;

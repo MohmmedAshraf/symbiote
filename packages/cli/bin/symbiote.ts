@@ -14,7 +14,7 @@ import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import { createServerContext } from '../src/mcp/context.js';
-import { handleApiRequest } from '../src/mcp/http-api.js';
+import { handleApiRequest, handleInternalEvent, handleSseConnection } from '../src/mcp/http-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,6 +93,7 @@ function showHelp(): void {
     console.log(
         `  ${pc.bold('$')} ${pc.cyan('symbiote impact')}        Analyze impact of working changes`,
     );
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote unbond')}        Detach from all AI agents`);
     console.log();
     console.log(pc.dim('  Claude Code Hooks:'));
     console.log(
@@ -235,15 +236,69 @@ async function cmdInit(): Promise<void> {
         p.log.warn(`${scanResult.errors.length} files had parse errors.`);
     }
 
-    p.outro('Your project has a brain.');
+    const { detectInstalledAgents, isBonded, connectWithHooks } =
+        await import('../src/init/agent-connector.js');
 
-    console.log();
-    console.log(pc.dim('  Connect to your AI:'));
-    console.log(`    ${pc.cyan('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
-    console.log();
-    console.log(pc.dim('  Or start the dashboard:'));
-    console.log(`    ${pc.cyan('symbiote serve')}`);
-    console.log();
+    const agents = detectInstalledAgents();
+    const installed = agents.filter((a) => a.installed);
+
+    if (installed.length === 0) {
+        p.log.info(
+            pc.dim(
+                'No AI agents detected. Install Claude Code, Cursor, or another supported host,\n' +
+                    'then run `symbiote init` again.',
+            ),
+        );
+    } else {
+        const alreadyBonded = installed.filter((a) => isBonded(a));
+        const unbonded = installed.filter((a) => !isBonded(a));
+
+        if (alreadyBonded.length > 0) {
+            for (const agent of alreadyBonded) {
+                p.log.info(`${pc.green('✓')} ${agent.name} ${pc.dim('[already bonded]')}`);
+            }
+        }
+
+        if (unbonded.length > 0) {
+            const options = unbonded.map((a) => ({
+                value: a.id,
+                label: a.name,
+                hint: a.id === 'claude-code' ? 'MCP server + hooks' : 'MCP server',
+            }));
+
+            const selected = await p.multiselect({
+                message: 'Bond with detected hosts?',
+                options,
+                initialValues: unbonded.map((a) => a.id),
+                required: false,
+            });
+
+            if (p.isCancel(selected)) {
+                p.log.info(pc.dim('Skipped bonding.'));
+            } else if (Array.isArray(selected) && selected.length > 0) {
+                const toBond = unbonded.filter((a) => selected.includes(a.id));
+                for (const agent of toBond) {
+                    const result = connectWithHooks(agent);
+                    if (result.mcp.success && result.hooks.success) {
+                        const detail =
+                            agent.id === 'claude-code'
+                                ? 'MCP server added, hooks installed'
+                                : 'MCP config written';
+                        p.log.success(`${agent.name} — ${detail}`);
+                    } else if (result.mcp.success) {
+                        p.log.success(`${agent.name} — MCP server added`);
+                        p.log.warn(
+                            `${agent.name} — hooks failed (run \`symbiote hooks install\` manually)`,
+                        );
+                    } else {
+                        p.log.error(`${agent.name} — ${result.mcp.message}`);
+                    }
+                }
+            }
+        }
+    }
+
+    p.outro('Symbiote is bonded. Your AI knows who you are.');
 }
 
 async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
@@ -317,6 +372,21 @@ async function cmdHookPre(): Promise<void> {
 
     const response = handler.handle(payload);
     writeResponse(response);
+
+    const { fireHookEvent } = await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
+    const filePath = payload.tool_input.file_path as string | undefined;
+    if (filePath && payload.tool_name === 'Read') {
+        const relativePath = path.relative(projectRoot, filePath);
+        await fireHookEvent(
+            'file:read',
+            {
+                filePath: relativePath,
+                toolName: payload.tool_name,
+            },
+            getServerPort(),
+        );
+    }
 }
 
 async function cmdHookPost(): Promise<void> {
@@ -361,6 +431,21 @@ async function cmdHookPost(): Promise<void> {
 
     const response = await handler.handle(payload);
     writeResponse(response);
+
+    const { fireHookEvent } = await import('../src/hooks/types.js');
+    const { getServerPort } = await import('../src/utils/config.js');
+    if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
+        const filePath = payload.tool_input.file_path as string | undefined;
+        if (filePath) {
+            const relativePath = path.relative(projectRoot, filePath);
+            const isCreate = payload.tool_name === 'Write';
+            await fireHookEvent(
+                isCreate ? 'file:create' : 'file:edit',
+                { filePath: relativePath, toolName: payload.tool_name },
+                getServerPort(),
+            );
+        }
+    }
 }
 
 async function cmdHooksInstall(): Promise<void> {
@@ -533,6 +618,16 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
                 'Content-Type': 'application/json',
             });
             res.end(JSON.stringify({ status: 'ok' }));
+            return;
+        }
+
+        if (url.pathname === '/internal/events' && req.method === 'POST') {
+            handleInternalEvent(ctx.eventBus, req, res);
+            return;
+        }
+
+        if (url.pathname === '/events' && req.method === 'GET') {
+            handleSseConnection(ctx.eventBus, req, res);
             return;
         }
 
@@ -756,6 +851,40 @@ async function cmdDna(
     process.exit(1);
 }
 
+async function cmdUnbond(targetId?: string): Promise<void> {
+    const { detectInstalledAgents, isBonded, disconnectWithHooks } =
+        await import('../src/init/agent-connector.js');
+
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Detaching'));
+
+    const agents = detectInstalledAgents();
+    const bonded = agents.filter((a) => a.installed && isBonded(a));
+
+    if (bonded.length === 0) {
+        p.outro('No bonded hosts found.');
+        return;
+    }
+
+    const toUnbond = targetId ? bonded.filter((a) => a.id === targetId) : bonded;
+
+    if (targetId && toUnbond.length === 0) {
+        p.log.error(`Host not found or not bonded: ${targetId}`);
+        p.outro('');
+        return;
+    }
+
+    for (const agent of toUnbond) {
+        const result = disconnectWithHooks(agent);
+        if (result.mcp.success) {
+            p.log.success(`Detached from ${agent.name}`);
+        } else {
+            p.log.error(`Failed to detach from ${agent.name}: ${result.mcp.message}`);
+        }
+    }
+
+    p.outro('Symbiote detached.');
+}
+
 async function main(): Promise<void> {
     const { command, args, flags } = parseArgs(process.argv);
 
@@ -818,6 +947,11 @@ async function main(): Promise<void> {
             const subcommand = args[0];
             const subArgs = args.slice(1);
             await cmdDna(subcommand, subArgs, flags);
+            break;
+        }
+        case 'unbond': {
+            const targetId = args[0];
+            await cmdUnbond(targetId);
             break;
         }
         default:

@@ -1,22 +1,28 @@
 import { Link, useRouterState } from '@tanstack/react-router';
+import { useEvents } from '@/lib/events-context';
 
 const tabs = [
     { path: '/', label: 'Brain Graph', icon: BrainIcon },
-    { path: '/chat', label: 'Ask Project', icon: ChatIcon },
     { path: '/health', label: 'Health Pulse', icon: HeartIcon },
     { path: '/dna', label: 'DNA Lab', icon: DnaIcon },
 ] as const;
 
 export function TabBar() {
     const { location } = useRouterState();
+    const { connectionState } = useEvents();
+
+    const dotColor =
+        connectionState === 'connected'
+            ? 'bg-success'
+            : connectionState === 'idle'
+              ? 'bg-warning'
+              : 'bg-text-muted/30';
 
     return (
         <nav className="flex w-14 flex-col items-center gap-1 border-r border-border bg-surface-0 py-4">
             {tabs.map(({ path, label, icon: Icon }) => {
                 const active =
-                    path === '/'
-                        ? location.pathname === '/'
-                        : location.pathname.startsWith(path);
+                    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
                 return (
                     <Link
@@ -36,8 +42,14 @@ export function TabBar() {
 
             <div className="mt-auto px-2">
                 <div
-                    className="size-2 rounded-full bg-success"
-                    title="Connected"
+                    className={`size-2 rounded-full ${dotColor}`}
+                    title={
+                        connectionState === 'connected'
+                            ? 'Bonded'
+                            : connectionState === 'idle'
+                              ? 'Idle'
+                              : 'Disconnected'
+                    }
                 />
             </div>
         </nav>
@@ -62,20 +74,6 @@ function BrainIcon({ className }: { className?: string }) {
             <line x1="14.5" y1="10" x2="17.5" y2="7.5" />
             <line x1="9.5" y1="14" x2="6.5" y2="16.5" />
             <line x1="14.5" y1="14" x2="17.5" y2="16.5" />
-        </svg>
-    );
-}
-
-function ChatIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-        >
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
         </svg>
     );
 }

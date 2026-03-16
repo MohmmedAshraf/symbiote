@@ -68,3 +68,14 @@ export function ensureSymbioteHome(): string {
 export function getBrainDbPath(projectRoot: string): string {
     return path.join(projectRoot, BRAIN_DIR, 'symbiote.db');
 }
+
+export const DEFAULT_PORT = 3333;
+
+export function getServerPort(): number {
+    const envPort = process.env.SYMBIOTE_PORT;
+    if (envPort) {
+        const parsed = parseInt(envPort, 10);
+        if (!isNaN(parsed)) return parsed;
+    }
+    return DEFAULT_PORT;
+}

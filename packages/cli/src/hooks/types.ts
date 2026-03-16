@@ -39,3 +39,12 @@ export function readStdinPayload(): Promise<HookPayload> {
 export function writeResponse(response: HookResponse): void {
     process.stdout.write(JSON.stringify(response) + '\n');
 }
+
+import { createEvent } from '../events/types.js';
+import type { EventType, EventData } from '../events/types.js';
+import { sendEvent } from '../events/ipc.js';
+
+export function fireHookEvent(type: EventType, data: EventData, port: number): Promise<void> {
+    const event = createEvent(type, data);
+    return sendEvent(event, port);
+}
