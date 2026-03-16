@@ -39,10 +39,6 @@ export async function handleApiRequest(
         return handleUpdateDna(ctx, entryId, req, res);
     }
 
-    if (pathname === '/api/chat' && req.method === 'POST') {
-        return handleChat(ctx, req, res);
-    }
-
     return false;
 }
 
@@ -201,42 +197,6 @@ function handleUpdateDna(
             }
         } catch {
             json(res, { error: 'Invalid JSON' }, 400);
-        }
-    });
-    return true;
-}
-
-function handleChat(ctx: ServerContext, req: IncomingMessage, res: ServerResponse): boolean {
-    let body = '';
-    req.on('data', (chunk) => {
-        body += chunk;
-    });
-    req.on('end', async () => {
-        try {
-            const { message } = JSON.parse(body);
-            if (!message || typeof message !== 'string') {
-                json(res, { error: 'Missing message field' }, 400);
-                return;
-            }
-
-            const overview = await ctx.graph.getOverview();
-
-            res.writeHead(200, {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-                'Cache-Control': 'no-cache',
-            });
-
-            res.write(
-                'Chat is not configured. Set an LLM provider in ' +
-                    '~/.symbiote/config.json (supported: openai, anthropic, ollama). ' +
-                    `\n\nProject has ${overview.totalNodes} nodes and ${overview.totalEdges} edges.`,
-            );
-            res.end();
-        } catch {
-            if (!res.headersSent) {
-                json(res, { error: 'Chat failed' }, 500);
-            }
         }
     });
     return true;

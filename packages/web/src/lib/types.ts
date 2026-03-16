@@ -112,10 +112,3 @@ export interface DnaEntry {
     occurrences: number;
     content: string;
 }
-
-export interface ChatMessage {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    highlightedNodes?: string[];
-}
