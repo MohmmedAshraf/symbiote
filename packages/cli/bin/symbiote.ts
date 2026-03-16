@@ -278,27 +278,28 @@ async function cmdInit(): Promise<void> {
             } else if (Array.isArray(selected) && selected.length > 0) {
                 const toBond = unbonded.filter((a) => selected.includes(a.id));
                 for (const agent of toBond) {
+                    const s3 = p.spinner();
+                    s3.start(`Bonding with ${agent.name}...`);
                     const result = connectWithHooks(agent);
                     if (result.mcp.success && result.hooks.success) {
                         const detail =
                             agent.id === 'claude-code'
                                 ? 'MCP server added, hooks installed'
                                 : 'MCP config written';
-                        p.log.success(`${agent.name} — ${detail}`);
+                        s3.stop(`${agent.name} — ${detail}`);
                     } else if (result.mcp.success) {
-                        p.log.success(`${agent.name} — MCP server added`);
-                        p.log.warn(
-                            `${agent.name} — hooks failed (run \`symbiote hooks install\` manually)`,
-                        );
+                        s3.stop(`${agent.name} — MCP server added`);
+                        p.log.warn(`Hooks failed — run \`symbiote hooks install\` manually`);
                     } else {
-                        p.log.error(`${agent.name} — ${result.mcp.message}`);
+                        s3.stop(`${agent.name} — failed`);
+                        p.log.error(result.mcp.message);
                     }
                 }
             }
         }
     }
 
-    p.outro('Symbiote is bonded. Your AI knows who you are.');
+    p.outro('Your project has a brain.');
 }
 
 async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
