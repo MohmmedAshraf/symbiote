@@ -1,12 +1,14 @@
 {
     "name": "synapse",
     "private": true,
+    "packageManager": "npm@11.9.0",
     "workspaces": ["packages/*"],
     "scripts": {
         "build": "turbo build",
         "dev": "turbo dev",
         "test": "turbo test",
-        "lint": "turbo lint"
+        "lint": "turbo lint",
+        "prepublishOnly": "turbo build"
     },
     "devDependencies": {
         "turbo": "^2"

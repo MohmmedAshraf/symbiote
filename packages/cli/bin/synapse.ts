@@ -2,7 +2,52 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { ServerResponse } from 'node:http';
 import { Command } from 'commander';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const MIME_TYPES: Record<string, string> = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff2': 'font/woff2',
+    '.woff': 'font/woff',
+    '.map': 'application/json',
+};
+
+function serveStatic(
+    webDistDir: string,
+    pathname: string,
+    res: ServerResponse
+): boolean {
+    const safePath = path
+        .normalize(pathname)
+        .replace(/^(\.\.[/\\])+/, '');
+    let filePath = path.join(webDistDir, safePath);
+
+    if (
+        !fs.existsSync(filePath) ||
+        fs.statSync(filePath).isDirectory()
+    ) {
+        filePath = path.join(webDistDir, 'index.html');
+    }
+
+    if (!fs.existsSync(filePath)) return false;
+
+    const ext = path.extname(filePath);
+    const contentType =
+        MIME_TYPES[ext] ?? 'application/octet-stream';
+
+    res.writeHead(200, { 'Content-Type': contentType });
+    fs.createReadStream(filePath).pipe(res);
+    return true;
+}
 import { createDatabase } from '../src/storage/db.js';
 import { Repository } from '../src/storage/repository.js';
 import { Scanner, type ScanResult } from '../src/core/scanner.js';
@@ -163,6 +208,21 @@ program
                         ctx,
                         url.pathname,
                         req,
+                        res
+                    )
+                )
+                    return;
+            }
+
+            const webDistDir = path.resolve(
+                __dirname,
+                '../../web/dist'
+            );
+            if (fs.existsSync(webDistDir)) {
+                if (
+                    serveStatic(
+                        webDistDir,
+                        url.pathname,
                         res
                     )
                 )
