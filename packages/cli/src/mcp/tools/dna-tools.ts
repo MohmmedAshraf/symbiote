@@ -12,19 +12,15 @@ export interface GetDeveloperDnaOutput {
 
 export function handleGetDeveloperDna(
     ctx: ServerContext,
-    input: GetDeveloperDnaInput
+    input: GetDeveloperDnaInput,
 ): GetDeveloperDnaOutput {
     let entries = ctx.dnaEngine.getActiveEntries();
 
     if (input.category) {
-        entries = entries.filter(
-            (e) => e.frontmatter.category === input.category
-        );
+        entries = entries.filter((e) => e.frontmatter.category === input.category);
     }
 
-    entries.sort(
-        (a, b) => b.frontmatter.confidence - a.frontmatter.confidence
-    );
+    entries.sort((a, b) => b.frontmatter.confidence - a.frontmatter.confidence);
 
     return { entries };
 }
@@ -41,14 +37,10 @@ export interface RecordInstructionOutput {
 
 export function handleRecordInstruction(
     ctx: ServerContext,
-    input: RecordInstructionInput
+    input: RecordInstructionInput,
 ): RecordInstructionOutput {
     const source = input.isExplicit ? 'explicit' : 'correction';
-    const entry = ctx.dnaEngine.captureInstruction(
-        input.instruction,
-        input.sessionId,
-        source
-    );
+    const entry = ctx.dnaEngine.captureInstruction(input.instruction, input.sessionId, source);
 
     return { entry };
 }

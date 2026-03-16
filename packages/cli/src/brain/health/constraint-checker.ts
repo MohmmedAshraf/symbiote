@@ -3,10 +3,7 @@ import { createRequire } from 'node:module';
 import type { Repository } from '../../storage/repository.js';
 import type { IntentStore, IntentEntry } from '../intent.js';
 import { detectLanguage, getGrammar } from '../../core/languages.js';
-import type {
-    ConstraintViolation,
-    DescriptiveConstraint,
-} from './types.js';
+import type { ConstraintViolation, DescriptiveConstraint } from './types.js';
 
 const require = createRequire(import.meta.url);
 const Parser = require('tree-sitter');
@@ -19,7 +16,7 @@ export interface ConstraintCheckResult {
 export class ConstraintChecker {
     constructor(
         private repo: Repository,
-        private intent: IntentStore
+        private intent: IntentStore,
     ) {}
 
     async check(): Promise<ConstraintCheckResult> {
@@ -45,9 +42,7 @@ export class ConstraintChecker {
         return { violations, descriptive };
     }
 
-    private async checkWithPattern(
-        constraint: IntentEntry
-    ): Promise<ConstraintViolation[]> {
+    private async checkWithPattern(constraint: IntentEntry): Promise<ConstraintViolation[]> {
         const pattern = constraint.frontmatter.pattern!;
         const violations: ConstraintViolation[] = [];
         const scope = constraint.frontmatter.scope;
@@ -74,10 +69,7 @@ export class ConstraintChecker {
             const language = parser.getLanguage();
 
             try {
-                const query = new Parser.Query(
-                    language,
-                    pattern
-                );
+                const query = new Parser.Query(language, pattern);
                 const matches = query.matches(tree.rootNode);
 
                 for (const match of matches) {
@@ -86,15 +78,11 @@ export class ConstraintChecker {
 
                     const node = firstCapture.node;
                     violations.push({
-                        constraintId:
-                            constraint.frontmatter.id,
-                        constraintDescription:
-                            constraint.content,
+                        constraintId: constraint.frontmatter.id,
+                        constraintDescription: constraint.content,
                         filePath,
-                        lineStart:
-                            node.startPosition.row + 1,
-                        lineEnd:
-                            node.endPosition.row + 1,
+                        lineStart: node.startPosition.row + 1,
+                        lineEnd: node.endPosition.row + 1,
                         matchedText: node.text.slice(0, 100),
                     });
                 }
@@ -118,8 +106,6 @@ export class ConstraintChecker {
             return [...filePaths];
         }
 
-        return [...filePaths].filter((fp) =>
-            fp.includes(scope)
-        );
+        return [...filePaths].filter((fp) => fp.includes(scope));
     }
 }

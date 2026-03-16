@@ -2,15 +2,27 @@
     "name": "symbiote",
     "private": true,
     "packageManager": "npm@11.9.0",
-    "workspaces": ["packages/*"],
+    "workspaces": [
+        "packages/*"
+    ],
     "scripts": {
         "build": "turbo build",
         "dev": "turbo dev",
         "test": "turbo test",
         "lint": "turbo lint",
+        "format": "prettier --write 'packages/*/src/**/*.ts' 'packages/*/bin/**/*.ts' 'packages/*/test/**/*.ts'",
+        "format:check": "prettier --check 'packages/*/src/**/*.ts' 'packages/*/bin/**/*.ts' 'packages/*/test/**/*.ts'",
+        "prepare": "husky",
         "prepublishOnly": "turbo build"
     },
+    "lint-staged": {
+        "*.{ts,tsx}": "prettier --write",
+        "*.{json,md}": "prettier --write"
+    },
     "devDependencies": {
+        "husky": "^9.1.7",
+        "lint-staged": "^16.4.0",
+        "prettier": "^3.8.1",
         "turbo": "^2"
     }
 }

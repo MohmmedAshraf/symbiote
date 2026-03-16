@@ -44,9 +44,7 @@ describe('SmartInit integration', () => {
             });
             init.run();
 
-            const overview = readFileSync(
-                join(brainDir, 'intent', 'overview.md'), 'utf-8',
-            );
+            const overview = readFileSync(join(brainDir, 'intent', 'overview.md'), 'utf-8');
 
             expect(overview).toContain('# init-project');
             expect(overview).toContain('A Next.js app with Drizzle ORM');

@@ -22,9 +22,7 @@ describe('Scanner', () => {
     });
 
     it('scans a simple JS project and populates the graph', async () => {
-        const result = await scanner.scan(
-            path.join(FIXTURES, 'simple-project')
-        );
+        const result = await scanner.scan(path.join(FIXTURES, 'simple-project'));
 
         expect(result.filesScanned).toBeGreaterThan(0);
         expect(result.nodesCreated).toBeGreaterThan(0);
@@ -35,9 +33,7 @@ describe('Scanner', () => {
     });
 
     it('scans a TypeScript project', async () => {
-        const result = await scanner.scan(
-            path.join(FIXTURES, 'ts-project')
-        );
+        const result = await scanner.scan(path.join(FIXTURES, 'ts-project'));
 
         expect(result.filesScanned).toBeGreaterThan(0);
         expect(result.nodesCreated).toBeGreaterThan(0);
@@ -47,12 +43,8 @@ describe('Scanner', () => {
     });
 
     it('skips unchanged files on second scan', async () => {
-        const first = await scanner.scan(
-            path.join(FIXTURES, 'simple-project')
-        );
-        const second = await scanner.scan(
-            path.join(FIXTURES, 'simple-project')
-        );
+        const first = await scanner.scan(path.join(FIXTURES, 'simple-project'));
+        const second = await scanner.scan(path.join(FIXTURES, 'simple-project'));
 
         expect(second.filesScanned).toBe(0);
         expect(second.filesSkipped).toBe(first.filesScanned);
@@ -60,10 +52,7 @@ describe('Scanner', () => {
 
     it('rescans everything when force=true', async () => {
         await scanner.scan(path.join(FIXTURES, 'simple-project'));
-        const second = await scanner.scan(
-            path.join(FIXTURES, 'simple-project'),
-            { force: true }
-        );
+        const second = await scanner.scan(path.join(FIXTURES, 'simple-project'), { force: true });
 
         expect(second.filesScanned).toBeGreaterThan(0);
         expect(second.filesSkipped).toBe(0);

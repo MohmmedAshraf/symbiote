@@ -6,10 +6,7 @@ import { Scanner } from '../../../src/core/scanner.js';
 import { IntentStore } from '../../../src/brain/intent.js';
 import { HealthEngine } from '../../../src/brain/health/index.js';
 
-const FIXTURES = path.join(
-    import.meta.dirname,
-    '../../fixtures/brain-project'
-);
+const FIXTURES = path.join(import.meta.dirname, '../../fixtures/brain-project');
 
 describe('HealthEngine', () => {
     let db: SymbioteDB;
@@ -22,9 +19,7 @@ describe('HealthEngine', () => {
         const scanner = new Scanner(repo);
         await scanner.scan(path.join(FIXTURES, 'src'));
 
-        const intent = new IntentStore(
-            path.join(FIXTURES, '.brain')
-        );
+        const intent = new IntentStore(path.join(FIXTURES, '.brain'));
         engine = new HealthEngine(repo, intent, db);
     });
 
@@ -60,8 +55,22 @@ describe('HealthEngine', () => {
 
     it('detects circular deps when manually added', async () => {
         await repo.insertNodes([
-            { id: 'fn:x.ts:a', type: 'function', name: 'a', filePath: 'x.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:y.ts:b', type: 'function', name: 'b', filePath: 'y.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:x.ts:a',
+                type: 'function',
+                name: 'a',
+                filePath: 'x.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:y.ts:b',
+                type: 'function',
+                name: 'b',
+                filePath: 'y.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:x.ts:a', targetId: 'fn:y.ts:b', type: 'calls' },
@@ -75,7 +84,14 @@ describe('HealthEngine', () => {
     it('returns score between 0 and 100 even with many issues', async () => {
         for (let i = 0; i < 50; i++) {
             await repo.insertNodes([
-                { id: `fn:orphan${i}.ts:fn${i}`, type: 'function', name: `fn${i}`, filePath: `orphan${i}.ts`, lineStart: 1, lineEnd: 3 },
+                {
+                    id: `fn:orphan${i}.ts:fn${i}`,
+                    type: 'function',
+                    name: `fn${i}`,
+                    filePath: `orphan${i}.ts`,
+                    lineStart: 1,
+                    lineEnd: 3,
+                },
             ]);
         }
 

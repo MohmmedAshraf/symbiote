@@ -105,9 +105,7 @@ describe('Repository', () => {
                 },
             ]);
 
-            await repo.insertEdges([
-                { sourceId: 'fn:a:foo', targetId: 'fn:b:bar', type: 'calls' },
-            ]);
+            await repo.insertEdges([{ sourceId: 'fn:a:foo', targetId: 'fn:b:bar', type: 'calls' }]);
 
             const deps = await repo.getDependencies('fn:a:foo');
             expect(deps).toHaveLength(1);
@@ -140,9 +138,7 @@ describe('Repository', () => {
                 },
             ]);
 
-            await repo.insertEdges([
-                { sourceId: 'fn:a:foo', targetId: 'fn:b:bar', type: 'calls' },
-            ]);
+            await repo.insertEdges([{ sourceId: 'fn:a:foo', targetId: 'fn:b:bar', type: 'calls' }]);
 
             const stats = await repo.getStats();
             expect(stats.nodes).toBe(2);

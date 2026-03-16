@@ -12,9 +12,7 @@ export interface ProjectOverviewOutput {
     decisions: IntentEntry[];
 }
 
-export async function handleGetProjectOverview(
-    ctx: ServerContext
-): Promise<ProjectOverviewOutput> {
+export async function handleGetProjectOverview(ctx: ServerContext): Promise<ProjectOverviewOutput> {
     const overview = await ctx.graph.getOverview();
     const constraints = ctx.intent.listEntries('constraint', {
         status: 'active',
@@ -48,7 +46,7 @@ export interface FileContextOutput {
 
 export async function handleGetContextForFile(
     ctx: ServerContext,
-    input: GetContextForFileInput
+    input: GetContextForFileInput,
 ): Promise<FileContextOutput> {
     const fileCtx = await ctx.graph.getFileContext(input.filePath);
 
@@ -56,16 +54,14 @@ export async function handleGetContextForFile(
         .listEntries('constraint')
         .filter(
             (c) =>
-                c.frontmatter.scope === 'global' ||
-                input.filePath.startsWith(c.frontmatter.scope)
+                c.frontmatter.scope === 'global' || input.filePath.startsWith(c.frontmatter.scope),
         );
 
     const decisions = ctx.intent
         .listEntries('decision')
         .filter(
             (d) =>
-                d.frontmatter.scope === 'global' ||
-                input.filePath.startsWith(d.frontmatter.scope)
+                d.frontmatter.scope === 'global' || input.filePath.startsWith(d.frontmatter.scope),
         );
 
     return {
@@ -95,7 +91,7 @@ export interface QueryGraphOutput {
 
 export async function handleQueryGraph(
     ctx: ServerContext,
-    input: QueryGraphInput
+    input: QueryGraphInput,
 ): Promise<QueryGraphOutput> {
     switch (input.type) {
         case 'search':
@@ -122,21 +118,17 @@ export interface SemanticSearchOutput {
 
 export async function handleSemanticSearch(
     ctx: ServerContext,
-    input: SemanticSearchInput
+    input: SemanticSearchInput,
 ): Promise<SemanticSearchOutput> {
     try {
         const queryVector = new Array(384).fill(0);
-        const searchResults = await semanticSearch(
-            ctx.db,
-            queryVector,
-            input.limit ?? 10
-        );
+        const searchResults = await semanticSearch(ctx.db, queryVector, input.limit ?? 10);
 
         const results = await Promise.all(
             searchResults.map(async (r) => ({
                 node: (await ctx.repo.getNodeById(r.nodeId)) ?? null,
                 distance: r.distance,
-            }))
+            })),
         );
 
         return { results };

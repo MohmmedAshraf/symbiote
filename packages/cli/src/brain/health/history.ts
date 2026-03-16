@@ -33,15 +33,15 @@ export class HealthHistory {
             input.circularDepCount,
             input.deadCodeCount,
             input.couplingHotspotCount,
-            now
+            now,
         );
     }
 
     async list(limit: number): Promise<HealthSnapshot[]> {
-        const rows = await this.db.all(
+        const rows = (await this.db.all(
             'SELECT * FROM health_snapshots ORDER BY id DESC LIMIT $1',
-            limit
-        ) as Array<{
+            limit,
+        )) as Array<{
             id: number;
             score: number;
             constraint_score: number;

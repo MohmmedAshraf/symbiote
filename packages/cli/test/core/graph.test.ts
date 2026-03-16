@@ -14,9 +14,30 @@ describe('GraphQuery', () => {
         graph = new GraphQuery(repo);
 
         await repo.insertNodes([
-            { id: 'fn:a:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 5 },
-            { id: 'fn:b:bar', type: 'function', name: 'bar', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:a:baz', type: 'function', name: 'baz', filePath: 'a.ts', lineStart: 7, lineEnd: 10 },
+            {
+                id: 'fn:a:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
+            {
+                id: 'fn:b:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:a:baz',
+                type: 'function',
+                name: 'baz',
+                filePath: 'a.ts',
+                lineStart: 7,
+                lineEnd: 10,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a:foo', targetId: 'fn:b:bar', type: 'calls' },

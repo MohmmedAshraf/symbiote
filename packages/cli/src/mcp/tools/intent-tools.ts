@@ -11,15 +11,13 @@ export interface GetConstraintsOutput {
 
 export function handleGetConstraints(
     ctx: ServerContext,
-    input: GetConstraintsInput
+    input: GetConstraintsInput,
 ): GetConstraintsOutput {
     const constraints = ctx.intent.listEntries('constraint');
 
     if (input.scope) {
         return {
-            constraints: constraints.filter(
-                (c) => c.frontmatter.scope === input.scope
-            ),
+            constraints: constraints.filter((c) => c.frontmatter.scope === input.scope),
         };
     }
 
@@ -36,16 +34,14 @@ export interface GetDecisionsOutput {
 
 export function handleGetDecisions(
     ctx: ServerContext,
-    input: GetDecisionsInput
+    input: GetDecisionsInput,
 ): GetDecisionsOutput {
     const decisions = ctx.intent.listEntries('decision');
 
     if (input.scope) {
         return {
             decisions: decisions.filter(
-                (d) =>
-                    d.frontmatter.scope === 'global' ||
-                    d.frontmatter.scope === input.scope
+                (d) => d.frontmatter.scope === 'global' || d.frontmatter.scope === input.scope,
             ),
         };
     }
@@ -65,7 +61,7 @@ export interface ProposeEntryOutput {
 
 export function handleProposeDecision(
     ctx: ServerContext,
-    input: ProposeDecisionInput
+    input: ProposeDecisionInput,
 ): ProposeEntryOutput {
     const entry: IntentEntry = {
         frontmatter: {
@@ -91,7 +87,7 @@ export interface ProposeConstraintInput {
 
 export function handleProposeConstraint(
     ctx: ServerContext,
-    input: ProposeConstraintInput
+    input: ProposeConstraintInput,
 ): ProposeEntryOutput {
     const entry: IntentEntry = {
         frontmatter: {

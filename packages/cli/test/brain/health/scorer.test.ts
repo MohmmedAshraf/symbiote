@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-    computeHealthScore,
-    computeCategoryScore,
-} from '../../../src/brain/health/scorer.js';
+import { computeHealthScore, computeCategoryScore } from '../../../src/brain/health/scorer.js';
 
 describe('computeCategoryScore', () => {
     it('returns 100 when there are zero issues', () => {
@@ -60,12 +57,7 @@ describe('computeHealthScore', () => {
         expect(score.categories.coupling.weight).toBe(0.2);
 
         const constraintScore = computeCategoryScore(5, 20);
-        const expected = Math.round(
-            constraintScore * 0.4 +
-                100 * 0.2 +
-                100 * 0.2 +
-                100 * 0.2
-        );
+        const expected = Math.round(constraintScore * 0.4 + 100 * 0.2 + 100 * 0.2 + 100 * 0.2);
         expect(score.score).toBe(expected);
     });
 

@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../src/mcp/context.js';
 import { createMcpServer } from '../../src/mcp/server.js';
 
 describe('createMcpServer', () => {
@@ -17,14 +14,8 @@ describe('createMcpServer', () => {
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        tmpHome = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-srv-home-${Date.now()}`
-        );
-        tmpBrain = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-srv-brain-${Date.now()}`
-        );
+        tmpHome = path.join(os.tmpdir(), `symbiote-mcp-srv-home-${Date.now()}`);
+        tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-srv-brain-${Date.now()}`);
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
         });
@@ -39,7 +30,7 @@ describe('createMcpServer', () => {
         });
         fs.writeFileSync(
             path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] })
+            JSON.stringify({ version: 1, entries: [] }),
         );
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,

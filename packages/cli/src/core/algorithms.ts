@@ -62,7 +62,7 @@ export class GraphAlgorithms {
                 if (source !== target && !undirected.hasEdge(source, target)) {
                     undirected.addEdge(source, target);
                 }
-            }
+            },
         );
 
         return louvain(undirected);
@@ -97,9 +97,7 @@ export class GraphAlgorithms {
             metadata.pageRank = ranks[node.id] ?? 0;
             metadata.betweenness = betweenness[node.id] ?? 0;
 
-            await this.repo.insertNodes([
-                { ...node, metadata },
-            ]);
+            await this.repo.insertNodes([{ ...node, metadata }]);
         }
 
         return {

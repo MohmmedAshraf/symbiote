@@ -14,11 +14,46 @@ describe('GraphAlgorithms', () => {
         algorithms = new GraphAlgorithms(repo);
 
         await repo.insertNodes([
-            { id: 'fn:a:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 5 },
-            { id: 'fn:a:bar', type: 'function', name: 'bar', filePath: 'a.ts', lineStart: 7, lineEnd: 10 },
-            { id: 'fn:b:baz', type: 'function', name: 'baz', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:b:qux', type: 'function', name: 'qux', filePath: 'b.ts', lineStart: 5, lineEnd: 8 },
-            { id: 'fn:c:solo', type: 'function', name: 'solo', filePath: 'c.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
+            {
+                id: 'fn:a:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'a.ts',
+                lineStart: 7,
+                lineEnd: 10,
+            },
+            {
+                id: 'fn:b:baz',
+                type: 'function',
+                name: 'baz',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:b:qux',
+                type: 'function',
+                name: 'qux',
+                filePath: 'b.ts',
+                lineStart: 5,
+                lineEnd: 8,
+            },
+            {
+                id: 'fn:c:solo',
+                type: 'function',
+                name: 'solo',
+                filePath: 'c.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a:foo', targetId: 'fn:a:bar', type: 'calls' },

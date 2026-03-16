@@ -4,10 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
 import { Scanner } from '../../../src/core/scanner.js';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../../src/mcp/context.js';
 import {
     handleGetProjectOverview,
     handleGetContextForFile,
@@ -15,14 +12,8 @@ import {
     handleSemanticSearch,
 } from '../../../src/mcp/tools/project-tools.js';
 
-const FIXTURES_SRC = path.join(
-    import.meta.dirname,
-    '../../fixtures/brain-project/src'
-);
-const FIXTURES_BRAIN = path.join(
-    import.meta.dirname,
-    '../../fixtures/brain-project/.brain'
-);
+const FIXTURES_SRC = path.join(import.meta.dirname, '../../fixtures/brain-project/src');
+const FIXTURES_BRAIN = path.join(import.meta.dirname, '../../fixtures/brain-project/.brain');
 
 describe('Project Tools', () => {
     let db: SymbioteDB;
@@ -31,10 +22,7 @@ describe('Project Tools', () => {
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        tmpHome = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-proj-${Date.now()}`
-        );
+        tmpHome = path.join(os.tmpdir(), `symbiote-mcp-proj-${Date.now()}`);
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
         });
@@ -49,7 +37,7 @@ describe('Project Tools', () => {
         });
         fs.writeFileSync(
             path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] })
+            JSON.stringify({ version: 1, entries: [] }),
         );
 
         ctx = createServerContext({

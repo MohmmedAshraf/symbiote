@@ -19,10 +19,7 @@ export interface ScanResult {
 export class Scanner {
     constructor(private repo: Repository) {}
 
-    async scan(
-        rootDir: string,
-        options: ScanOptions = {}
-    ): Promise<ScanResult> {
+    async scan(rootDir: string, options: ScanOptions = {}): Promise<ScanResult> {
         const files = walkFiles(rootDir);
         const result: ScanResult = {
             filesScanned: 0,
@@ -36,10 +33,7 @@ export class Scanner {
             try {
                 const hash = hashFileContent(filePath);
 
-                if (
-                    !options.force &&
-                    !(await this.repo.isFileChanged(filePath, hash))
-                ) {
+                if (!options.force && !(await this.repo.isFileChanged(filePath, hash))) {
                     result.filesSkipped++;
                     continue;
                 }
@@ -61,10 +55,7 @@ export class Scanner {
             } catch (error) {
                 result.errors.push({
                     file: filePath,
-                    error:
-                        error instanceof Error
-                            ? error.message
-                            : String(error),
+                    error: error instanceof Error ? error.message : String(error),
                 });
             }
         }

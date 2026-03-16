@@ -20,8 +20,22 @@ describe('CycleDetector', () => {
 
     it('returns empty array when there are no cycles', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:b.ts:bar', type: 'function', name: 'bar', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:b.ts:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:foo', targetId: 'fn:b.ts:bar', type: 'calls' },
@@ -33,8 +47,22 @@ describe('CycleDetector', () => {
 
     it('detects a simple A -> B -> A cycle', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:b.ts:bar', type: 'function', name: 'bar', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:b.ts:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:foo', targetId: 'fn:b.ts:bar', type: 'calls' },
@@ -50,9 +78,30 @@ describe('CycleDetector', () => {
 
     it('detects a three-node cycle A -> B -> C -> A', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:a', type: 'function', name: 'a', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:b.ts:b', type: 'function', name: 'b', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:c.ts:c', type: 'function', name: 'c', filePath: 'c.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:a',
+                type: 'function',
+                name: 'a',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:b.ts:b',
+                type: 'function',
+                name: 'b',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:c.ts:c',
+                type: 'function',
+                name: 'c',
+                filePath: 'c.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:a', targetId: 'fn:b.ts:b', type: 'calls' },
@@ -68,7 +117,14 @@ describe('CycleDetector', () => {
 
     it('ignores self-loops within the same file', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:recursive', type: 'function', name: 'recursive', filePath: 'a.ts', lineStart: 1, lineEnd: 5 },
+            {
+                id: 'fn:a.ts:recursive',
+                type: 'function',
+                name: 'recursive',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:recursive', targetId: 'fn:a.ts:recursive', type: 'calls' },
@@ -80,8 +136,22 @@ describe('CycleDetector', () => {
 
     it('ignores cycles within the same file', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:a.ts:bar', type: 'function', name: 'bar', filePath: 'a.ts', lineStart: 5, lineEnd: 8 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:a.ts:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'a.ts',
+                lineStart: 5,
+                lineEnd: 8,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:foo', targetId: 'fn:a.ts:bar', type: 'calls' },
@@ -94,7 +164,14 @@ describe('CycleDetector', () => {
 
     it('returns empty array when graph has no edges', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
 
         const cycles = await detector.detect();

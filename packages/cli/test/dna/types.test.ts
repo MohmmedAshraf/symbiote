@@ -9,12 +9,7 @@ import {
 
 describe('DNA_CATEGORIES', () => {
     it('includes all four categories', () => {
-        expect(DNA_CATEGORIES).toEqual([
-            'style',
-            'preferences',
-            'anti-patterns',
-            'decisions',
-        ]);
+        expect(DNA_CATEGORIES).toEqual(['style', 'preferences', 'anti-patterns', 'decisions']);
     });
 });
 
@@ -50,19 +45,14 @@ Use early returns to exit functions. Never nest logic inside else blocks after a
         expect(result!.frontmatter.status).toBe('approved');
         expect(result!.frontmatter.category).toBe('style');
         expect(result!.frontmatter.occurrences).toBe(12);
-        expect(result!.frontmatter.sessionIds).toEqual([
-            'session-1',
-            'session-2',
-        ]);
+        expect(result!.frontmatter.sessionIds).toEqual(['session-1', 'session-2']);
         expect(result!.content).toBe(
-            'Use early returns to exit functions. Never nest logic inside else blocks after a return statement.'
+            'Use early returns to exit functions. Never nest logic inside else blocks after a return statement.',
         );
     });
 
     it('returns null for invalid markdown without frontmatter', () => {
-        const result = parseFrontmatter(
-            'Just plain text without frontmatter.'
-        );
+        const result = parseFrontmatter('Just plain text without frontmatter.');
         expect(result).toBeNull();
     });
 
@@ -96,9 +86,7 @@ describe('serializeEntry', () => {
         expect(serialized).toContain('confidence: 0.95');
         expect(serialized).toContain('status: approved');
         expect(serialized).toContain('category: style');
-        expect(serialized).toContain(
-            'Use early returns to exit functions.'
-        );
+        expect(serialized).toContain('Use early returns to exit functions.');
 
         const reparsed = parseFrontmatter(serialized);
         expect(reparsed).toBeDefined();

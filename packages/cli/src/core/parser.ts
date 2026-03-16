@@ -75,11 +75,7 @@ export function parseFile(filePath: string): ParseResult | null {
     return { filePath, language, nodes, edges };
 }
 
-function extractNodes(
-    root: SyntaxNode,
-    filePath: string,
-    nodes: NodeRecord[]
-): void {
+function extractNodes(root: SyntaxNode, filePath: string, nodes: NodeRecord[]): void {
     const cursor = root.walk();
     let reachedRoot = false;
 
@@ -104,10 +100,7 @@ function extractNodes(
             }
         }
 
-        if (
-            node.type === 'class_declaration' ||
-            node.type === 'class'
-        ) {
+        if (node.type === 'class_declaration' || node.type === 'class') {
             const name = getClassName(node);
             if (name) {
                 nodes.push({
@@ -140,16 +133,13 @@ function extractMethods(
     classNode: SyntaxNode,
     filePath: string,
     className: string,
-    nodes: NodeRecord[]
+    nodes: NodeRecord[],
 ): void {
     const body = classNode.childForFieldName('body');
     if (!body) return;
 
     for (const child of body.children) {
-        if (
-            child.type === 'method_definition' ||
-            child.type === 'public_field_definition'
-        ) {
+        if (child.type === 'method_definition' || child.type === 'public_field_definition') {
             const name = child.childForFieldName('name')?.text;
             if (name) {
                 nodes.push({
@@ -165,11 +155,7 @@ function extractMethods(
     }
 }
 
-function extractImports(
-    root: SyntaxNode,
-    filePath: string,
-    edges: EdgeRecord[]
-): void {
+function extractImports(root: SyntaxNode, filePath: string, edges: EdgeRecord[]): void {
     for (const child of root.children) {
         if (child.type === 'import_statement') {
             const source = child.childForFieldName('source');

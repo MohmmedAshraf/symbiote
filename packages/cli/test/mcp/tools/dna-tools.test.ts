@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../../src/mcp/context.js';
 import {
     handleGetDeveloperDna,
     handleRecordInstruction,
@@ -20,14 +17,8 @@ describe('DNA Tools', () => {
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        tmpHome = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-dna-${Date.now()}`
-        );
-        tmpBrain = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-brain-${Date.now()}`
-        );
+        tmpHome = path.join(os.tmpdir(), `symbiote-mcp-dna-${Date.now()}`);
+        tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-brain-${Date.now()}`);
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
         });
@@ -42,7 +33,7 @@ describe('DNA Tools', () => {
         });
         fs.writeFileSync(
             path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] })
+            JSON.stringify({ version: 1, entries: [] }),
         );
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,
@@ -74,7 +65,7 @@ describe('DNA Tools', () => {
             ctx.dnaEngine.captureInstruction(
                 'Use early returns in functions',
                 'session-1',
-                'correction'
+                'correction',
             );
             const result = handleGetDeveloperDna(ctx, {
                 category: 'style',
@@ -83,16 +74,8 @@ describe('DNA Tools', () => {
         });
 
         it('returns all active entries when no filter', () => {
-            ctx.dnaEngine.captureInstruction(
-                'Use early returns',
-                'session-1',
-                'correction'
-            );
-            ctx.dnaEngine.captureInstruction(
-                'Prefer Drizzle over Prisma',
-                'session-1',
-                'explicit'
-            );
+            ctx.dnaEngine.captureInstruction('Use early returns', 'session-1', 'correction');
+            ctx.dnaEngine.captureInstruction('Prefer Drizzle over Prisma', 'session-1', 'explicit');
             const result = handleGetDeveloperDna(ctx, {});
             expect(result.entries.length).toBeGreaterThanOrEqual(2);
         });
@@ -101,8 +84,7 @@ describe('DNA Tools', () => {
     describe('handleRecordInstruction', () => {
         it('captures an instruction and returns the created entry', () => {
             const result = handleRecordInstruction(ctx, {
-                instruction:
-                    'Always use server actions for mutations',
+                instruction: 'Always use server actions for mutations',
                 sessionId: 'test-session',
                 isExplicit: false,
             });

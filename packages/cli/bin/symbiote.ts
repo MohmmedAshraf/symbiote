@@ -9,11 +9,7 @@ import pc from 'picocolors';
 import { createDatabase } from '../src/storage/db.js';
 import { Repository } from '../src/storage/repository.js';
 import { Scanner } from '../src/core/scanner.js';
-import {
-    ensureBrainDir,
-    ensureSymbioteHome,
-    getBrainDbPath,
-} from '../src/utils/config.js';
+import { ensureBrainDir, ensureSymbioteHome, getBrainDbPath } from '../src/utils/config.js';
 import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
@@ -35,28 +31,18 @@ const MIME_TYPES: Record<string, string> = {
     '.map': 'application/json',
 };
 
-function serveStatic(
-    webDistDir: string,
-    pathname: string,
-    res: ServerResponse
-): boolean {
-    const safePath = path
-        .normalize(pathname)
-        .replace(/^(\.\.[/\\])+/, '');
+function serveStatic(webDistDir: string, pathname: string, res: ServerResponse): boolean {
+    const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
     let filePath = path.join(webDistDir, safePath);
 
-    if (
-        !fs.existsSync(filePath) ||
-        fs.statSync(filePath).isDirectory()
-    ) {
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         filePath = path.join(webDistDir, 'index.html');
     }
 
     if (!fs.existsSync(filePath)) return false;
 
     const ext = path.extname(filePath);
-    const contentType =
-        MIME_TYPES[ext] ?? 'application/octet-stream';
+    const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
 
     res.writeHead(200, { 'Content-Type': contentType });
     fs.createReadStream(filePath).pipe(res);
@@ -93,32 +79,20 @@ function showLogo(): void {
 function showHelp(): void {
     showLogo();
     console.log();
-    console.log(
-        pc.dim(
-            '  Your codebase gets a brain. Your AI never forgets who you are.'
-        )
-    );
+    console.log(pc.dim('  Your codebase gets a brain. Your AI never forgets who you are.'));
     console.log();
     console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote init')}          Initialize for the current project`
+        `  ${pc.bold('$')} ${pc.cyan('symbiote init')}          Initialize for the current project`,
     );
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote scan')}          Rescan codebase`);
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote serve')}         Start MCP server + web UI`);
     console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote scan')}          Rescan codebase`
+        `  ${pc.bold('$')} ${pc.cyan('symbiote mcp')}           MCP server only (for editors)`,
     );
-    console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote serve')}         Start MCP server + web UI`
-    );
-    console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote mcp')}           MCP server only (for editors)`
-    );
-    console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote dna')}           View your developer DNA`
-    );
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna')}           View your developer DNA`);
     console.log();
     console.log(pc.dim('  Connect to Claude Code:'));
-    console.log(
-        `    ${pc.dim('claude mcp add symbiote -- npx symbiote-cli mcp')}`
-    );
+    console.log(`    ${pc.dim('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
     console.log();
 }
 
@@ -128,8 +102,7 @@ function parseArgs(argv: string[]): {
     flags: Record<string, string | boolean>;
 } {
     const raw = argv.slice(2);
-    const command =
-        raw.find((a) => !a.startsWith('-')) ?? '';
+    const command = raw.find((a) => !a.startsWith('-')) ?? '';
     const args: string[] = [];
     const flags: Record<string, string | boolean> = {};
 
@@ -140,23 +113,14 @@ function parseArgs(argv: string[]): {
             continue;
         }
         const arg = raw[i];
-        if (
-            arg === command &&
-            args.length === 0 &&
-            !arg.startsWith('-')
-        ) {
+        if (arg === command && args.length === 0 && !arg.startsWith('-')) {
             continue;
         }
         if (arg.startsWith('--')) {
             const eqIdx = arg.indexOf('=');
             if (eqIdx !== -1) {
-                flags[arg.slice(2, eqIdx)] = arg.slice(
-                    eqIdx + 1
-                );
-            } else if (
-                i + 1 < raw.length &&
-                !raw[i + 1].startsWith('-')
-            ) {
+                flags[arg.slice(2, eqIdx)] = arg.slice(eqIdx + 1);
+            } else if (i + 1 < raw.length && !raw[i + 1].startsWith('-')) {
                 flags[arg.slice(2)] = raw[i + 1];
                 skipNext = true;
             } else {
@@ -173,10 +137,7 @@ function parseArgs(argv: string[]): {
                 v: 'version',
             };
             const long = longMap[short] ?? short;
-            if (
-                i + 1 < raw.length &&
-                !raw[i + 1].startsWith('-')
-            ) {
+            if (i + 1 < raw.length && !raw[i + 1].startsWith('-')) {
                 flags[long] = raw[i + 1];
                 skipNext = true;
             } else {
@@ -191,16 +152,11 @@ function parseArgs(argv: string[]): {
 }
 
 async function cmdInit(): Promise<void> {
-    const { SmartInit } = await import(
-        '../src/init/index.js'
-    );
+    const { SmartInit } = await import('../src/init/index.js');
 
     const projectRoot = process.cwd();
 
-    p.intro(
-        pc.bold('Symbiote') +
-            pc.dim(' — Initializing project brain')
-    );
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Initializing project brain'));
 
     const symbioteHome = ensureSymbioteHome();
     const brainDir = ensureBrainDir(projectRoot);
@@ -215,9 +171,7 @@ async function cmdInit(): Promise<void> {
     const scanResult = await scanner.scan(projectRoot);
     s1.stop(
         `${scanResult.filesScanned} files` +
-            pc.dim(
-                ` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`
-            )
+            pc.dim(` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`),
     );
 
     const s2 = p.spinner();
@@ -235,31 +189,29 @@ async function cmdInit(): Promise<void> {
 
     const lines: string[] = [];
     if (result.rulesImported > 0) {
-        lines.push(
-            `${pc.dim('Rules imported:')}   ${result.rulesImported}`
-        );
+        lines.push(`${pc.dim('Rules imported:')}   ${result.rulesImported}`);
     }
     if (result.techStack.length > 0) {
         lines.push(
-            `${pc.dim('Tech stack:')}      ${result.techStack.map((t) => t.name).join(', ')}`
+            `${pc.dim('Tech stack:')}      ${result.techStack.map((t) => t.name).join(', ')}`,
         );
     }
     if (result.architectureSignals.length > 0) {
         lines.push(
-            `${pc.dim('Architecture:')}    ${result.architectureSignals.slice(0, 3).map((s) => s.pattern).join(', ')}`
+            `${pc.dim('Architecture:')}    ${result.architectureSignals
+                .slice(0, 3)
+                .map((s) => s.pattern)
+                .join(', ')}`,
         );
     }
     if (result.intentEntriesCreated > 0) {
         lines.push(
-            `${pc.dim('Intent entries:')}  ${result.intentEntriesCreated} constraints/decisions`
+            `${pc.dim('Intent entries:')}  ${result.intentEntriesCreated} constraints/decisions`,
         );
     }
-    if (
-        result.dnaEntriesImported > 0 ||
-        result.dnaEntriesLoaded > 0
-    ) {
+    if (result.dnaEntriesImported > 0 || result.dnaEntriesLoaded > 0) {
         lines.push(
-            `${pc.dim('DNA entries:')}     ${result.dnaEntriesLoaded} loaded, ${result.dnaEntriesImported} imported`
+            `${pc.dim('DNA entries:')}     ${result.dnaEntriesLoaded} loaded, ${result.dnaEntriesImported} imported`,
         );
     }
 
@@ -268,27 +220,21 @@ async function cmdInit(): Promise<void> {
     }
 
     if (scanResult.errors.length > 0) {
-        p.log.warn(
-            `${scanResult.errors.length} files had parse errors.`
-        );
+        p.log.warn(`${scanResult.errors.length} files had parse errors.`);
     }
 
     p.outro('Your project has a brain.');
 
     console.log();
     console.log(pc.dim('  Connect to your AI:'));
-    console.log(
-        `    ${pc.cyan('claude mcp add symbiote -- npx symbiote-cli mcp')}`
-    );
+    console.log(`    ${pc.cyan('claude mcp add symbiote -- npx symbiote-cli mcp')}`);
     console.log();
     console.log(pc.dim('  Or start the dashboard:'));
     console.log(`    ${pc.cyan('symbiote serve')}`);
     console.log();
 }
 
-async function cmdScan(
-    flags: Record<string, string | boolean>
-): Promise<void> {
+async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabase(dbPath);
@@ -305,17 +251,13 @@ async function cmdScan(
     s.stop(
         `Scanned: ${result.filesScanned}` +
             pc.dim(
-                ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}`
-            )
+                ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}`,
+            ),
     );
 }
 
-async function cmdServe(
-    flags: Record<string, string | boolean>
-): Promise<void> {
-    const { SSEServerTransport } = await import(
-        '@modelcontextprotocol/sdk/server/sse.js'
-    );
+async function cmdServe(flags: Record<string, string | boolean>): Promise<void> {
+    const { SSEServerTransport } = await import('@modelcontextprotocol/sdk/server/sse.js');
     const http = await import('node:http');
 
     const projectRoot = process.cwd();
@@ -331,46 +273,22 @@ async function cmdServe(
     });
     const { server } = createMcpServer(ctx);
 
-    const port =
-        typeof flags.port === 'string'
-            ? parseInt(flags.port, 10)
-            : 3333;
-    const transports = new Map<
-        string,
-        InstanceType<typeof SSEServerTransport>
-    >();
+    const port = typeof flags.port === 'string' ? parseInt(flags.port, 10) : 3333;
+    const transports = new Map<string, InstanceType<typeof SSEServerTransport>>();
 
     const httpServer = http.createServer(async (req, res) => {
-        const url = new URL(
-            req.url ?? '/',
-            `http://localhost:${port}`
-        );
+        const url = new URL(req.url ?? '/', `http://localhost:${port}`);
 
-        if (
-            url.pathname === '/sse' &&
-            req.method === 'GET'
-        ) {
-            const transport = new SSEServerTransport(
-                '/messages',
-                res
-            );
-            transports.set(
-                transport.sessionId,
-                transport
-            );
+        if (url.pathname === '/sse' && req.method === 'GET') {
+            const transport = new SSEServerTransport('/messages', res);
+            transports.set(transport.sessionId, transport);
             await server.connect(transport);
             return;
         }
 
-        if (
-            url.pathname === '/messages' &&
-            req.method === 'POST'
-        ) {
-            const sessionId =
-                url.searchParams.get('sessionId');
-            const transport = sessionId
-                ? transports.get(sessionId)
-                : undefined;
+        if (url.pathname === '/messages' && req.method === 'POST') {
+            const sessionId = url.searchParams.get('sessionId');
+            const transport = sessionId ? transports.get(sessionId) : undefined;
 
             if (!transport) {
                 res.writeHead(404);
@@ -391,26 +309,12 @@ async function cmdServe(
         }
 
         if (url.pathname.startsWith('/api/')) {
-            if (
-                await handleApiRequest(
-                    ctx,
-                    url.pathname,
-                    req,
-                    res
-                )
-            )
-                return;
+            if (await handleApiRequest(ctx, url.pathname, req, res)) return;
         }
 
-        const webDistDir = path.resolve(
-            __dirname,
-            '../../../web/dist'
-        );
+        const webDistDir = path.resolve(__dirname, '../../../web/dist');
         if (fs.existsSync(webDistDir)) {
-            if (
-                serveStatic(webDistDir, url.pathname, res)
-            )
-                return;
+            if (serveStatic(webDistDir, url.pathname, res)) return;
         }
 
         res.writeHead(404);
@@ -418,14 +322,11 @@ async function cmdServe(
     });
 
     httpServer.listen(port, () => {
-        p.intro(
-            pc.bold('Symbiote') +
-                pc.dim(' — Server running')
-        );
+        p.intro(pc.bold('Symbiote') + pc.dim(' — Server running'));
         p.log.info(
             `${pc.dim('Web UI:')}       http://localhost:${port}\n` +
                 `${pc.dim('MCP SSE:')}      http://localhost:${port}/sse\n` +
-                `${pc.dim('Health:')}       http://localhost:${port}/health`
+                `${pc.dim('Health:')}       http://localhost:${port}/health`,
         );
         p.outro(pc.dim('Press Ctrl+C to stop.'));
     });
@@ -438,9 +339,7 @@ async function cmdServe(
 }
 
 async function cmdMcp(): Promise<void> {
-    const { StdioServerTransport } = await import(
-        '@modelcontextprotocol/sdk/server/stdio.js'
-    );
+    const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
 
     const projectRoot = process.cwd();
     const brainDir = ensureBrainDir(projectRoot);
@@ -467,7 +366,7 @@ async function cmdMcp(): Promise<void> {
 async function cmdDna(
     subcommand: string | undefined,
     args: string[],
-    flags: Record<string, string | boolean>
+    flags: Record<string, string | boolean>,
 ): Promise<void> {
     const symbioteHome = ensureSymbioteHome();
     const dnaDir = path.join(symbioteHome, 'dna');
@@ -476,36 +375,30 @@ async function cmdDna(
 
     if (!subcommand || subcommand === 'dna') {
         const all = storage.listEntries();
-        const approved = all.filter(
-            (e) => e.frontmatter.status === 'approved'
-        );
-        const suggested = all.filter(
-            (e) => e.frontmatter.status === 'suggested'
-        );
-        const rejected = all.filter(
-            (e) => e.frontmatter.status === 'rejected'
-        );
+        const approved = all.filter((e) => e.frontmatter.status === 'approved');
+        const suggested = all.filter((e) => e.frontmatter.status === 'suggested');
+        const rejected = all.filter((e) => e.frontmatter.status === 'rejected');
 
         p.intro(pc.bold('Developer DNA'));
         p.log.info(
             `${pc.dim('Total:')}     ${all.length}\n` +
                 `${pc.dim('Approved:')}  ${approved.length}\n` +
                 `${pc.dim('Suggested:')} ${suggested.length}\n` +
-                `${pc.dim('Rejected:')}  ${rejected.length}`
+                `${pc.dim('Rejected:')}  ${rejected.length}`,
         );
 
         if (suggested.length > 0) {
             p.log.warn('Pending review:');
             for (const entry of suggested) {
                 console.log(
-                    `  ${pc.yellow('[?]')} ${entry.frontmatter.id} ${pc.dim(`(confidence: ${entry.frontmatter.confidence})`)}`
+                    `  ${pc.yellow('[?]')} ${entry.frontmatter.id} ${pc.dim(`(confidence: ${entry.frontmatter.confidence})`)}`,
                 );
             }
             console.log();
             console.log(
                 pc.dim(
-                    "  Run 'symbiote dna approve <id>' or 'symbiote dna reject <id>' to review."
-                )
+                    "  Run 'symbiote dna approve <id>' or 'symbiote dna reject <id>' to review.",
+                ),
             );
         }
 
@@ -515,20 +408,12 @@ async function cmdDna(
 
     if (subcommand === 'list') {
         const entries = storage.listEntries({
-            status: (
-                typeof flags.status === 'string'
-                    ? flags.status
-                    : undefined
-            ) as
+            status: (typeof flags.status === 'string' ? flags.status : undefined) as
                 | 'suggested'
                 | 'approved'
                 | 'rejected'
                 | undefined,
-            category: (
-                typeof flags.category === 'string'
-                    ? flags.category
-                    : undefined
-            ) as
+            category: (typeof flags.category === 'string' ? flags.category : undefined) as
                 | 'style'
                 | 'preferences'
                 | 'anti-patterns'
@@ -541,9 +426,7 @@ async function cmdDna(
             return;
         }
 
-        console.log(
-            `\n${pc.bold('Developer DNA')} ${pc.dim(`— ${entries.length} entries`)}\n`
-        );
+        console.log(`\n${pc.bold('Developer DNA')} ${pc.dim(`— ${entries.length} entries`)}\n`);
         console.log(pc.dim('\u2500'.repeat(70)));
 
         for (const entry of entries) {
@@ -556,10 +439,10 @@ async function cmdDna(
                       : pc.yellow('[?]');
 
             console.log(
-                `${statusIcon} ${pc.bold(fm.id)}  ${pc.dim(`(${fm.category}, confidence: ${fm.confidence}, occurrences: ${fm.occurrences})`)}`
+                `${statusIcon} ${pc.bold(fm.id)}  ${pc.dim(`(${fm.category}, confidence: ${fm.confidence}, occurrences: ${fm.occurrences})`)}`,
             );
             console.log(
-                `    ${entry.content.slice(0, 100)}${entry.content.length > 100 ? '...' : ''}`
+                `    ${entry.content.slice(0, 100)}${entry.content.length > 100 ? '...' : ''}`,
             );
             console.log(pc.dim('\u2500'.repeat(70)));
         }
@@ -581,33 +464,15 @@ async function cmdDna(
 
         const fm = entry.frontmatter;
         console.log();
-        console.log(
-            `${pc.dim('ID:')}          ${pc.bold(fm.id)}`
-        );
-        console.log(
-            `${pc.dim('Category:')}    ${fm.category}`
-        );
-        console.log(
-            `${pc.dim('Status:')}      ${fm.status}`
-        );
-        console.log(
-            `${pc.dim('Confidence:')}  ${fm.confidence}`
-        );
-        console.log(
-            `${pc.dim('Source:')}      ${fm.source}`
-        );
-        console.log(
-            `${pc.dim('First seen:')}  ${fm.firstSeen}`
-        );
-        console.log(
-            `${pc.dim('Last seen:')}   ${fm.lastSeen}`
-        );
-        console.log(
-            `${pc.dim('Occurrences:')} ${fm.occurrences}`
-        );
-        console.log(
-            `${pc.dim('Sessions:')}    ${fm.sessionIds.length}`
-        );
+        console.log(`${pc.dim('ID:')}          ${pc.bold(fm.id)}`);
+        console.log(`${pc.dim('Category:')}    ${fm.category}`);
+        console.log(`${pc.dim('Status:')}      ${fm.status}`);
+        console.log(`${pc.dim('Confidence:')}  ${fm.confidence}`);
+        console.log(`${pc.dim('Source:')}      ${fm.source}`);
+        console.log(`${pc.dim('First seen:')}  ${fm.firstSeen}`);
+        console.log(`${pc.dim('Last seen:')}   ${fm.lastSeen}`);
+        console.log(`${pc.dim('Occurrences:')} ${fm.occurrences}`);
+        console.log(`${pc.dim('Sessions:')}    ${fm.sessionIds.length}`);
         console.log(`\n${entry.content}\n`);
         return;
     }
@@ -615,18 +480,14 @@ async function cmdDna(
     if (subcommand === 'approve') {
         const id = args[0];
         if (!id) {
-            p.log.error(
-                'Usage: symbiote dna approve <id>'
-            );
+            p.log.error('Usage: symbiote dna approve <id>');
             process.exit(1);
         }
 
         const engine = new DnaEngine(storage);
         const entry = engine.approveEntry(id);
         if (entry) {
-            p.log.success(
-                `Approved: ${entry.frontmatter.id}`
-            );
+            p.log.success(`Approved: ${entry.frontmatter.id}`);
         } else {
             p.log.error(`Entry not found: ${id}`);
         }
@@ -636,18 +497,14 @@ async function cmdDna(
     if (subcommand === 'reject') {
         const id = args[0];
         if (!id) {
-            p.log.error(
-                'Usage: symbiote dna reject <id>'
-            );
+            p.log.error('Usage: symbiote dna reject <id>');
             process.exit(1);
         }
 
         const engine = new DnaEngine(storage);
         const entry = engine.rejectEntry(id);
         if (entry) {
-            p.log.success(
-                `Rejected: ${entry.frontmatter.id}`
-            );
+            p.log.success(`Rejected: ${entry.frontmatter.id}`);
         } else {
             p.log.error(`Entry not found: ${id}`);
         }
@@ -657,9 +514,7 @@ async function cmdDna(
     if (subcommand === 'delete') {
         const id = args[0];
         if (!id) {
-            p.log.error(
-                'Usage: symbiote dna delete <id>'
-            );
+            p.log.error('Usage: symbiote dna delete <id>');
             process.exit(1);
         }
 
@@ -669,18 +524,12 @@ async function cmdDna(
     }
 
     p.log.error(`Unknown DNA subcommand: ${subcommand}`);
-    console.log(
-        pc.dim(
-            '  Available: list, show, approve, reject, delete'
-        )
-    );
+    console.log(pc.dim('  Available: list, show, approve, reject, delete'));
     process.exit(1);
 }
 
 async function main(): Promise<void> {
-    const { command, args, flags } = parseArgs(
-        process.argv
-    );
+    const { command, args, flags } = parseArgs(process.argv);
 
     if (flags.help) {
         showHelp();
@@ -722,8 +571,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-    p.log.error(
-        err instanceof Error ? err.message : String(err)
-    );
+    p.log.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
 });

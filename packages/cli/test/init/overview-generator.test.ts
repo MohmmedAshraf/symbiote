@@ -103,9 +103,7 @@ describe('generateSmartOverview', () => {
                 target: 'intent',
             },
         ];
-        const output = generateSmartOverview(
-            'my-app', makeAnalysis(), makeScanResult(), rules,
-        );
+        const output = generateSmartOverview('my-app', makeAnalysis(), makeScanResult(), rules);
         expect(output).toContain('## Key Constraints');
         expect(output).toContain('All mutations through server actions');
         expect(output).not.toContain('strict mode enabled');

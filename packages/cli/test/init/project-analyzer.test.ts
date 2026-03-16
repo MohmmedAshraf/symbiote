@@ -33,8 +33,11 @@ describe('analyzeProject', () => {
         expect(
             srcContents.some((dir) =>
                 patterns.includes(
-                    dir === 'components' ? 'component-library' :
-                        dir === 'lib' ? 'lib-utilities' : 'utility-layer',
+                    dir === 'components'
+                        ? 'component-library'
+                        : dir === 'lib'
+                          ? 'lib-utilities'
+                          : 'utility-layer',
                 ),
             ),
         ).toBe(false);

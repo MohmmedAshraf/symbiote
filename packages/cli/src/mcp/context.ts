@@ -23,9 +23,7 @@ export interface ServerContext {
     dnaEngine: DnaEngine;
 }
 
-export function createServerContext(
-    options: ServerContextOptions
-): ServerContext {
+export function createServerContext(options: ServerContextOptions): ServerContext {
     const repo = new Repository(options.db);
     const graph = new GraphQuery(repo);
     const intent = new IntentStore(options.brainDir);

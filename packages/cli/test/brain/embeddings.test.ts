@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
 import { Repository } from '../../src/storage/repository.js';
-import {
-    storeEmbedding,
-    semanticSearch,
-} from '../../src/brain/embeddings.js';
+import { storeEmbedding, semanticSearch } from '../../src/brain/embeddings.js';
 
 describe('brain embeddings', () => {
     let db: SymbioteDB;
@@ -20,9 +17,9 @@ describe('brain embeddings', () => {
     });
 
     it('creates the embeddings table with schema', async () => {
-        const tables = await db.all(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'embeddings'"
-        ) as { table_name: string }[];
+        const tables = (await db.all(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'embeddings'",
+        )) as { table_name: string }[];
         expect(tables.length).toBe(1);
     });
 
@@ -38,14 +35,12 @@ describe('brain embeddings', () => {
             },
         ]);
 
-        const fakeVector = new Array(384)
-            .fill(0)
-            .map((_, i) => i / 384);
+        const fakeVector = new Array(384).fill(0).map((_, i) => i / 384);
         await storeEmbedding(db, 'fn:test.ts:hello', fakeVector);
 
-        const count = await db.all(
-            'SELECT COUNT(*) as count FROM embeddings'
-        ) as Array<{ count: number | bigint }>;
+        const count = (await db.all('SELECT COUNT(*) as count FROM embeddings')) as Array<{
+            count: number | bigint;
+        }>;
         expect(Number(count[0].count)).toBe(1);
     });
 
@@ -69,12 +64,8 @@ describe('brain embeddings', () => {
             },
         ]);
 
-        const authVector = new Array(384)
-            .fill(0)
-            .map((_, i) => (i % 2 === 0 ? 1 : 0));
-        const mathVector = new Array(384)
-            .fill(0)
-            .map((_, i) => (i % 2 === 0 ? 0 : 1));
+        const authVector = new Array(384).fill(0).map((_, i) => (i % 2 === 0 ? 1 : 0));
+        const mathVector = new Array(384).fill(0).map((_, i) => (i % 2 === 0 ? 0 : 1));
         await storeEmbedding(db, 'fn:auth.ts:login', authVector);
         await storeEmbedding(db, 'fn:math.ts:add', mathVector);
 

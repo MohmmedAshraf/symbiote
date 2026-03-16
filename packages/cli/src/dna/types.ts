@@ -1,9 +1,4 @@
-export const DNA_CATEGORIES = [
-    'style',
-    'preferences',
-    'anti-patterns',
-    'decisions',
-] as const;
+export const DNA_CATEGORIES = ['style', 'preferences', 'anti-patterns', 'decisions'] as const;
 
 export type DnaCategory = (typeof DNA_CATEGORIES)[number];
 
@@ -44,7 +39,7 @@ export interface DnaIndex {
 }
 
 export function parseFrontmatter(
-    raw: string
+    raw: string,
 ): { frontmatter: DnaFrontmatter; content: string } | null {
     if (!raw || !raw.startsWith('---')) return null;
 
@@ -65,16 +60,10 @@ export function parseFrontmatter(
             status: (frontmatter.status as DnaStatus) ?? 'suggested',
             category: (frontmatter.category as DnaCategory) ?? 'style',
             firstSeen: stripQuotes(
-                String(
-                    frontmatter.firstSeen ??
-                        new Date().toISOString().split('T')[0]
-                )
+                String(frontmatter.firstSeen ?? new Date().toISOString().split('T')[0]),
             ),
             lastSeen: stripQuotes(
-                String(
-                    frontmatter.lastSeen ??
-                        new Date().toISOString().split('T')[0]
-                )
+                String(frontmatter.lastSeen ?? new Date().toISOString().split('T')[0]),
             ),
             occurrences: Number(frontmatter.occurrences ?? 1),
             sessionIds: (frontmatter.sessionIds as string[]) ?? [],
@@ -111,10 +100,7 @@ export function serializeEntry(entry: DnaEntry): string {
 }
 
 function stripQuotes(s: string): string {
-    if (
-        (s.startsWith('"') && s.endsWith('"')) ||
-        (s.startsWith("'") && s.endsWith("'"))
-    ) {
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
         return s.slice(1, -1);
     }
     return s;

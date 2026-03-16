@@ -1,11 +1,6 @@
 import { DnaStorage } from './storage.js';
 import { type EmbeddingModel, cosineSimilarity } from './embeddings.js';
-import type {
-    DnaCategory,
-    DnaEntry,
-    DnaFrontmatter,
-    DnaSource,
-} from './types.js';
+import type { DnaCategory, DnaEntry, DnaFrontmatter, DnaSource } from './types.js';
 
 const SIMILARITY_THRESHOLD = 0.85;
 const AUTO_PROMOTE_SESSIONS = 3;
@@ -20,14 +15,10 @@ export interface SimilarMatch {
 export class DnaEngine {
     constructor(
         private storage: DnaStorage,
-        private embeddings?: EmbeddingModel
+        private embeddings?: EmbeddingModel,
     ) {}
 
-    captureInstruction(
-        instruction: string,
-        sessionId: string,
-        source: DnaSource
-    ): DnaEntry {
+    captureInstruction(instruction: string, sessionId: string, source: DnaSource): DnaEntry {
         const category = DnaEngine.classifyCategory(instruction);
         const id = DnaEngine.generateId(category, instruction);
 
@@ -43,9 +34,7 @@ export class DnaEngine {
         const entry: DnaEntry = {
             frontmatter: {
                 id,
-                confidence: isExplicit
-                    ? EXPLICIT_CONFIDENCE
-                    : BASE_CONFIDENCE,
+                confidence: isExplicit ? EXPLICIT_CONFIDENCE : BASE_CONFIDENCE,
                 source,
                 status: isExplicit ? 'approved' : 'suggested',
                 category,
@@ -64,7 +53,7 @@ export class DnaEngine {
     async captureInstructionWithPatternMatch(
         instruction: string,
         sessionId: string,
-        source: DnaSource
+        source: DnaSource,
     ): Promise<DnaEntry> {
         if (!this.embeddings) {
             return this.captureInstruction(instruction, sessionId, source);
@@ -74,36 +63,23 @@ export class DnaEngine {
         const sameCategoryEntries = this.storage.listEntries({ category });
 
         if (sameCategoryEntries.length > 0) {
-            const queryEmbedding =
-                await this.embeddings.embed(instruction);
+            const queryEmbedding = await this.embeddings.embed(instruction);
 
             let bestMatch: DnaEntry | null = null;
             let bestSimilarity = 0;
 
             for (const entry of sameCategoryEntries) {
-                const entryEmbedding = await this.embeddings.embed(
-                    entry.content
-                );
-                const similarity = cosineSimilarity(
-                    queryEmbedding,
-                    entryEmbedding
-                );
+                const entryEmbedding = await this.embeddings.embed(entry.content);
+                const similarity = cosineSimilarity(queryEmbedding, entryEmbedding);
 
-                if (
-                    similarity > SIMILARITY_THRESHOLD &&
-                    similarity > bestSimilarity
-                ) {
+                if (similarity > SIMILARITY_THRESHOLD && similarity > bestSimilarity) {
                     bestMatch = entry;
                     bestSimilarity = similarity;
                 }
             }
 
             if (bestMatch) {
-                return this.updateExistingEntry(
-                    bestMatch,
-                    sessionId,
-                    source
-                );
+                return this.updateExistingEntry(bestMatch, sessionId, source);
             }
         }
 
@@ -120,13 +96,8 @@ export class DnaEngine {
         const matches: SimilarMatch[] = [];
 
         for (const entry of allEntries) {
-            const entryEmbedding = await this.embeddings.embed(
-                entry.content
-            );
-            const similarity = cosineSimilarity(
-                queryEmbedding,
-                entryEmbedding
-            );
+            const entryEmbedding = await this.embeddings.embed(entry.content);
+            const similarity = cosineSimilarity(queryEmbedding, entryEmbedding);
 
             if (similarity > 0.3) {
                 matches.push({ entry, similarity });
@@ -168,16 +139,10 @@ export class DnaEngine {
     }
 
     getActiveEntries(): DnaEntry[] {
-        return this.storage
-            .listEntries()
-            .filter((e) => e.frontmatter.status !== 'rejected');
+        return this.storage.listEntries().filter((e) => e.frontmatter.status !== 'rejected');
     }
 
-    private updateExistingEntry(
-        entry: DnaEntry,
-        sessionId: string,
-        source: DnaSource
-    ): DnaEntry {
+    private updateExistingEntry(entry: DnaEntry, sessionId: string, source: DnaSource): DnaEntry {
         const fm = entry.frontmatter;
         const today = new Date().toISOString().split('T')[0];
 
@@ -194,10 +159,7 @@ export class DnaEngine {
             fm.source = 'explicit';
         } else {
             fm.confidence = this.computeConfidence(fm);
-            if (
-                fm.status === 'suggested' &&
-                fm.sessionIds.length >= AUTO_PROMOTE_SESSIONS
-            ) {
+            if (fm.status === 'suggested' && fm.sessionIds.length >= AUTO_PROMOTE_SESSIONS) {
                 fm.status = 'approved';
             }
         }
@@ -210,10 +172,7 @@ export class DnaEngine {
         const uniqueSessions = fm.sessionIds.length;
 
         if (uniqueSessions >= AUTO_PROMOTE_SESSIONS) {
-            return Math.min(
-                0.8 + (uniqueSessions - AUTO_PROMOTE_SESSIONS) * 0.05,
-                0.99
-            );
+            return Math.min(0.8 + (uniqueSessions - AUTO_PROMOTE_SESSIONS) * 0.05, 0.99);
         }
 
         return BASE_CONFIDENCE + (uniqueSessions - 1) * 0.2;

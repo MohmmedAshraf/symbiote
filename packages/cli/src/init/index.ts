@@ -55,7 +55,10 @@ export class SmartInit {
         const dnaResult = bootstrapDna(this.symbioteHome, rules);
         const projectName = path.basename(this.projectRoot);
         const overviewContent = generateSmartOverview(
-            projectName, analysis, this.scanResult, rules,
+            projectName,
+            analysis,
+            this.scanResult,
+            rules,
         );
         this.writeOverview(overviewContent);
 
@@ -79,9 +82,7 @@ export class SmartInit {
         let count = 0;
 
         for (const rule of intentRules) {
-            const type: IntentType = rule.classification === 'decision'
-                ? 'decision'
-                : 'constraint';
+            const type: IntentType = rule.classification === 'decision' ? 'decision' : 'constraint';
             const id = `${type}-${slugify(rule.text)}`;
 
             const existing = store.readEntry(id);

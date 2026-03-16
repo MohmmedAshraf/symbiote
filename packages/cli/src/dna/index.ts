@@ -12,9 +12,5 @@ export {
     type DnaIndexEntry,
 } from './types.js';
 export { DnaStorage, type ListOptions } from './storage.js';
-export {
-    EmbeddingModel,
-    cosineSimilarity,
-    EMBEDDING_DIM,
-} from './embeddings.js';
+export { EmbeddingModel, cosineSimilarity, EMBEDDING_DIM } from './embeddings.js';
 export { DnaEngine, type SimilarMatch } from './engine.js';

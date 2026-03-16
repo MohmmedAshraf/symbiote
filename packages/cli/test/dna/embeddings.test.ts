@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-    cosineSimilarity,
-    EmbeddingModel,
-} from '../../src/dna/embeddings.js';
+import { cosineSimilarity, EmbeddingModel } from '../../src/dna/embeddings.js';
 
 describe('cosineSimilarity', () => {
     it('returns 1.0 for identical vectors', () => {
@@ -48,9 +45,7 @@ describe('EmbeddingModel', () => {
 
     it('generates embeddings for text', async () => {
         model = new EmbeddingModel();
-        const embedding = await model.embed(
-            'Use early returns in functions.'
-        );
+        const embedding = await model.embed('Use early returns in functions.');
         expect(embedding).toBeDefined();
         expect(embedding.length).toBe(384);
         expect(typeof embedding[0]).toBe('number');
@@ -58,12 +53,8 @@ describe('EmbeddingModel', () => {
 
     it('produces similar embeddings for similar text', async () => {
         model = new EmbeddingModel();
-        const a = await model.embed(
-            'Use early returns to exit functions.'
-        );
-        const b = await model.embed(
-            'Always return early from functions instead of nesting.'
-        );
+        const a = await model.embed('Use early returns to exit functions.');
+        const b = await model.embed('Always return early from functions instead of nesting.');
         const c = await model.embed('The weather is sunny today.');
 
         const simAB = cosineSimilarity(a, b);

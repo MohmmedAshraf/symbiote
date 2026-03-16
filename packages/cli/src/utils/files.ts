@@ -18,10 +18,7 @@ const DEFAULT_IGNORE = [
     'target',
 ];
 
-export function walkFiles(
-    rootDir: string,
-    ignoreDirs: string[] = DEFAULT_IGNORE
-): string[] {
+export function walkFiles(rootDir: string, ignoreDirs: string[] = DEFAULT_IGNORE): string[] {
     const files: string[] = [];
     const ignoreSet = new Set(ignoreDirs);
 
@@ -48,9 +45,5 @@ export function walkFiles(
 
 export function hashFileContent(filePath: string): string {
     const content = fs.readFileSync(filePath, 'utf-8');
-    return crypto
-        .createHash('sha256')
-        .update(content)
-        .digest('hex')
-        .slice(0, 16);
+    return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
 }

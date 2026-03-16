@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../../src/mcp/context.js';
 import {
     handleGetConstraints,
     handleGetDecisions,
@@ -22,14 +19,8 @@ describe('Intent Tools', () => {
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        tmpHome = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-intent-home-${Date.now()}`
-        );
-        tmpBrain = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-intent-brain-${Date.now()}`
-        );
+        tmpHome = path.join(os.tmpdir(), `symbiote-mcp-intent-home-${Date.now()}`);
+        tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-intent-brain-${Date.now()}`);
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
         });
@@ -44,7 +35,7 @@ describe('Intent Tools', () => {
         });
         fs.writeFileSync(
             path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] })
+            JSON.stringify({ version: 1, entries: [] }),
         );
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,
@@ -113,19 +104,15 @@ describe('Intent Tools', () => {
         it('creates a proposed decision file', () => {
             const result = handleProposeDecision(ctx, {
                 id: 'decision-use-rsc',
-                content:
-                    'Use React Server Components for data fetching in Next.js.',
+                content: 'Use React Server Components for data fetching in Next.js.',
                 scope: 'global',
             });
 
-            expect(result.entry.frontmatter.id).toBe(
-                'decision-use-rsc'
-            );
+            expect(result.entry.frontmatter.id).toBe('decision-use-rsc');
             expect(result.entry.frontmatter.status).toBe('proposed');
             expect(result.entry.frontmatter.author).toBe('ai');
 
-            const readBack =
-                ctx.intent.readEntry('decision-use-rsc');
+            const readBack = ctx.intent.readEntry('decision-use-rsc');
             expect(readBack).toBeDefined();
         });
     });
@@ -134,19 +121,15 @@ describe('Intent Tools', () => {
         it('creates a proposed constraint file', () => {
             const result = handleProposeConstraint(ctx, {
                 id: 'constraint-no-any',
-                content:
-                    "Never use the 'any' type in TypeScript.",
+                content: "Never use the 'any' type in TypeScript.",
                 scope: 'global',
             });
 
-            expect(result.entry.frontmatter.id).toBe(
-                'constraint-no-any'
-            );
+            expect(result.entry.frontmatter.id).toBe('constraint-no-any');
             expect(result.entry.frontmatter.status).toBe('proposed');
             expect(result.entry.frontmatter.type).toBe('constraint');
 
-            const readBack =
-                ctx.intent.readEntry('constraint-no-any');
+            const readBack = ctx.intent.readEntry('constraint-no-any');
             expect(readBack).toBeDefined();
         });
     });

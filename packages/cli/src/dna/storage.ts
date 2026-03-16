@@ -43,11 +43,7 @@ export class DnaStorage {
         const indexEntry = index.entries.find((e) => e.id === id);
         if (!indexEntry) return null;
 
-        const filePath = path.join(
-            this.dnaDir,
-            indexEntry.category,
-            indexEntry.fileName
-        );
+        const filePath = path.join(this.dnaDir, indexEntry.category, indexEntry.fileName);
 
         if (!fs.existsSync(filePath)) return null;
 
@@ -91,11 +87,7 @@ export class DnaStorage {
         const indexEntry = index.entries.find((e) => e.id === id);
         if (!indexEntry) return;
 
-        const filePath = path.join(
-            this.dnaDir,
-            indexEntry.category,
-            indexEntry.fileName
-        );
+        const filePath = path.join(this.dnaDir, indexEntry.category, indexEntry.fileName);
 
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -114,9 +106,7 @@ export class DnaStorage {
         }
 
         if (options?.category) {
-            filtered = filtered.filter(
-                (e) => e.category === options.category
-            );
+            filtered = filtered.filter((e) => e.category === options.category);
         }
 
         const entries: DnaEntry[] = [];
@@ -130,10 +120,7 @@ export class DnaStorage {
 
     private writeIndex(index: DnaIndex): void {
         const indexPath = path.join(this.dnaDir, 'index.json');
-        fs.writeFileSync(
-            indexPath,
-            JSON.stringify(index, null, 4) + '\n'
-        );
+        fs.writeFileSync(indexPath, JSON.stringify(index, null, 4) + '\n');
     }
 
     private idToFileName(id: string, category: DnaCategory): string {

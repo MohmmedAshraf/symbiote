@@ -18,12 +18,8 @@ describe('ensureBrainDir', () => {
         expect(fs.existsSync(brainDir)).toBe(true);
         expect(fs.existsSync(path.join(brainDir, 'config.json'))).toBe(true);
         expect(fs.existsSync(path.join(brainDir, '.gitignore'))).toBe(true);
-        expect(
-            fs.existsSync(path.join(brainDir, 'intent', 'decisions'))
-        ).toBe(true);
-        expect(
-            fs.existsSync(path.join(brainDir, 'intent', 'constraints'))
-        ).toBe(true);
+        expect(fs.existsSync(path.join(brainDir, 'intent', 'decisions'))).toBe(true);
+        expect(fs.existsSync(path.join(brainDir, 'intent', 'constraints'))).toBe(true);
     });
 
     it('is idempotent', () => {

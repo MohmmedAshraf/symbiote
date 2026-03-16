@@ -5,7 +5,7 @@ const SCHEMA_VERSION = 1;
 export class SymbioteDB {
     private constructor(
         private instance: DuckDBInstance,
-        private conn: Awaited<ReturnType<DuckDBInstance['connect']>>
+        private conn: Awaited<ReturnType<DuckDBInstance['connect']>>,
     ) {}
 
     static async create(path: string): Promise<SymbioteDB> {
@@ -40,7 +40,7 @@ export class SymbioteDB {
             this.bindParam(prepared, i + 1, params[i]);
         }
         const result = await prepared.run();
-        return await result.getRowObjects() as Record<string, unknown>[];
+        return (await result.getRowObjects()) as Record<string, unknown>[];
     }
 
     async close(): Promise<void> {
@@ -50,7 +50,7 @@ export class SymbioteDB {
     private bindParam(
         prepared: Awaited<ReturnType<typeof this.conn.prepare>>,
         index: number,
-        value: unknown
+        value: unknown,
     ): void {
         if (value === null || value === undefined) {
             prepared.bindNull(index);
@@ -133,15 +133,13 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
         CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
     `);
 
-    const existing = await db.all(
-        "SELECT value FROM meta WHERE key = 'schema_version'"
-    );
+    const existing = await db.all("SELECT value FROM meta WHERE key = 'schema_version'");
 
     if (existing.length === 0) {
         await db.run(
             'INSERT INTO meta (key, value) VALUES ($1, $2)',
             'schema_version',
-            String(SCHEMA_VERSION)
+            String(SCHEMA_VERSION),
         );
     }
 

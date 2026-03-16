@@ -16,9 +16,9 @@ describe('HealthHistory', () => {
     });
 
     it('creates the health_snapshots table on init', async () => {
-        const tables = await db.all(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'health_snapshots'"
-        ) as { table_name: string }[];
+        const tables = (await db.all(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'health_snapshots'",
+        )) as { table_name: string }[];
         expect(tables.length).toBe(1);
     });
 
@@ -42,8 +42,28 @@ describe('HealthHistory', () => {
     });
 
     it('retrieves snapshots in reverse chronological order', async () => {
-        await history.save({ score: 80, constraintScore: 80, circularDepScore: 100, deadCodeScore: 90, couplingScore: 70, constraintViolationCount: 1, circularDepCount: 0, deadCodeCount: 2, couplingHotspotCount: 3 });
-        await history.save({ score: 90, constraintScore: 100, circularDepScore: 100, deadCodeScore: 90, couplingScore: 70, constraintViolationCount: 0, circularDepCount: 0, deadCodeCount: 2, couplingHotspotCount: 3 });
+        await history.save({
+            score: 80,
+            constraintScore: 80,
+            circularDepScore: 100,
+            deadCodeScore: 90,
+            couplingScore: 70,
+            constraintViolationCount: 1,
+            circularDepCount: 0,
+            deadCodeCount: 2,
+            couplingHotspotCount: 3,
+        });
+        await history.save({
+            score: 90,
+            constraintScore: 100,
+            circularDepScore: 100,
+            deadCodeScore: 90,
+            couplingScore: 70,
+            constraintViolationCount: 0,
+            circularDepCount: 0,
+            deadCodeCount: 2,
+            couplingHotspotCount: 3,
+        });
 
         const snapshots = await history.list(10);
         expect(snapshots.length).toBe(2);
@@ -53,7 +73,17 @@ describe('HealthHistory', () => {
 
     it('respects the limit parameter', async () => {
         for (let i = 0; i < 5; i++) {
-            await history.save({ score: 50 + i * 10, constraintScore: 100, circularDepScore: 100, deadCodeScore: 100, couplingScore: 100, constraintViolationCount: 0, circularDepCount: 0, deadCodeCount: 0, couplingHotspotCount: 0 });
+            await history.save({
+                score: 50 + i * 10,
+                constraintScore: 100,
+                circularDepScore: 100,
+                deadCodeScore: 100,
+                couplingScore: 100,
+                constraintViolationCount: 0,
+                circularDepCount: 0,
+                deadCodeCount: 0,
+                couplingHotspotCount: 0,
+            });
         }
 
         const snapshots = await history.list(3);
@@ -63,7 +93,17 @@ describe('HealthHistory', () => {
     it('returns latest snapshot or null', async () => {
         expect(await history.latest()).toBeNull();
 
-        await history.save({ score: 75, constraintScore: 80, circularDepScore: 100, deadCodeScore: 60, couplingScore: 60, constraintViolationCount: 1, circularDepCount: 0, deadCodeCount: 8, couplingHotspotCount: 4 });
+        await history.save({
+            score: 75,
+            constraintScore: 80,
+            circularDepScore: 100,
+            deadCodeScore: 60,
+            couplingScore: 60,
+            constraintViolationCount: 1,
+            circularDepCount: 0,
+            deadCodeCount: 8,
+            couplingHotspotCount: 4,
+        });
 
         const latest = await history.latest();
         expect(latest).toBeDefined();
@@ -71,8 +111,28 @@ describe('HealthHistory', () => {
     });
 
     it('assigns auto-incrementing ids', async () => {
-        await history.save({ score: 80, constraintScore: 80, circularDepScore: 100, deadCodeScore: 90, couplingScore: 70, constraintViolationCount: 1, circularDepCount: 0, deadCodeCount: 2, couplingHotspotCount: 3 });
-        await history.save({ score: 90, constraintScore: 100, circularDepScore: 100, deadCodeScore: 90, couplingScore: 70, constraintViolationCount: 0, circularDepCount: 0, deadCodeCount: 2, couplingHotspotCount: 3 });
+        await history.save({
+            score: 80,
+            constraintScore: 80,
+            circularDepScore: 100,
+            deadCodeScore: 90,
+            couplingScore: 70,
+            constraintViolationCount: 1,
+            circularDepCount: 0,
+            deadCodeCount: 2,
+            couplingHotspotCount: 3,
+        });
+        await history.save({
+            score: 90,
+            constraintScore: 100,
+            circularDepScore: 100,
+            deadCodeScore: 90,
+            couplingScore: 70,
+            constraintViolationCount: 0,
+            circularDepCount: 0,
+            deadCodeCount: 2,
+            couplingHotspotCount: 3,
+        });
 
         const snapshots = await history.list(10);
         expect(snapshots[0].id).toBeGreaterThan(snapshots[1].id);

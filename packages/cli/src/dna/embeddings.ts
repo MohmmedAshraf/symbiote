@@ -28,10 +28,7 @@ export class EmbeddingModel {
             pooling: 'mean',
             normalize: true,
         });
-        return Array.from(output.data as Float32Array).slice(
-            0,
-            EMBEDDING_DIM
-        );
+        return Array.from(output.data as Float32Array).slice(0, EMBEDDING_DIM);
     }
 
     async embedBatch(texts: string[]): Promise<number[][]> {
@@ -43,12 +40,7 @@ export class EmbeddingModel {
                 pooling: 'mean',
                 normalize: true,
             });
-            results.push(
-                Array.from(output.data as Float32Array).slice(
-                    0,
-                    EMBEDDING_DIM
-                )
-            );
+            results.push(Array.from(output.data as Float32Array).slice(0, EMBEDDING_DIM));
         }
 
         return results;
@@ -56,11 +48,11 @@ export class EmbeddingModel {
 
     private async getExtractor(): Promise<FeatureExtractionPipeline> {
         if (!this.extractor) {
-            this.extractor = await pipeline(
+            this.extractor = (await pipeline(
                 'feature-extraction' as 'feature-extraction',
                 MODEL_NAME,
-                { dtype: 'fp32' }
-            ) as unknown as FeatureExtractionPipeline;
+                { dtype: 'fp32' },
+            )) as unknown as FeatureExtractionPipeline;
         }
         return this.extractor;
     }

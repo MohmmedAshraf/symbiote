@@ -3,10 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../src/mcp/context.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
@@ -21,14 +18,8 @@ describe('MCP Resources', () => {
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        tmpHome = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-res-home-${Date.now()}`
-        );
-        tmpBrain = path.join(
-            os.tmpdir(),
-            `symbiote-mcp-res-brain-${Date.now()}`
-        );
+        tmpHome = path.join(os.tmpdir(), `symbiote-mcp-res-home-${Date.now()}`);
+        tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-res-brain-${Date.now()}`);
         fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
             recursive: true,
         });
@@ -43,7 +34,7 @@ describe('MCP Resources', () => {
         });
         fs.writeFileSync(
             path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] })
+            JSON.stringify({ version: 1, entries: [] }),
         );
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,
@@ -73,11 +64,7 @@ describe('MCP Resources', () => {
         });
 
         it('includes entry details when DNA entries exist', () => {
-            ctx.dnaEngine.captureInstruction(
-                'Use early returns',
-                's1',
-                'correction'
-            );
+            ctx.dnaEngine.captureInstruction('Use early returns', 's1', 'correction');
             const result = handleDnaResource(ctx);
             expect(result).toContain('early returns');
         });

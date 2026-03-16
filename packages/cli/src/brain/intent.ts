@@ -31,16 +31,11 @@ export class IntentStore {
         this.intentDir = path.join(brainDir, 'intent');
     }
 
-    listEntries(
-        type: IntentType,
-        options?: ListIntentOptions
-    ): IntentEntry[] {
+    listEntries(type: IntentType, options?: ListIntentOptions): IntentEntry[] {
         const dir = this.typeDir(type);
         if (!fs.existsSync(dir)) return [];
 
-        const files = fs
-            .readdirSync(dir)
-            .filter((f) => f.endsWith('.md'));
+        const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
         const entries: IntentEntry[] = [];
 
         for (const file of files) {
@@ -48,16 +43,8 @@ export class IntentStore {
             const parsed = parseIntentFrontmatter(raw);
             if (!parsed) continue;
 
-            if (
-                options?.status &&
-                parsed.frontmatter.status !== options.status
-            )
-                continue;
-            if (
-                options?.scope &&
-                parsed.frontmatter.scope !== options.scope
-            )
-                continue;
+            if (options?.status && parsed.frontmatter.status !== options.status) continue;
+            if (options?.scope && parsed.frontmatter.scope !== options.scope) continue;
 
             entries.push(parsed);
         }
@@ -70,18 +57,12 @@ export class IntentStore {
             const dir = this.typeDir(type);
             if (!fs.existsSync(dir)) continue;
 
-            const files = fs
-                .readdirSync(dir)
-                .filter((f) => f.endsWith('.md'));
+            const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
 
             for (const file of files) {
-                const raw = fs.readFileSync(
-                    path.join(dir, file),
-                    'utf-8'
-                );
+                const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
                 const parsed = parseIntentFrontmatter(raw);
-                if (parsed && parsed.frontmatter.id === id)
-                    return parsed;
+                if (parsed && parsed.frontmatter.id === id) return parsed;
             }
         }
 
@@ -99,10 +80,7 @@ export class IntentStore {
     }
 
     private typeDir(type: IntentType): string {
-        return path.join(
-            this.intentDir,
-            type === 'decision' ? 'decisions' : 'constraints'
-        );
+        return path.join(this.intentDir, type === 'decision' ? 'decisions' : 'constraints');
     }
 
     private idToFileName(id: string): string {
@@ -110,9 +88,7 @@ export class IntentStore {
     }
 }
 
-export function parseIntentFrontmatter(
-    raw: string
-): IntentEntry | null {
+export function parseIntentFrontmatter(raw: string): IntentEntry | null {
     if (!raw || !raw.startsWith('---')) return null;
 
     const endIndex = raw.indexOf('---', 3);
@@ -132,16 +108,10 @@ export function parseIntentFrontmatter(
             status: (fields.status as IntentStatus) ?? 'active',
             author: String(fields.author ?? 'unknown'),
             createdAt: stripQuotes(
-                String(
-                    fields.createdAt ??
-                        new Date().toISOString().split('T')[0]
-                )
+                String(fields.createdAt ?? new Date().toISOString().split('T')[0]),
             ),
             pattern: fields.pattern
-                ? stripQuotes(String(fields.pattern)).replace(
-                      /\\"/g,
-                      '"'
-                  )
+                ? stripQuotes(String(fields.pattern)).replace(/\\"/g, '"')
                 : undefined,
         },
         content,
@@ -167,18 +137,13 @@ export function serializeIntentEntry(entry: IntentEntry): string {
 }
 
 function stripQuotes(s: string): string {
-    if (
-        (s.startsWith('"') && s.endsWith('"')) ||
-        (s.startsWith("'") && s.endsWith("'"))
-    ) {
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
         return s.slice(1, -1);
     }
     return s;
 }
 
-function parseSimpleYaml(
-    block: string
-): Record<string, string> | null {
+function parseSimpleYaml(block: string): Record<string, string> | null {
     const result: Record<string, string> = {};
     const lines = block.split('\n');
 

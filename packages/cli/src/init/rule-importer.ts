@@ -48,10 +48,7 @@ function readJsonIfExists(filePath: string): unknown | null {
     }
 }
 
-function findAndReadJson(
-    projectRoot: string,
-    filenames: string[],
-): unknown | null {
+function findAndReadJson(projectRoot: string, filenames: string[]): unknown | null {
     for (const filename of filenames) {
         const result = readJsonIfExists(join(projectRoot, filename));
         if (result) {
@@ -83,9 +80,7 @@ export function importRules(projectRoot: string): ClassifiedRule[] {
 
     const eslintConfig = findAndReadJson(projectRoot, ESLINT_FILES);
     if (eslintConfig) {
-        const parsed = parseEslintConfig(
-            eslintConfig as Parameters<typeof parseEslintConfig>[0],
-        );
+        const parsed = parseEslintConfig(eslintConfig as Parameters<typeof parseEslintConfig>[0]);
         for (const rule of parsed) {
             rules.push({ ...rule, target: classifyTarget(rule) });
         }
@@ -93,9 +88,7 @@ export function importRules(projectRoot: string): ClassifiedRule[] {
 
     const tsconfig = readJsonIfExists(join(projectRoot, 'tsconfig.json'));
     if (tsconfig) {
-        const parsed = parseTsConfig(
-            tsconfig as Parameters<typeof parseTsConfig>[0],
-        );
+        const parsed = parseTsConfig(tsconfig as Parameters<typeof parseTsConfig>[0]);
         for (const rule of parsed) {
             rules.push({ ...rule, target: classifyTarget(rule) });
         }

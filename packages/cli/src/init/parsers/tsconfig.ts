@@ -48,12 +48,7 @@ const STRICT_FLAGS: readonly string[] = [
     'alwaysStrict',
 ];
 
-const DECISION_FLAGS: readonly string[] = [
-    'target',
-    'module',
-    'moduleResolution',
-    'jsx',
-];
+const DECISION_FLAGS: readonly string[] = ['target', 'module', 'moduleResolution', 'jsx'];
 
 export function parseTsConfig(config: TsConfig): ParsedRule[] {
     const rules: ParsedRule[] = [];

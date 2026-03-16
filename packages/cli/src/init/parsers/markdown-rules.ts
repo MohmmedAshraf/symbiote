@@ -1,20 +1,53 @@
 import type { ParsedRule, RuleClassification } from './types.js';
 
 const ANTI_PATTERN_KEYWORDS = [
-    'never', 'don\'t', 'dont', 'avoid', 'do not', 'forbidden',
-    'prohibited', 'no ', 'not allowed', 'must not', 'should not',
-    'shouldn\'t', 'won\'t', 'cannot', 'can\'t',
+    'never',
+    "don't",
+    'dont',
+    'avoid',
+    'do not',
+    'forbidden',
+    'prohibited',
+    'no ',
+    'not allowed',
+    'must not',
+    'should not',
+    "shouldn't",
+    "won't",
+    'cannot',
+    "can't",
 ];
 
 const DECISION_KEYWORDS = [
-    'chose', 'chosen', 'because', 'reason', 'decided', 'decision',
-    'rationale', 'switched', 'migrated', 'adopted', 'picked',
-    'selected', 'went with', 'opted',
+    'chose',
+    'chosen',
+    'because',
+    'reason',
+    'decided',
+    'decision',
+    'rationale',
+    'switched',
+    'migrated',
+    'adopted',
+    'picked',
+    'selected',
+    'went with',
+    'opted',
 ];
 
 const CONSTRAINT_PREFIXES = [
-    'use ', 'always ', 'prefer ', 'must ', 'require ', 'ensure ',
-    'enforce ', 'mandate ', 'only ', 'all ', 'every ', 'strict',
+    'use ',
+    'always ',
+    'prefer ',
+    'must ',
+    'require ',
+    'ensure ',
+    'enforce ',
+    'mandate ',
+    'only ',
+    'all ',
+    'every ',
+    'strict',
 ];
 
 const MIN_RULE_LENGTH = 10;

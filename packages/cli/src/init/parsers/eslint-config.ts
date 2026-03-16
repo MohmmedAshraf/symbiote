@@ -42,9 +42,7 @@ export function parseEslintConfig(config: EslintConfig): ParsedRule[] {
     const rules: ParsedRule[] = [];
 
     if (config.extends) {
-        const extendsList = Array.isArray(config.extends)
-            ? config.extends
-            : [config.extends];
+        const extendsList = Array.isArray(config.extends) ? config.extends : [config.extends];
 
         rules.push({
             text: `ESLint extends: ${extendsList.join(', ')}`,

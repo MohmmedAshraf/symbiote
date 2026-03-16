@@ -49,15 +49,12 @@ export class Repository {
              ON CONFLICT(path) DO UPDATE SET hash = $2, last_scanned = $3`,
             path,
             hash,
-            now
+            now,
         );
     }
 
     async getFile(filePath: string): Promise<FileRecord | undefined> {
-        const rows = await this.db.all(
-            'SELECT * FROM files WHERE path = $1',
-            filePath
-        );
+        const rows = await this.db.all('SELECT * FROM files WHERE path = $1', filePath);
 
         if (rows.length === 0) return undefined;
         const row = rows[0] as { path: string; hash: string; last_scanned: string };
@@ -85,7 +82,7 @@ export class Repository {
                 node.filePath,
                 node.lineStart,
                 node.lineEnd,
-                JSON.stringify(node.metadata ?? {})
+                JSON.stringify(node.metadata ?? {}),
             );
         }
     }
@@ -93,42 +90,39 @@ export class Repository {
     async clearNodesForFile(filePath: string): Promise<void> {
         await this.db.run(
             'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-            filePath
+            filePath,
         );
         await this.db.run(
             'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-            filePath
+            filePath,
         );
-        await this.db.run(
-            'DELETE FROM nodes WHERE file_path = $1',
-            filePath
-        );
+        await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
     }
 
     async getNodesByFile(filePath: string): Promise<NodeRecord[]> {
-        const rows = await this.db.all(
+        const rows = (await this.db.all(
             'SELECT * FROM nodes WHERE file_path = $1',
-            filePath
-        ) as unknown as NodeRow[];
+            filePath,
+        )) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
 
     async getNodeById(id: string): Promise<NodeRecord | undefined> {
-        const rows = await this.db.all(
+        const rows = (await this.db.all(
             'SELECT * FROM nodes WHERE id = $1',
-            id
-        ) as unknown as NodeRow[];
+            id,
+        )) as unknown as NodeRow[];
 
         if (rows.length === 0) return undefined;
         return this.mapNodeRow(rows[0]);
     }
 
     async searchNodesByName(query: string): Promise<NodeRecord[]> {
-        const rows = await this.db.all(
-            "SELECT * FROM nodes WHERE name ILIKE $1 LIMIT 50",
-            `%${query}%`
-        ) as unknown as NodeRow[];
+        const rows = (await this.db.all(
+            'SELECT * FROM nodes WHERE name ILIKE $1 LIMIT 50',
+            `%${query}%`,
+        )) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
@@ -140,25 +134,25 @@ export class Repository {
                  ON CONFLICT DO NOTHING`,
                 edge.sourceId,
                 edge.targetId,
-                edge.type
+                edge.type,
             );
         }
     }
 
     async getDependencies(nodeId: string): Promise<EdgeRecord[]> {
-        const rows = await this.db.all(
+        const rows = (await this.db.all(
             'SELECT * FROM edges WHERE source_id = $1',
-            nodeId
-        ) as unknown as EdgeRow[];
+            nodeId,
+        )) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
 
     async getDependents(nodeId: string): Promise<EdgeRecord[]> {
-        const rows = await this.db.all(
+        const rows = (await this.db.all(
             'SELECT * FROM edges WHERE target_id = $1',
-            nodeId
-        ) as unknown as EdgeRow[];
+            nodeId,
+        )) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
@@ -176,9 +170,9 @@ export class Repository {
     }
 
     async getNodeCountByType(): Promise<Record<string, number>> {
-        const rows = await this.db.all(
-            'SELECT type, COUNT(*) as count FROM nodes GROUP BY type'
-        ) as Array<{ type: string; count: number | bigint }>;
+        const rows = (await this.db.all(
+            'SELECT type, COUNT(*) as count FROM nodes GROUP BY type',
+        )) as Array<{ type: string; count: number | bigint }>;
 
         const result: Record<string, number> = {};
         for (const row of rows) {
@@ -188,17 +182,13 @@ export class Repository {
     }
 
     async getAllNodes(): Promise<NodeRecord[]> {
-        const rows = await this.db.all(
-            'SELECT * FROM nodes'
-        ) as unknown as NodeRow[];
+        const rows = (await this.db.all('SELECT * FROM nodes')) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
 
     async getAllEdges(): Promise<EdgeRecord[]> {
-        const rows = await this.db.all(
-            'SELECT * FROM edges'
-        ) as unknown as EdgeRow[];
+        const rows = (await this.db.all('SELECT * FROM edges')) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }

@@ -8,35 +8,32 @@ export interface SearchResult {
 export async function storeEmbedding(
     db: SymbioteDB,
     nodeId: string,
-    vector: number[]
+    vector: number[],
 ): Promise<void> {
     const arrayLiteral = `[${vector.join(',')}]`;
     await db.run(
         `INSERT OR REPLACE INTO embeddings (node_id, vector) VALUES ($1, $2::FLOAT[384])`,
         nodeId,
-        arrayLiteral
+        arrayLiteral,
     );
 }
 
-export async function deleteEmbeddingsForFile(
-    db: SymbioteDB,
-    filePath: string
-): Promise<void> {
+export async function deleteEmbeddingsForFile(db: SymbioteDB, filePath: string): Promise<void> {
     await db.run(
         `DELETE FROM embeddings WHERE node_id IN (
             SELECT id FROM nodes WHERE file_path = $1
         )`,
-        filePath
+        filePath,
     );
 }
 
 export async function semanticSearch(
     db: SymbioteDB,
     queryVector: number[],
-    limit: number = 10
+    limit: number = 10,
 ): Promise<SearchResult[]> {
     const arrayLiteral = `[${queryVector.join(',')}]`;
-    const rows = await db.all(
+    const rows = (await db.all(
         `SELECT
             node_id,
             array_cosine_similarity(vector, $1::FLOAT[384]) AS similarity
@@ -45,8 +42,8 @@ export async function semanticSearch(
          ORDER BY similarity DESC
          LIMIT $2`,
         arrayLiteral,
-        limit
-    ) as Array<{ node_id: string; similarity: number }>;
+        limit,
+    )) as Array<{ node_id: string; similarity: number }>;
 
     return rows.map((r) => ({
         nodeId: r.node_id,

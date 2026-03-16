@@ -8,10 +8,7 @@ import { IntentStore } from '../../../src/brain/intent.js';
 import { Scanner } from '../../../src/core/scanner.js';
 import { ConstraintChecker } from '../../../src/brain/health/constraint-checker.js';
 
-const FIXTURES = path.join(
-    import.meta.dirname,
-    '../../fixtures/health-project'
-);
+const FIXTURES = path.join(import.meta.dirname, '../../fixtures/health-project');
 
 describe('ConstraintChecker', () => {
     let db: SymbioteDB;
@@ -34,12 +31,10 @@ describe('ConstraintChecker', () => {
 
     it('detects violations for constraints with Tree-sitter patterns', async () => {
         const result = await checker.check();
-        expect(result.violations.length).toBeGreaterThanOrEqual(
-            1
-        );
+        expect(result.violations.length).toBeGreaterThanOrEqual(1);
 
         const sqlViolations = result.violations.filter(
-            (v) => v.constraintId === 'constraint-no-raw-sql'
+            (v) => v.constraintId === 'constraint-no-raw-sql',
         );
         expect(sqlViolations.length).toBeGreaterThanOrEqual(1);
         expect(sqlViolations[0].filePath).toContain('raw-sql');
@@ -55,9 +50,7 @@ describe('ConstraintChecker', () => {
 
     it('does not flag clean files', async () => {
         const result = await checker.check();
-        const cleanViolations = result.violations.filter((v) =>
-            v.filePath.includes('clean')
-        );
+        const cleanViolations = result.violations.filter((v) => v.filePath.includes('clean'));
         expect(cleanViolations).toEqual([]);
     });
 
@@ -68,21 +61,10 @@ describe('ConstraintChecker', () => {
     });
 
     it('handles constraints without patterns as descriptive', async () => {
-        const tmpBrain = path.join(
-            os.tmpdir(),
-            `symbiote-constraint-test-${Date.now()}`
-        );
-        fs.mkdirSync(
-            path.join(tmpBrain, 'intent', 'constraints'),
-            { recursive: true }
-        );
+        const tmpBrain = path.join(os.tmpdir(), `symbiote-constraint-test-${Date.now()}`);
+        fs.mkdirSync(path.join(tmpBrain, 'intent', 'constraints'), { recursive: true });
         fs.writeFileSync(
-            path.join(
-                tmpBrain,
-                'intent',
-                'constraints',
-                'compose-wrappers.md'
-            ),
+            path.join(tmpBrain, 'intent', 'constraints', 'compose-wrappers.md'),
             [
                 '---',
                 'id: constraint-compose-wrappers',
@@ -94,20 +76,15 @@ describe('ConstraintChecker', () => {
                 '---',
                 '',
                 'Higher-order wrappers must compose on lower-level ones, not re-implement them.',
-            ].join('\n')
+            ].join('\n'),
         );
 
         const tmpIntent = new IntentStore(tmpBrain);
-        const tmpChecker = new ConstraintChecker(
-            repo,
-            tmpIntent
-        );
+        const tmpChecker = new ConstraintChecker(repo, tmpIntent);
         const result = await tmpChecker.check();
 
         expect(result.descriptive.length).toBe(1);
-        expect(result.descriptive[0].constraintId).toBe(
-            'constraint-compose-wrappers'
-        );
+        expect(result.descriptive[0].constraintId).toBe('constraint-compose-wrappers');
 
         fs.rmSync(tmpBrain, { recursive: true, force: true });
     });

@@ -20,7 +20,14 @@ describe('CouplingAnalyzer', () => {
 
     it('returns empty array when graph has no edges', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
 
         const hotspots = await analyzer.detect();
@@ -29,8 +36,22 @@ describe('CouplingAnalyzer', () => {
 
     it('returns empty array when coupling is below threshold', async () => {
         await repo.insertNodes([
-            { id: 'fn:a.ts:foo', type: 'function', name: 'foo', filePath: 'a.ts', lineStart: 1, lineEnd: 3 },
-            { id: 'fn:b.ts:bar', type: 'function', name: 'bar', filePath: 'b.ts', lineStart: 1, lineEnd: 3 },
+            {
+                id: 'fn:a.ts:foo',
+                type: 'function',
+                name: 'foo',
+                filePath: 'a.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
+            {
+                id: 'fn:b.ts:bar',
+                type: 'function',
+                name: 'bar',
+                filePath: 'b.ts',
+                lineStart: 1,
+                lineEnd: 3,
+            },
         ]);
         await repo.insertEdges([
             { sourceId: 'fn:a.ts:foo', targetId: 'fn:b.ts:bar', type: 'calls' },
@@ -44,12 +65,26 @@ describe('CouplingAnalyzer', () => {
         const nodes = [];
         const edges = [];
 
-        nodes.push({ id: 'fn:hub.ts:hub', type: 'function', name: 'hub', filePath: 'hub.ts', lineStart: 1, lineEnd: 3 });
+        nodes.push({
+            id: 'fn:hub.ts:hub',
+            type: 'function',
+            name: 'hub',
+            filePath: 'hub.ts',
+            lineStart: 1,
+            lineEnd: 3,
+        });
 
         for (let i = 0; i < 10; i++) {
             const file = `caller${i}.ts`;
             const id = `fn:${file}:fn${i}`;
-            nodes.push({ id, type: 'function', name: `fn${i}`, filePath: file, lineStart: 1, lineEnd: 3 });
+            nodes.push({
+                id,
+                type: 'function',
+                name: `fn${i}`,
+                filePath: file,
+                lineStart: 1,
+                lineEnd: 3,
+            });
             edges.push({ sourceId: id, targetId: 'fn:hub.ts:hub', type: 'calls' });
         }
 
@@ -66,20 +101,48 @@ describe('CouplingAnalyzer', () => {
         const nodes = [];
         const edges = [];
 
-        nodes.push({ id: 'fn:big.ts:big', type: 'function', name: 'big', filePath: 'big.ts', lineStart: 1, lineEnd: 3 });
-        nodes.push({ id: 'fn:small.ts:small', type: 'function', name: 'small', filePath: 'small.ts', lineStart: 1, lineEnd: 3 });
+        nodes.push({
+            id: 'fn:big.ts:big',
+            type: 'function',
+            name: 'big',
+            filePath: 'big.ts',
+            lineStart: 1,
+            lineEnd: 3,
+        });
+        nodes.push({
+            id: 'fn:small.ts:small',
+            type: 'function',
+            name: 'small',
+            filePath: 'small.ts',
+            lineStart: 1,
+            lineEnd: 3,
+        });
 
         for (let i = 0; i < 10; i++) {
             const file = `src${i}.ts`;
             const id = `fn:${file}:fn${i}`;
-            nodes.push({ id, type: 'function', name: `fn${i}`, filePath: file, lineStart: 1, lineEnd: 3 });
+            nodes.push({
+                id,
+                type: 'function',
+                name: `fn${i}`,
+                filePath: file,
+                lineStart: 1,
+                lineEnd: 3,
+            });
             edges.push({ sourceId: id, targetId: 'fn:big.ts:big', type: 'calls' });
         }
 
         for (let i = 0; i < 8; i++) {
             const file = `other${i}.ts`;
             const id = `fn:${file}:fn${i}`;
-            nodes.push({ id, type: 'function', name: `fn${i}`, filePath: file, lineStart: 1, lineEnd: 3 });
+            nodes.push({
+                id,
+                type: 'function',
+                name: `fn${i}`,
+                filePath: file,
+                lineStart: 1,
+                lineEnd: 3,
+            });
             edges.push({ sourceId: id, targetId: 'fn:small.ts:small', type: 'calls' });
         }
 

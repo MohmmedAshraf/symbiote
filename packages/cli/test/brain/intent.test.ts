@@ -2,15 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {
-    IntentStore,
-    type IntentEntry,
-} from '../../src/brain/intent.js';
+import { IntentStore, type IntentEntry } from '../../src/brain/intent.js';
 
-const FIXTURES = path.join(
-    import.meta.dirname,
-    '../fixtures/brain-project/.brain'
-);
+const FIXTURES = path.join(import.meta.dirname, '../fixtures/brain-project/.brain');
 
 describe('IntentStore', () => {
     describe('reading from fixtures', () => {
@@ -62,10 +56,7 @@ describe('IntentStore', () => {
         let store: IntentStore;
 
         beforeEach(() => {
-            tmpDir = path.join(
-                os.tmpdir(),
-                `symbiote-intent-test-${Date.now()}`
-            );
+            tmpDir = path.join(os.tmpdir(), `symbiote-intent-test-${Date.now()}`);
             fs.mkdirSync(path.join(tmpDir, 'intent', 'decisions'), {
                 recursive: true,
             });
@@ -89,8 +80,7 @@ describe('IntentStore', () => {
                     author: 'ai',
                     createdAt: '2026-03-16',
                 },
-                content:
-                    'Use React Server Components for data fetching.',
+                content: 'Use React Server Components for data fetching.',
             };
 
             store.writeEntry(entry);
@@ -98,9 +88,7 @@ describe('IntentStore', () => {
             const read = store.readEntry('decision-test');
             expect(read).toBeDefined();
             expect(read!.frontmatter.status).toBe('proposed');
-            expect(read!.content).toContain(
-                'React Server Components'
-            );
+            expect(read!.content).toContain('React Server Components');
         });
 
         it('writes a constraint entry', () => {
@@ -113,8 +101,7 @@ describe('IntentStore', () => {
                     author: 'ai',
                     createdAt: '2026-03-16',
                 },
-                content:
-                    'All API routes must use the withAuth wrapper.',
+                content: 'All API routes must use the withAuth wrapper.',
             };
 
             store.writeEntry(entry);

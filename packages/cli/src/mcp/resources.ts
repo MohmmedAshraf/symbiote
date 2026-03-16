@@ -9,25 +9,20 @@ export function handleDnaResource(ctx: ServerContext): string {
         return 'No developer DNA entries found. DNA is learned from your corrections and instructions to AI tools.';
     }
 
-    const lines = [
-        `Developer DNA — ${entries.length} active entries\n`,
-    ];
+    const lines = [`Developer DNA — ${entries.length} active entries\n`];
 
     for (const entry of entries) {
         const fm = entry.frontmatter;
-        const statusLabel =
-            fm.status === 'approved' ? 'APPROVED' : 'SUGGESTED';
+        const statusLabel = fm.status === 'approved' ? 'APPROVED' : 'SUGGESTED';
         lines.push(
-            `[${statusLabel}] ${fm.category}/${fm.id} (confidence: ${fm.confidence})\n  ${entry.content}\n`
+            `[${statusLabel}] ${fm.category}/${fm.id} (confidence: ${fm.confidence})\n  ${entry.content}\n`,
         );
     }
 
     return lines.join('\n');
 }
 
-export async function handleProjectOverviewResource(
-    ctx: ServerContext
-): Promise<string> {
+export async function handleProjectOverviewResource(ctx: ServerContext): Promise<string> {
     const overview = await handleGetProjectOverview(ctx);
 
     const lines = [
@@ -39,36 +34,28 @@ export async function handleProjectOverviewResource(
         'Node Types:',
     ];
 
-    for (const [type, count] of Object.entries(
-        overview.nodesByType
-    )) {
+    for (const [type, count] of Object.entries(overview.nodesByType)) {
         lines.push(`  ${type}: ${count}`);
     }
 
     if (overview.constraints.length > 0) {
         lines.push('', 'Active Constraints:');
         for (const c of overview.constraints) {
-            lines.push(
-                `  - [${c.frontmatter.id}] ${c.content.slice(0, 100)}`
-            );
+            lines.push(`  - [${c.frontmatter.id}] ${c.content.slice(0, 100)}`);
         }
     }
 
     if (overview.decisions.length > 0) {
         lines.push('', 'Active Decisions:');
         for (const d of overview.decisions) {
-            lines.push(
-                `  - [${d.frontmatter.id}] ${d.content.slice(0, 100)}`
-            );
+            lines.push(`  - [${d.frontmatter.id}] ${d.content.slice(0, 100)}`);
         }
     }
 
     return lines.join('\n');
 }
 
-export async function handleProjectHealthResource(
-    ctx: ServerContext
-): Promise<string> {
+export async function handleProjectHealthResource(ctx: ServerContext): Promise<string> {
     const report = await ctx.health.analyze();
 
     const lines = [
@@ -83,30 +70,21 @@ export async function handleProjectHealthResource(
     if (report.constraintViolations.length > 0) {
         lines.push('', '--- Constraint Violations ---');
         for (const v of report.constraintViolations) {
-            lines.push(
-                `  ${v.filePath}:${v.lineStart} — ${v.constraintId}: ${v.matchedText}`
-            );
+            lines.push(`  ${v.filePath}:${v.lineStart} — ${v.constraintId}: ${v.matchedText}`);
         }
     }
 
     if (report.descriptiveConstraints.length > 0) {
-        lines.push(
-            '',
-            '--- Active Constraints (descriptive) ---'
-        );
+        lines.push('', '--- Active Constraints (descriptive) ---');
         for (const c of report.descriptiveConstraints) {
-            lines.push(
-                `  [${c.constraintId}] ${c.description.slice(0, 80)}`
-            );
+            lines.push(`  [${c.constraintId}] ${c.description.slice(0, 80)}`);
         }
     }
 
     if (report.circularDeps.length > 0) {
         lines.push('', '--- Circular Dependencies ---');
         for (const cycle of report.circularDeps) {
-            lines.push(
-                `  ${cycle.filePaths.join(' → ')} → ${cycle.filePaths[0]}`
-            );
+            lines.push(`  ${cycle.filePaths.join(' → ')} → ${cycle.filePaths[0]}`);
         }
     }
 
@@ -114,7 +92,7 @@ export async function handleProjectHealthResource(
         lines.push('', '--- Coupling Hotspots ---');
         for (const h of report.couplingHotspots) {
             lines.push(
-                `  ${h.filePath}: ${h.incomingEdges} in, ${h.outgoingEdges} out (${h.totalEdges} total)`
+                `  ${h.filePath}: ${h.incomingEdges} in, ${h.outgoingEdges} out (${h.totalEdges} total)`,
             );
         }
     }

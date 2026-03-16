@@ -25,21 +25,15 @@ describe('DnaStorage', () => {
     describe('ensureDirectories', () => {
         it('creates category directories', () => {
             expect(fs.existsSync(path.join(tmpDir, 'style'))).toBe(true);
-            expect(fs.existsSync(path.join(tmpDir, 'preferences'))).toBe(
-                true
-            );
-            expect(fs.existsSync(path.join(tmpDir, 'anti-patterns'))).toBe(
-                true
-            );
+            expect(fs.existsSync(path.join(tmpDir, 'preferences'))).toBe(true);
+            expect(fs.existsSync(path.join(tmpDir, 'anti-patterns'))).toBe(true);
             expect(fs.existsSync(path.join(tmpDir, 'decisions'))).toBe(true);
         });
 
         it('creates an empty index.json if none exists', () => {
             const indexPath = path.join(tmpDir, 'index.json');
             expect(fs.existsSync(indexPath)).toBe(true);
-            const index: DnaIndex = JSON.parse(
-                fs.readFileSync(indexPath, 'utf-8')
-            );
+            const index: DnaIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
             expect(index.version).toBe(1);
             expect(index.entries).toEqual([]);
         });
@@ -90,17 +84,14 @@ describe('DnaStorage', () => {
                     occurrences: 1,
                     sessionIds: ['session-5'],
                 },
-                content:
-                    'Avoid nested ternary expressions. Use if/else or early returns instead.',
+                content: 'Avoid nested ternary expressions. Use if/else or early returns instead.',
             };
 
             storage.writeEntry(entry);
 
             const readBack = storage.readEntry('style-no-nested-ternaries');
             expect(readBack).toBeDefined();
-            expect(readBack!.frontmatter.id).toBe(
-                'style-no-nested-ternaries'
-            );
+            expect(readBack!.frontmatter.id).toBe('style-no-nested-ternaries');
             expect(readBack!.content).toContain('nested ternary');
 
             const index = storage.readIndex();

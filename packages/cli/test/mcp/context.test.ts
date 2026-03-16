@@ -1,8 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import {
-    createServerContext,
-    type ServerContext,
-} from '../../src/mcp/context.js';
+import { createServerContext, type ServerContext } from '../../src/mcp/context.js';
 import { createDatabase } from '../../src/storage/db.js';
 
 describe('createServerContext', () => {

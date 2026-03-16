@@ -39,9 +39,7 @@ export function generateSmartOverview(
         lines.push('## Architecture');
         lines.push('');
 
-        const sorted = [...analysis.architecture].sort(
-            (a, b) => b.confidence - a.confidence,
-        );
+        const sorted = [...analysis.architecture].sort((a, b) => b.confidence - a.confidence);
         for (const signal of sorted) {
             const pct = Math.round(signal.confidence * 100);
             lines.push(`- ${signal.pattern} (${pct}%)`);

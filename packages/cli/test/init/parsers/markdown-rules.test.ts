@@ -52,7 +52,7 @@ describe('parseMarkdownRules', () => {
         expect(constraints.length).toBeGreaterThanOrEqual(1);
         const texts = constraints.map((r) => r.text.toLowerCase());
         const hasConstraintKeyword = texts.some(
-            (t) => t.startsWith('use ') || t.startsWith('prefer ') || t.startsWith('always ')
+            (t) => t.startsWith('use ') || t.startsWith('prefer ') || t.startsWith('always '),
         );
         expect(hasConstraintKeyword).toBe(true);
     });

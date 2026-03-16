@@ -21,9 +21,7 @@ describe('walkFiles', () => {
 
     it('only returns files with supported language extensions', () => {
         const files = walkFiles(path.join(FIXTURES, 'simple-project'));
-        expect(
-            files.every((f) => f.endsWith('.js') || f.endsWith('.ts'))
-        ).toBe(true);
+        expect(files.every((f) => f.endsWith('.js') || f.endsWith('.ts'))).toBe(true);
     });
 });
 
@@ -42,12 +40,8 @@ describe('hashFileContent', () => {
     });
 
     it('returns different hashes for different files', () => {
-        const hash1 = hashFileContent(
-            path.join(FIXTURES, 'simple-project/index.js')
-        );
-        const hash2 = hashFileContent(
-            path.join(FIXTURES, 'simple-project/utils.js')
-        );
+        const hash1 = hashFileContent(path.join(FIXTURES, 'simple-project/index.js'));
+        const hash2 = hashFileContent(path.join(FIXTURES, 'simple-project/utils.js'));
         expect(hash1).not.toBe(hash2);
     });
 });

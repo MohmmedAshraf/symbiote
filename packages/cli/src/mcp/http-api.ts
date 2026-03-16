@@ -5,13 +5,10 @@ export async function handleApiRequest(
     ctx: ServerContext,
     pathname: string,
     req: IncomingMessage,
-    res: ServerResponse
+    res: ServerResponse,
 ): Promise<boolean> {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PATCH, OPTIONS'
-    );
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
@@ -24,13 +21,8 @@ export async function handleApiRequest(
         return await handleGetGraph(ctx, res);
     }
 
-    if (
-        pathname.startsWith('/api/graph/nodes/') &&
-        req.method === 'GET'
-    ) {
-        const nodeId = decodeURIComponent(
-            pathname.slice('/api/graph/nodes/'.length)
-        );
+    if (pathname.startsWith('/api/graph/nodes/') && req.method === 'GET') {
+        const nodeId = decodeURIComponent(pathname.slice('/api/graph/nodes/'.length));
         return await handleGetNodeContext(ctx, nodeId, res);
     }
 
@@ -42,13 +34,8 @@ export async function handleApiRequest(
         return handleListDna(ctx, res);
     }
 
-    if (
-        pathname.startsWith('/api/dna/') &&
-        req.method === 'PATCH'
-    ) {
-        const entryId = decodeURIComponent(
-            pathname.slice('/api/dna/'.length)
-        );
+    if (pathname.startsWith('/api/dna/') && req.method === 'PATCH') {
+        const entryId = decodeURIComponent(pathname.slice('/api/dna/'.length));
         return handleUpdateDna(ctx, entryId, req, res);
     }
 
@@ -59,11 +46,7 @@ export async function handleApiRequest(
     return false;
 }
 
-function json(
-    res: ServerResponse,
-    data: unknown,
-    status = 200
-): boolean {
+function json(res: ServerResponse, data: unknown, status = 200): boolean {
     res.writeHead(status, {
         'Content-Type': 'application/json',
     });
@@ -71,21 +54,19 @@ function json(
     return true;
 }
 
-async function handleGetGraph(
-    ctx: ServerContext,
-    res: ServerResponse
-): Promise<boolean> {
+async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<boolean> {
     const nodes = await ctx.repo.getAllNodes();
     const nodeIds = new Set(nodes.map((n) => n.id));
-    const edges = (await ctx.repo.getAllEdges())
-        .filter((e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId));
+    const edges = (await ctx.repo.getAllEdges()).filter(
+        (e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId),
+    );
     return json(res, { nodes, edges });
 }
 
 async function handleGetNodeContext(
     ctx: ServerContext,
     nodeId: string,
-    res: ServerResponse
+    res: ServerResponse,
 ): Promise<boolean> {
     const node = await ctx.repo.getNodeById(nodeId);
     if (!node) {
@@ -98,15 +79,13 @@ async function handleGetNodeContext(
         .listEntries('constraint')
         .filter(
             (c) =>
-                c.frontmatter.scope === 'global' ||
-                node.filePath.startsWith(c.frontmatter.scope)
+                c.frontmatter.scope === 'global' || node.filePath.startsWith(c.frontmatter.scope),
         );
     const decisions = ctx.intent
         .listEntries('decision')
         .filter(
             (d) =>
-                d.frontmatter.scope === 'global' ||
-                node.filePath.startsWith(d.frontmatter.scope)
+                d.frontmatter.scope === 'global' || node.filePath.startsWith(d.frontmatter.scope),
         );
 
     return json(res, {
@@ -118,17 +97,14 @@ async function handleGetNodeContext(
     });
 }
 
-async function handleGetHealthApi(
-    ctx: ServerContext,
-    res: ServerResponse
-): Promise<boolean> {
+async function handleGetHealthApi(ctx: ServerContext, res: ServerResponse): Promise<boolean> {
     const report = await ctx.health.analyze();
 
     const toIssues = (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: any[],
         category: string,
-        severity: 'error' | 'warning' | 'info'
+        severity: 'error' | 'warning' | 'info',
     ) =>
         items.map((item) => ({
             severity,
@@ -144,47 +120,28 @@ async function handleGetHealthApi(
             constraintViolations: {
                 score: report.categories.constraints.score,
                 weight: report.categories.constraints.weight,
-                issues: toIssues(
-                    report.constraintViolations ?? [],
-                    'constraint',
-                    'error'
-                ),
+                issues: toIssues(report.constraintViolations ?? [], 'constraint', 'error'),
             },
             circularDeps: {
                 score: report.categories.circularDeps.score,
                 weight: report.categories.circularDeps.weight,
-                issues: toIssues(
-                    report.circularDeps ?? [],
-                    'circular-dep',
-                    'warning'
-                ),
+                issues: toIssues(report.circularDeps ?? [], 'circular-dep', 'warning'),
             },
             deadCode: {
                 score: report.categories.deadCode.score,
                 weight: report.categories.deadCode.weight,
-                issues: toIssues(
-                    report.deadCode ?? [],
-                    'dead-code',
-                    'info'
-                ),
+                issues: toIssues(report.deadCode ?? [], 'dead-code', 'info'),
             },
             coupling: {
                 score: report.categories.coupling.score,
                 weight: report.categories.coupling.weight,
-                issues: toIssues(
-                    report.couplingHotspots ?? [],
-                    'coupling',
-                    'warning'
-                ),
+                issues: toIssues(report.couplingHotspots ?? [], 'coupling', 'warning'),
             },
         },
     });
 }
 
-function handleListDna(
-    ctx: ServerContext,
-    res: ServerResponse
-): boolean {
+function handleListDna(ctx: ServerContext, res: ServerResponse): boolean {
     const entries = ctx.dnaEngine.getActiveEntries().map((e) => ({
         id: e.frontmatter.id,
         category: e.frontmatter.category,
@@ -203,7 +160,7 @@ function handleUpdateDna(
     ctx: ServerContext,
     entryId: string,
     req: IncomingMessage,
-    res: ServerResponse
+    res: ServerResponse,
 ): boolean {
     let body = '';
     req.on('data', (chunk) => {
@@ -228,10 +185,7 @@ function handleUpdateDna(
                 }
                 json(res, entry);
             } else if (data.content) {
-                const entry = ctx.dnaEngine.editEntry(
-                    entryId,
-                    data.content
-                );
+                const entry = ctx.dnaEngine.editEntry(entryId, data.content);
                 if (!entry) {
                     json(res, { error: 'Entry not found' }, 404);
                     return;
@@ -247,11 +201,7 @@ function handleUpdateDna(
     return true;
 }
 
-function handleChat(
-    ctx: ServerContext,
-    req: IncomingMessage,
-    res: ServerResponse
-): boolean {
+function handleChat(ctx: ServerContext, req: IncomingMessage, res: ServerResponse): boolean {
     let body = '';
     req.on('data', (chunk) => {
         body += chunk;
@@ -260,11 +210,7 @@ function handleChat(
         try {
             const { message } = JSON.parse(body);
             if (!message || typeof message !== 'string') {
-                json(
-                    res,
-                    { error: 'Missing message field' },
-                    400
-                );
+                json(res, { error: 'Missing message field' }, 400);
                 return;
             }
 
@@ -279,7 +225,7 @@ function handleChat(
             res.write(
                 'Chat is not configured. Set an LLM provider in ' +
                     '~/.symbiote/config.json (supported: openai, anthropic, ollama). ' +
-                    `\n\nProject has ${overview.totalNodes} nodes and ${overview.totalEdges} edges.`
+                    `\n\nProject has ${overview.totalNodes} nodes and ${overview.totalEdges} edges.`,
             );
             res.end();
         } catch {

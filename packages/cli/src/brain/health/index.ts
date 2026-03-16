@@ -7,10 +7,7 @@ import { DeadCodeDetector } from './dead-code-detector.js';
 import { CouplingAnalyzer } from './coupling-analyzer.js';
 import { ConstraintChecker } from './constraint-checker.js';
 import { computeHealthScore } from './scorer.js';
-import {
-    HealthHistory,
-    type SaveSnapshotInput,
-} from './history.js';
+import { HealthHistory, type SaveSnapshotInput } from './history.js';
 
 export class HealthEngine {
     private cycleDetector: CycleDetector;
@@ -19,18 +16,11 @@ export class HealthEngine {
     private constraintChecker: ConstraintChecker;
     private history: HealthHistory;
 
-    constructor(
-        repo: Repository,
-        intent: IntentStore,
-        db: SymbioteDB
-    ) {
+    constructor(repo: Repository, intent: IntentStore, db: SymbioteDB) {
         this.cycleDetector = new CycleDetector(repo);
         this.deadCodeDetector = new DeadCodeDetector(repo);
         this.couplingAnalyzer = new CouplingAnalyzer(repo);
-        this.constraintChecker = new ConstraintChecker(
-            repo,
-            intent
-        );
+        this.constraintChecker = new ConstraintChecker(repo, intent);
         this.history = new HealthHistory(db);
     }
 
@@ -41,8 +31,7 @@ export class HealthEngine {
         const couplingHotspots = await this.couplingAnalyzer.detect();
 
         const scored = computeHealthScore({
-            constraintViolations:
-                constraintResult.violations.length,
+            constraintViolations: constraintResult.violations.length,
             circularDeps: circularDeps.length,
             deadCode: deadCode.length,
             couplingHotspots: couplingHotspots.length,
@@ -63,18 +52,14 @@ export class HealthEngine {
     async saveSnapshot(report: HealthReport): Promise<void> {
         const input: SaveSnapshotInput = {
             score: report.score,
-            constraintScore:
-                report.categories.constraints.score,
-            circularDepScore:
-                report.categories.circularDeps.score,
+            constraintScore: report.categories.constraints.score,
+            circularDepScore: report.categories.circularDeps.score,
             deadCodeScore: report.categories.deadCode.score,
             couplingScore: report.categories.coupling.score,
-            constraintViolationCount:
-                report.constraintViolations.length,
+            constraintViolationCount: report.constraintViolations.length,
             circularDepCount: report.circularDeps.length,
             deadCodeCount: report.deadCode.length,
-            couplingHotspotCount:
-                report.couplingHotspots.length,
+            couplingHotspotCount: report.couplingHotspots.length,
         };
         await this.history.save(input);
     }
@@ -101,15 +86,6 @@ export type {
 export { CycleDetector } from './cycle-detector.js';
 export { DeadCodeDetector } from './dead-code-detector.js';
 export { CouplingAnalyzer } from './coupling-analyzer.js';
-export {
-    ConstraintChecker,
-    type ConstraintCheckResult,
-} from './constraint-checker.js';
-export {
-    computeHealthScore,
-    computeCategoryScore,
-} from './scorer.js';
-export {
-    HealthHistory,
-    type SaveSnapshotInput,
-} from './history.js';
+export { ConstraintChecker, type ConstraintCheckResult } from './constraint-checker.js';
+export { computeHealthScore, computeCategoryScore } from './scorer.js';
+export { HealthHistory, type SaveSnapshotInput } from './history.js';

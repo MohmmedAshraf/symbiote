@@ -26,11 +26,7 @@ export class DeadCodeDetector {
         const dead: DeadCodeEntry[] = [];
 
         for (const node of allNodes) {
-            if (
-                node.type !== 'function' &&
-                node.type !== 'class' &&
-                node.type !== 'method'
-            ) {
+            if (node.type !== 'function' && node.type !== 'class' && node.type !== 'method') {
                 continue;
             }
 
@@ -45,8 +41,6 @@ export class DeadCodeDetector {
 
     private isEntryPointFile(filePath: string): boolean {
         const fileName = filePath.split('/').pop() ?? '';
-        return ENTRY_POINT_PATTERNS.some((pattern) =>
-            pattern.test(fileName)
-        );
+        return ENTRY_POINT_PATTERNS.some((pattern) => pattern.test(fileName));
     }
 }

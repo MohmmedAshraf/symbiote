@@ -18,9 +18,7 @@ describe('parseFile', () => {
     });
 
     it('extracts imports from a JavaScript file', () => {
-        const result = parseFile(
-            path.join(FIXTURES, 'simple-project/index.js')
-        );
+        const result = parseFile(path.join(FIXTURES, 'simple-project/index.js'));
 
         expect(result).toBeDefined();
         const imports = result!.edges.filter((e) => e.type === 'imports');
@@ -28,9 +26,7 @@ describe('parseFile', () => {
     });
 
     it('extracts classes from a TypeScript file', () => {
-        const result = parseFile(
-            path.join(FIXTURES, 'ts-project/service.ts')
-        );
+        const result = parseFile(path.join(FIXTURES, 'ts-project/service.ts'));
 
         expect(result).toBeDefined();
         const classes = result!.nodes.filter((n) => n.type === 'class');
@@ -41,9 +37,7 @@ describe('parseFile', () => {
     });
 
     it('extracts methods from classes', () => {
-        const result = parseFile(
-            path.join(FIXTURES, 'ts-project/service.ts')
-        );
+        const result = parseFile(path.join(FIXTURES, 'ts-project/service.ts'));
 
         expect(result).toBeDefined();
         const methods = result!.nodes.filter((n) => n.type === 'method');
@@ -51,9 +45,7 @@ describe('parseFile', () => {
     });
 
     it('parses TypeScript config files', () => {
-        const result = parseFile(
-            path.join(FIXTURES, '../vitest.config.ts')
-        );
+        const result = parseFile(path.join(FIXTURES, '../vitest.config.ts'));
         expect(result).toBeDefined();
     });
 

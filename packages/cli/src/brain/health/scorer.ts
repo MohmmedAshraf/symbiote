@@ -10,10 +10,7 @@ const PENALTY_PER_CIRCULAR_DEP = 25;
 const PENALTY_PER_DEAD_CODE = 5;
 const PENALTY_PER_COUPLING_HOTSPOT = 10;
 
-export function computeCategoryScore(
-    issueCount: number,
-    penaltyPerIssue: number
-): number {
+export function computeCategoryScore(issueCount: number, penaltyPerIssue: number): number {
     return Math.max(0, 100 - issueCount * penaltyPerIssue);
 }
 
@@ -34,31 +31,23 @@ export interface ScoredResult {
     };
 }
 
-export function computeHealthScore(
-    counts: IssueCounts
-): ScoredResult {
+export function computeHealthScore(counts: IssueCounts): ScoredResult {
     const constraintScore = computeCategoryScore(
         counts.constraintViolations,
-        PENALTY_PER_CONSTRAINT_VIOLATION
+        PENALTY_PER_CONSTRAINT_VIOLATION,
     );
-    const circularScore = computeCategoryScore(
-        counts.circularDeps,
-        PENALTY_PER_CIRCULAR_DEP
-    );
-    const deadCodeScore = computeCategoryScore(
-        counts.deadCode,
-        PENALTY_PER_DEAD_CODE
-    );
+    const circularScore = computeCategoryScore(counts.circularDeps, PENALTY_PER_CIRCULAR_DEP);
+    const deadCodeScore = computeCategoryScore(counts.deadCode, PENALTY_PER_DEAD_CODE);
     const couplingScore = computeCategoryScore(
         counts.couplingHotspots,
-        PENALTY_PER_COUPLING_HOTSPOT
+        PENALTY_PER_COUPLING_HOTSPOT,
     );
 
     const total = Math.round(
         constraintScore * WEIGHT_CONSTRAINTS +
             circularScore * WEIGHT_CIRCULAR +
             deadCodeScore * WEIGHT_DEAD_CODE +
-            couplingScore * WEIGHT_COUPLING
+            couplingScore * WEIGHT_COUPLING,
     );
 
     return {

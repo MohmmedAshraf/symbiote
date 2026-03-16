@@ -23,26 +23,16 @@ export class CouplingAnalyzer {
             const sourceFile = nodeToFile.get(edge.sourceId);
             const targetFile = nodeToFile.get(edge.targetId);
 
-            if (
-                !sourceFile ||
-                !targetFile ||
-                sourceFile === targetFile
-            )
-                continue;
+            if (!sourceFile || !targetFile || sourceFile === targetFile) continue;
 
-            if (!fileOutgoing.has(sourceFile))
-                fileOutgoing.set(sourceFile, new Set());
+            if (!fileOutgoing.has(sourceFile)) fileOutgoing.set(sourceFile, new Set());
             fileOutgoing.get(sourceFile)!.add(targetFile);
 
-            if (!fileIncoming.has(targetFile))
-                fileIncoming.set(targetFile, new Set());
+            if (!fileIncoming.has(targetFile)) fileIncoming.set(targetFile, new Set());
             fileIncoming.get(targetFile)!.add(sourceFile);
         }
 
-        const allFiles = new Set([
-            ...fileIncoming.keys(),
-            ...fileOutgoing.keys(),
-        ]);
+        const allFiles = new Set([...fileIncoming.keys(), ...fileOutgoing.keys()]);
         const hotspots: CouplingHotspot[] = [];
 
         for (const file of allFiles) {

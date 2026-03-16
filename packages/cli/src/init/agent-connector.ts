@@ -21,43 +21,25 @@ const AGENTS: Omit<AgentInfo, 'installed'>[] = [
     {
         name: 'Cursor',
         id: 'cursor',
-        configPath: path.join(
-            homedir(),
-            '.cursor',
-            'mcp.json'
-        ),
+        configPath: path.join(homedir(), '.cursor', 'mcp.json'),
         configType: 'json-file',
     },
     {
         name: 'Windsurf',
         id: 'windsurf',
-        configPath: path.join(
-            homedir(),
-            '.windsurf',
-            'mcp.json'
-        ),
+        configPath: path.join(homedir(), '.windsurf', 'mcp.json'),
         configType: 'json-file',
     },
     {
         name: 'Copilot',
         id: 'copilot',
-        configPath: path.join(
-            homedir(),
-            '.github',
-            'copilot',
-            'mcp.json'
-        ),
+        configPath: path.join(homedir(), '.github', 'copilot', 'mcp.json'),
         configType: 'json-file',
     },
     {
         name: 'OpenCode',
         id: 'opencode',
-        configPath: path.join(
-            homedir(),
-            '.config',
-            'opencode',
-            'config.json'
-        ),
+        configPath: path.join(homedir(), '.config', 'opencode', 'config.json'),
         configType: 'json-file',
     },
 ];
@@ -69,9 +51,7 @@ export function detectInstalledAgents(): AgentInfo[] {
     }));
 }
 
-function isAgentInstalled(
-    agent: Omit<AgentInfo, 'installed'>
-): boolean {
+function isAgentInstalled(agent: Omit<AgentInfo, 'installed'>): boolean {
     if (agent.id === 'claude-code') {
         try {
             execSync('which claude', { stdio: 'ignore' });
@@ -95,10 +75,7 @@ export function connectAgent(agent: AgentInfo): {
 } {
     try {
         if (agent.id === 'claude-code') {
-            execSync(
-                'claude mcp add symbiote -- npx symbiote-cli mcp',
-                { stdio: 'ignore' }
-            );
+            execSync('claude mcp add symbiote -- npx symbiote-cli mcp', { stdio: 'ignore' });
             return {
                 success: true,
                 message: 'MCP server added to Claude Code',
@@ -116,10 +93,7 @@ export function connectAgent(agent: AgentInfo): {
     } catch (err) {
         return {
             success: false,
-            message:
-                err instanceof Error
-                    ? err.message
-                    : 'Unknown error',
+            message: err instanceof Error ? err.message : 'Unknown error',
         };
     }
 }
@@ -138,27 +112,20 @@ function writeJsonMcpConfig(agent: AgentInfo): {
     let config: Record<string, unknown> = {};
     if (fs.existsSync(configPath)) {
         try {
-            config = JSON.parse(
-                fs.readFileSync(configPath, 'utf-8')
-            );
+            config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         } catch {
             config = {};
         }
     }
 
-    const mcpServers =
-        (config.mcpServers as Record<string, unknown>) ??
-        {};
+    const mcpServers = (config.mcpServers as Record<string, unknown>) ?? {};
     mcpServers.symbiote = {
         command: 'npx',
         args: ['symbiote-cli', 'mcp'],
     };
     config.mcpServers = mcpServers;
 
-    fs.writeFileSync(
-        configPath,
-        JSON.stringify(config, null, 4) + '\n'
-    );
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 4) + '\n');
 
     return {
         success: true,
@@ -181,20 +148,12 @@ export function disconnectAgent(agent: AgentInfo): {
             };
         }
 
-        if (
-            agent.configType === 'json-file' &&
-            fs.existsSync(agent.configPath)
-        ) {
-            const config = JSON.parse(
-                fs.readFileSync(agent.configPath, 'utf-8')
-            );
+        if (agent.configType === 'json-file' && fs.existsSync(agent.configPath)) {
+            const config = JSON.parse(fs.readFileSync(agent.configPath, 'utf-8'));
             const mcpServers = config.mcpServers ?? {};
             delete mcpServers.symbiote;
             config.mcpServers = mcpServers;
-            fs.writeFileSync(
-                agent.configPath,
-                JSON.stringify(config, null, 4) + '\n'
-            );
+            fs.writeFileSync(agent.configPath, JSON.stringify(config, null, 4) + '\n');
             return {
                 success: true,
                 message: `Removed from ${agent.configPath}`,
@@ -208,10 +167,7 @@ export function disconnectAgent(agent: AgentInfo): {
     } catch (err) {
         return {
             success: false,
-            message:
-                err instanceof Error
-                    ? err.message
-                    : 'Unknown error',
+            message: err instanceof Error ? err.message : 'Unknown error',
         };
     }
 }

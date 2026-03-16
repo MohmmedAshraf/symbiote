@@ -1,13 +1,6 @@
 export { createMcpServer } from './server.js';
-export {
-    createServerContext,
-    type ServerContext,
-    type ServerContextOptions,
-} from './context.js';
-export {
-    handleGetDeveloperDna,
-    handleRecordInstruction,
-} from './tools/dna-tools.js';
+export { createServerContext, type ServerContext, type ServerContextOptions } from './context.js';
+export { handleGetDeveloperDna, handleRecordInstruction } from './tools/dna-tools.js';
 export {
     handleGetProjectOverview,
     handleGetContextForFile,

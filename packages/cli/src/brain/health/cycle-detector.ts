@@ -22,10 +22,7 @@ export class CycleDetector {
         const inStack = new Set<string>();
         const seen = new Set<string>();
 
-        const dfs = async (
-            nodeId: string,
-            nodePath: string[]
-        ): Promise<void> => {
+        const dfs = async (nodeId: string, nodePath: string[]): Promise<void> => {
             if (inStack.has(nodeId)) {
                 const cycleStart = nodePath.indexOf(nodeId);
                 if (cycleStart < 0) return;

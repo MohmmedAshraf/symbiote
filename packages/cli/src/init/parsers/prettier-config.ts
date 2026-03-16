@@ -17,8 +17,7 @@ type RuleFormatter = (value: unknown) => string | null;
 
 const RULE_FORMATTERS: Record<string, RuleFormatter> = {
     semi: (v) => (typeof v === 'boolean' ? (v ? 'Semicolons required' : 'No semicolons') : null),
-    singleQuote: (v) =>
-        typeof v === 'boolean' ? (v ? 'Single quotes' : 'Double quotes') : null,
+    singleQuote: (v) => (typeof v === 'boolean' ? (v ? 'Single quotes' : 'Double quotes') : null),
     tabWidth: (v) => (typeof v === 'number' ? `Tab width: ${v}` : null),
     useTabs: (v) =>
         typeof v === 'boolean' ? (v ? 'Indent with tabs' : 'Indent with spaces') : null,
@@ -26,9 +25,7 @@ const RULE_FORMATTERS: Record<string, RuleFormatter> = {
     printWidth: (v) => (typeof v === 'number' ? `Print width: ${v}` : null),
     arrowParens: (v) => (typeof v === 'string' ? `Arrow parens: ${v}` : null),
     bracketSpacing: (v) =>
-        typeof v === 'boolean'
-            ? (v ? 'Bracket spacing enabled' : 'No bracket spacing')
-            : null,
+        typeof v === 'boolean' ? (v ? 'Bracket spacing enabled' : 'No bracket spacing') : null,
     endOfLine: (v) => (typeof v === 'string' ? `End of line: ${v}` : null),
 };
 
