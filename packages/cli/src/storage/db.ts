@@ -133,6 +133,8 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
         CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
     `);
 
+    await db.exec('INSTALL fts; LOAD fts;');
+
     const existing = await db.all("SELECT value FROM meta WHERE key = 'schema_version'");
 
     if (existing.length === 0) {
