@@ -155,7 +155,10 @@ export function isBonded(agent: AgentInfo): boolean {
     return false;
 }
 
-export function connectWithHooks(agent: AgentInfo): {
+export function connectWithHooks(
+    agent: AgentInfo,
+    projectRoot: string,
+): {
     mcp: { success: boolean; message: string };
     hooks: { success: boolean; message: string };
 } {
@@ -165,25 +168,14 @@ export function connectWithHooks(agent: AgentInfo): {
         return { mcp, hooks: { success: true, message: 'Hooks not available' } };
     }
 
-    let hooks = { success: true, message: 'Hooks installed' };
-    try {
-        execSync('claude hooks add pre_tool_use symbiote -- npx symbiote-cli hook pre', {
-            stdio: 'ignore',
-        });
-        execSync('claude hooks add post_tool_use symbiote -- npx symbiote-cli hook post', {
-            stdio: 'ignore',
-        });
-    } catch (err) {
-        hooks = {
-            success: false,
-            message: err instanceof Error ? err.message : 'Hook install failed',
-        };
-    }
-
+    const hooks = writeClaudeHooks(projectRoot);
     return { mcp, hooks };
 }
 
-export function disconnectWithHooks(agent: AgentInfo): {
+export function disconnectWithHooks(
+    agent: AgentInfo,
+    projectRoot: string,
+): {
     mcp: { success: boolean; message: string };
     hooks: { success: boolean; message: string };
 } {
@@ -193,18 +185,87 @@ export function disconnectWithHooks(agent: AgentInfo): {
         return { mcp, hooks: { success: true, message: 'No hooks to remove' } };
     }
 
-    let hooks = { success: true, message: 'Hooks removed' };
+    const hooks = removeClaudeHooks(projectRoot);
+    return { mcp, hooks };
+}
+
+function writeClaudeHooks(projectRoot: string): { success: boolean; message: string } {
     try {
-        execSync('claude hooks remove pre_tool_use symbiote', { stdio: 'ignore' });
-        execSync('claude hooks remove post_tool_use symbiote', { stdio: 'ignore' });
+        const claudeDir = path.join(projectRoot, '.claude');
+        fs.mkdirSync(claudeDir, { recursive: true });
+
+        const settingsPath = path.join(claudeDir, 'settings.local.json');
+        let settings: Record<string, unknown> = {};
+
+        if (fs.existsSync(settingsPath)) {
+            try {
+                settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+            } catch {
+                settings = {};
+            }
+        }
+
+        const hooks = (settings.hooks as Record<string, unknown[]>) ?? {};
+
+        hooks.PreToolUse = [
+            {
+                matcher: '',
+                hooks: [{ type: 'command', command: 'npx symbiote-cli hook pre' }],
+            },
+        ];
+
+        hooks.PostToolUse = [
+            {
+                matcher: '',
+                hooks: [{ type: 'command', command: 'npx symbiote-cli hook post' }],
+            },
+        ];
+
+        settings.hooks = hooks;
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+
+        return { success: true, message: 'Hooks installed' };
     } catch (err) {
-        hooks = {
+        return {
+            success: false,
+            message: err instanceof Error ? err.message : 'Hook install failed',
+        };
+    }
+}
+
+function removeClaudeHooks(projectRoot: string): { success: boolean; message: string } {
+    try {
+        const settingsPath = path.join(projectRoot, '.claude', 'settings.local.json');
+
+        if (!fs.existsSync(settingsPath)) {
+            return { success: true, message: 'No hooks to remove' };
+        }
+
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        const hooks = settings.hooks as Record<string, unknown[]> | undefined;
+
+        if (hooks) {
+            delete hooks.PreToolUse;
+            delete hooks.PostToolUse;
+
+            if (Object.keys(hooks).length === 0) {
+                delete settings.hooks;
+            }
+        }
+
+        if (Object.keys(settings).length === 0) {
+            fs.unlinkSync(settingsPath);
+        } else {
+            fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4) + '\n');
+        }
+
+        return { success: true, message: 'Hooks removed' };
+    } catch (err) {
+        return {
             success: false,
             message: err instanceof Error ? err.message : 'Hook removal failed',
         };
     }
-
-    return { mcp, hooks };
 }
 
 export function disconnectAgent(agent: AgentInfo): {

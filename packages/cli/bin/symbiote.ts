@@ -9,7 +9,14 @@ import pc from 'picocolors';
 import { createDatabase } from '../src/storage/db.js';
 import { Repository } from '../src/storage/repository.js';
 import { Scanner } from '../src/core/scanner.js';
-import { ensureBrainDir, ensureSymbioteHome, getBrainDbPath } from '../src/utils/config.js';
+import {
+    ensureBrainDir,
+    ensureSymbioteHome,
+    getBrainDbPath,
+    getProjectPort,
+    writePortFile,
+    clearPortFile,
+} from '../src/utils/config.js';
 import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
@@ -68,6 +75,16 @@ const GRAYS = [
     '\x1b[38;5;240m',
     '\x1b[38;5;238m',
 ];
+
+function openBrowser(url: string): void {
+    const cmd =
+        process.platform === 'darwin'
+            ? 'open'
+            : process.platform === 'win32'
+              ? 'start'
+              : 'xdg-open';
+    import('node:child_process').then(({ exec }) => exec(`${cmd} ${url}`));
+}
 
 function showLogo(): void {
     console.log();
@@ -280,7 +297,7 @@ async function cmdInit(): Promise<void> {
                 for (const agent of toBond) {
                     const s3 = p.spinner();
                     s3.start(`Bonding with ${agent.name}...`);
-                    const result = connectWithHooks(agent);
+                    const result = connectWithHooks(agent, projectRoot);
                     if (result.mcp.success && result.hooks.success) {
                         const detail =
                             agent.id === 'claude-code'
@@ -558,11 +575,59 @@ async function cmdImpact(): Promise<void> {
     p.outro(result.summary);
 }
 
+async function handleHttpRequest(
+    ctx: Awaited<ReturnType<typeof createServerContext>>,
+    webDistDir: string,
+    port: number,
+    url: URL,
+    req: IncomingMessage,
+    res: ServerResponse,
+): Promise<void> {
+    if (url.pathname === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+        return;
+    }
+
+    if (url.pathname === '/internal/events' && req.method === 'POST') {
+        handleInternalEvent(ctx.eventBus, req, res);
+        return;
+    }
+
+    if (url.pathname === '/events' && req.method === 'GET') {
+        handleSseConnection(ctx.eventBus, req, res);
+        return;
+    }
+
+    if (url.pathname.startsWith('/api/')) {
+        if (await handleApiRequest(ctx, url.pathname, req, res)) return;
+    }
+
+    if (fs.existsSync(webDistDir)) {
+        if (serveStatic(webDistDir, url.pathname, res)) return;
+    }
+
+    res.writeHead(404);
+    res.end('Not found');
+}
+
 async function cmdServe(flags: Record<string, string | boolean>): Promise<void> {
-    const { SSEServerTransport } = await import('@modelcontextprotocol/sdk/server/sse.js');
     const http = await import('node:http');
 
     const projectRoot = process.cwd();
+    const port =
+        typeof flags.port === 'string' ? parseInt(flags.port, 10) : getProjectPort(projectRoot);
+
+    const alreadyRunning = await isPortServing(port);
+    if (alreadyRunning) {
+        const url = `http://localhost:${port}`;
+        p.intro(pc.bold('Symbiote') + pc.dim(' — Brain is alive'));
+        p.log.info(`${pc.dim('Web UI:')}  ${url}`);
+        p.outro(pc.dim('Opening browser...'));
+        openBrowser(url);
+        return;
+    }
+
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
@@ -590,12 +655,39 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     });
     const { server } = createMcpServer(ctx);
 
-    const port = typeof flags.port === 'string' ? parseInt(flags.port, 10) : 3333;
+    const { SSEServerTransport } = await import('@modelcontextprotocol/sdk/server/sse.js');
     const transports = new Map<string, InstanceType<typeof SSEServerTransport>>();
+
+    const webDistDir = path.resolve(__dirname, '../../../web/dist');
 
     const httpServer = http.createServer((req, res) => {
         const url = new URL(req.url ?? '/', `http://localhost:${port}`);
-        handleRequest(url, req, res).catch((err) => {
+
+        if (url.pathname === '/sse' && req.method === 'GET') {
+            const transport = new SSEServerTransport('/messages', res);
+            transports.set(transport.sessionId, transport);
+            server.connect(transport).catch((err) => {
+                if (!res.headersSent) {
+                    res.writeHead(500);
+                    res.end(String(err));
+                }
+            });
+            return;
+        }
+
+        if (url.pathname === '/messages' && req.method === 'POST') {
+            const sessionId = url.searchParams.get('sessionId');
+            const transport = sessionId ? transports.get(sessionId) : undefined;
+            if (!transport) {
+                res.writeHead(404);
+                res.end('Session not found');
+                return;
+            }
+            transport.handlePostMessage(req, res);
+            return;
+        }
+
+        handleHttpRequest(ctx, webDistDir, port, url, req, res).catch((err) => {
             if (!res.headersSent) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: String(err) }));
@@ -603,82 +695,49 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
         });
     });
 
-    async function handleRequest(
-        url: URL,
-        req: IncomingMessage,
-        res: ServerResponse,
-    ): Promise<void> {
-        if (url.pathname === '/sse' && req.method === 'GET') {
-            const transport = new SSEServerTransport('/messages', res);
-            transports.set(transport.sessionId, transport);
-            await server.connect(transport);
-            return;
-        }
-
-        if (url.pathname === '/messages' && req.method === 'POST') {
-            const sessionId = url.searchParams.get('sessionId');
-            const transport = sessionId ? transports.get(sessionId) : undefined;
-
-            if (!transport) {
-                res.writeHead(404);
-                res.end('Session not found');
-                return;
-            }
-
-            await transport.handlePostMessage(req, res);
-            return;
-        }
-
-        if (url.pathname === '/health') {
-            res.writeHead(200, {
-                'Content-Type': 'application/json',
-            });
-            res.end(JSON.stringify({ status: 'ok' }));
-            return;
-        }
-
-        if (url.pathname === '/internal/events' && req.method === 'POST') {
-            handleInternalEvent(ctx.eventBus, req, res);
-            return;
-        }
-
-        if (url.pathname === '/events' && req.method === 'GET') {
-            handleSseConnection(ctx.eventBus, req, res);
-            return;
-        }
-
-        if (url.pathname.startsWith('/api/')) {
-            if (await handleApiRequest(ctx, url.pathname, req, res)) return;
-        }
-
-        const webDistDir = path.resolve(__dirname, '../../../web/dist');
-        if (fs.existsSync(webDistDir)) {
-            if (serveStatic(webDistDir, url.pathname, res)) return;
-        }
-
-        res.writeHead(404);
-        res.end('Not found');
-    }
-
     httpServer.listen(port, () => {
+        writePortFile(projectRoot, port);
+        const url = `http://localhost:${port}`;
         p.intro(pc.bold('Symbiote') + pc.dim(' — Brain is alive'));
         p.log.info(
-            `${pc.dim('Web UI:')}       http://localhost:${port}\n` +
+            `${pc.dim('Web UI:')}       ${url}\n` +
                 `${pc.dim('MCP SSE:')}      http://localhost:${port}/sse\n` +
                 `${pc.dim('Health:')}       http://localhost:${port}/health`,
         );
         p.outro(pc.dim('Press Ctrl+C to stop.'));
+        openBrowser(url);
     });
 
     process.on('SIGINT', () => {
+        clearPortFile(projectRoot);
         httpServer.close();
         db.close();
         process.exit(0);
     });
 }
 
+async function isPortServing(port: number): Promise<boolean> {
+    const http = await import('node:http');
+    return new Promise((resolve) => {
+        const req = http.request(
+            { hostname: '127.0.0.1', port, path: '/health', timeout: 1000 },
+            (res) => {
+                res.resume();
+                resolve(res.statusCode === 200);
+            },
+        );
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => {
+            req.destroy();
+            resolve(false);
+        });
+        req.end();
+    });
+}
+
 async function cmdMcp(): Promise<void> {
     const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
+    const http = await import('node:http');
 
     const projectRoot = process.cwd();
     const brainDir = ensureBrainDir(projectRoot);
@@ -697,7 +756,31 @@ async function cmdMcp(): Promise<void> {
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
+    const port = getProjectPort(projectRoot);
+
+    const webDistDir = path.resolve(__dirname, '../../../web/dist');
+    const httpServer = http.createServer((req, res) => {
+        const url = new URL(req.url ?? '/', `http://localhost:${port}`);
+        handleHttpRequest(ctx, webDistDir, port, url, req, res).catch((err) => {
+            if (!res.headersSent) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: String(err) }));
+            }
+        });
+    });
+
+    httpServer.listen(port, () => {
+        writePortFile(projectRoot, port);
+        process.stderr.write(`[symbiote] Web UI available at http://localhost:${port}\n`);
+    });
+
+    httpServer.on('error', () => {
+        // Port already in use — skip HTTP server silently
+    });
+
     process.on('SIGINT', () => {
+        clearPortFile(projectRoot);
+        httpServer.close();
         db.close();
         process.exit(0);
     });
@@ -872,6 +955,8 @@ async function cmdUnbond(targetId?: string): Promise<void> {
     const { detectInstalledAgents, isBonded, disconnectWithHooks } =
         await import('../src/init/agent-connector.js');
 
+    const projectRoot = process.cwd();
+
     p.intro(pc.bold('Symbiote') + pc.dim(' — Detaching'));
 
     const agents = detectInstalledAgents();
@@ -891,7 +976,7 @@ async function cmdUnbond(targetId?: string): Promise<void> {
     }
 
     for (const agent of toUnbond) {
-        const result = disconnectWithHooks(agent);
+        const result = disconnectWithHooks(agent, projectRoot);
         if (result.mcp.success) {
             p.log.success(`Detached from ${agent.name}`);
         } else {
