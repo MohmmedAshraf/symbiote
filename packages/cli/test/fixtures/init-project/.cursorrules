@@ -1,0 +1,6 @@
+# Rules
+
+- Always use TypeScript strict mode with no exceptions
+- Prefer composition over inheritance in all designs
+- Never use `any` — use `unknown` with type narrowing instead
+- Use `cn()` utility for combining Tailwind classes conditionally
