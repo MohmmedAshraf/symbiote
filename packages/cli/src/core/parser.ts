@@ -100,6 +100,48 @@ function extractNodes(root: SyntaxNode, filePath: string, nodes: NodeRecord[]): 
             }
         }
 
+        if (node.type === 'interface_declaration') {
+            const name = node.childForFieldName('name')?.text;
+            if (name) {
+                nodes.push({
+                    id: `interface:${filePath}:${name}`,
+                    type: 'interface',
+                    name,
+                    filePath,
+                    lineStart: node.startPosition.row + 1,
+                    lineEnd: node.endPosition.row + 1,
+                });
+            }
+        }
+
+        if (node.type === 'type_alias_declaration') {
+            const name = node.childForFieldName('name')?.text;
+            if (name) {
+                nodes.push({
+                    id: `type:${filePath}:${name}`,
+                    type: 'type_alias',
+                    name,
+                    filePath,
+                    lineStart: node.startPosition.row + 1,
+                    lineEnd: node.endPosition.row + 1,
+                });
+            }
+        }
+
+        if (node.type === 'enum_declaration') {
+            const name = node.childForFieldName('name')?.text;
+            if (name) {
+                nodes.push({
+                    id: `enum:${filePath}:${name}`,
+                    type: 'enum',
+                    name,
+                    filePath,
+                    lineStart: node.startPosition.row + 1,
+                    lineEnd: node.endPosition.row + 1,
+                });
+            }
+        }
+
         if (node.type === 'class_declaration' || node.type === 'class') {
             const name = getClassName(node);
             if (name) {

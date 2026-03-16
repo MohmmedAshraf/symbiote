@@ -3,6 +3,7 @@ import { parseFile } from '../../src/core/parser.js';
 import path from 'node:path';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures');
+const DEEP_FIXTURES = path.join(import.meta.dirname, '../fixtures/deep-parse-project');
 
 describe('parseFile', () => {
     it('extracts functions from a JavaScript file', () => {
@@ -52,5 +53,30 @@ describe('parseFile', () => {
     it('returns null for non-existent files', () => {
         const result = parseFile('/nonexistent/file.js');
         expect(result).toBeNull();
+    });
+});
+
+describe('type node extraction', () => {
+    it('extracts interface declarations', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'types.ts'));
+        expect(result).toBeDefined();
+        const interfaces = result!.nodes.filter((n) => n.type === 'interface');
+        expect(interfaces).toHaveLength(1);
+        expect(interfaces[0].name).toBe('User');
+        expect(interfaces[0].id).toBe(`interface:${path.join(DEEP_FIXTURES, 'types.ts')}:User`);
+    });
+
+    it('extracts type alias declarations', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'types.ts'));
+        const types = result!.nodes.filter((n) => n.type === 'type_alias');
+        expect(types).toHaveLength(1);
+        expect(types[0].name).toBe('CreateUserInput');
+    });
+
+    it('extracts enum declarations', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'types.ts'));
+        const enums = result!.nodes.filter((n) => n.type === 'enum');
+        expect(enums).toHaveLength(1);
+        expect(enums[0].name).toBe('UserRole');
     });
 });
