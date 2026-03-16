@@ -81,11 +81,13 @@ export async function handleGetContextForFile(
 
 export interface QueryGraphInput {
     query: string;
-    type: 'search' | 'dependencies' | 'dependents';
+    type: 'search' | 'dependencies' | 'dependents' | 'hubs';
+    limit?: number;
 }
 
 export interface QueryGraphOutput {
     results: NodeRecord[];
+    edgeCounts?: number[];
 }
 
 export async function handleQueryGraph(
@@ -105,6 +107,13 @@ export async function handleQueryGraph(
             return {
                 results: await ctx.graph.getDependents(input.query),
             };
+        case 'hubs': {
+            const hubs = await ctx.graph.getHubs(input.limit ?? 20);
+            return {
+                results: hubs.map((h) => h.node),
+                edgeCounts: hubs.map((h) => h.edgeCount),
+            };
+        }
     }
 }
 
@@ -121,17 +130,26 @@ export async function handleSemanticSearch(
     ctx: ServerContext,
     input: SemanticSearchInput,
 ): Promise<SemanticSearchOutput> {
+    const limit = input.limit ?? 10;
     try {
-        const results = await ctx.search.search(input.query, {
-            limit: input.limit ?? 10,
-        });
-        return {
-            results: results.map((r) => ({
-                node: r.node,
-                distance: 1 - r.score,
-            })),
-        };
+        const results = await ctx.search.search(input.query, { limit });
+        if (results.length > 0) {
+            return {
+                results: results.map((r) => ({
+                    node: r.node,
+                    distance: 1 - r.score,
+                })),
+            };
+        }
     } catch {
-        return { results: [] };
+        // Fall through to text search
     }
+
+    const textResults = await ctx.search.textSearch(input.query, limit);
+    return {
+        results: textResults.map((r) => ({
+            node: r.node,
+            distance: 1 - r.score,
+        })),
+    };
 }

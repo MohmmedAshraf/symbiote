@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { createDatabase } from '../src/storage/db.js';
@@ -180,7 +180,7 @@ async function cmdInit(): Promise<void> {
 
     const s1 = p.spinner();
     s1.start('Scanning codebase...');
-    const scanResult = await scanner.scan(projectRoot);
+    const scanResult = await scanner.scan(projectRoot, { embeddings: true });
     s1.stop(
         `${scanResult.filesScanned} files` +
             pc.dim(` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`),
@@ -257,7 +257,7 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
     s.start('Scanning codebase...');
     const result = await scanner.scan(projectRoot, {
         force: flags.force === true,
-        embeddings: flags.embeddings === true,
+        embeddings: flags.embeddings !== false,
     });
     await db.close();
 
@@ -492,9 +492,21 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     const port = typeof flags.port === 'string' ? parseInt(flags.port, 10) : 3333;
     const transports = new Map<string, InstanceType<typeof SSEServerTransport>>();
 
-    const httpServer = http.createServer(async (req, res) => {
+    const httpServer = http.createServer((req, res) => {
         const url = new URL(req.url ?? '/', `http://localhost:${port}`);
+        handleRequest(url, req, res).catch((err) => {
+            if (!res.headersSent) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: String(err) }));
+            }
+        });
+    });
 
+    async function handleRequest(
+        url: URL,
+        req: IncomingMessage,
+        res: ServerResponse,
+    ): Promise<void> {
         if (url.pathname === '/sse' && req.method === 'GET') {
             const transport = new SSEServerTransport('/messages', res);
             transports.set(transport.sessionId, transport);
@@ -535,7 +547,7 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
 
         res.writeHead(404);
         res.end('Not found');
-    });
+    }
 
     httpServer.listen(port, () => {
         p.intro(pc.bold('Symbiote') + pc.dim(' — Server running'));

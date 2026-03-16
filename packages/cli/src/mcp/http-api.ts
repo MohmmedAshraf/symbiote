@@ -55,12 +55,17 @@ function json(res: ServerResponse, data: unknown, status = 200): boolean {
 }
 
 async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<boolean> {
-    const nodes = await ctx.repo.getAllNodes();
-    const nodeIds = new Set(nodes.map((n) => n.id));
-    const edges = (await ctx.repo.getAllEdges()).filter(
-        (e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId),
-    );
-    return json(res, { nodes, edges });
+    try {
+        const nodes = await ctx.repo.getAllNodes();
+        const nodeIds = new Set(nodes.map((n) => n.id));
+        const edges = (await ctx.repo.getAllEdges()).filter(
+            (e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId),
+        );
+        return json(res, { nodes, edges });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return json(res, { error: message, nodes: [], edges: [] }, 500);
+    }
 }
 
 async function handleGetNodeContext(

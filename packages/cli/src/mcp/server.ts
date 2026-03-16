@@ -84,10 +84,24 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'query_graph',
-        'Search the code graph: find symbols by name, trace dependencies or dependents.',
+        'Search the code graph: find symbols by name, trace dependencies/dependents, or find the most connected hub nodes.',
         {
-            query: z.string().describe('Search query or node ID for dependency/dependent lookup'),
-            type: z.enum(['search', 'dependencies', 'dependents']).describe('Query type'),
+            query: z
+                .string()
+                .default('')
+                .describe(
+                    'Search query or node ID (required for search/dependencies/dependents, ignored for hubs)',
+                ),
+            type: z
+                .enum(['search', 'dependencies', 'dependents', 'hubs'])
+                .describe(
+                    'Query type: search, dependencies, dependents, or hubs (most connected nodes)',
+                ),
+            limit: z
+                .number()
+                .optional()
+                .default(20)
+                .describe('Max results for hubs query (default: 20)'),
         },
         async (input) => ({
             content: [

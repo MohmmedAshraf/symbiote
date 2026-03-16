@@ -181,6 +181,27 @@ export class Repository {
         return result;
     }
 
+    async getHubs(limit: number = 20): Promise<Array<{ node: NodeRecord; edgeCount: number }>> {
+        const rows = (await this.db.all(
+            `SELECT n.*, COUNT(*) as edge_count
+             FROM nodes n
+             JOIN (
+                 SELECT source_id AS node_id FROM edges
+                 UNION ALL
+                 SELECT target_id AS node_id FROM edges
+             ) e ON e.node_id = n.id
+             GROUP BY n.id
+             ORDER BY edge_count DESC
+             LIMIT $1`,
+            limit,
+        )) as unknown as Array<NodeRow & { edge_count: number }>;
+
+        return rows.map((row) => ({
+            node: this.mapNodeRow(row),
+            edgeCount: Number(row.edge_count),
+        }));
+    }
+
     async getAllNodes(): Promise<NodeRecord[]> {
         const rows = (await this.db.all('SELECT * FROM nodes')) as unknown as NodeRow[];
 

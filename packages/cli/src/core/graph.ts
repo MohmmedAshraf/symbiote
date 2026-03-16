@@ -18,24 +18,54 @@ export interface ProjectOverview {
 export class GraphQuery {
     constructor(private repo: Repository) {}
 
-    async getDependencies(nodeId: string): Promise<NodeRecord[]> {
-        const edges = await this.repo.getDependencies(nodeId);
+    async getDependencies(query: string): Promise<NodeRecord[]> {
+        const nodeIds = await this.resolveNodeIds(query);
         const nodes: NodeRecord[] = [];
-        for (const e of edges) {
-            const node = await this.repo.getNodeById(e.targetId);
-            if (node) nodes.push(node);
+        const seen = new Set<string>();
+        for (const id of nodeIds) {
+            for (const e of await this.repo.getDependencies(id)) {
+                if (seen.has(e.targetId)) continue;
+                seen.add(e.targetId);
+                const node = await this.repo.getNodeById(e.targetId);
+                if (node) nodes.push(node);
+            }
         }
         return nodes;
     }
 
-    async getDependents(nodeId: string): Promise<NodeRecord[]> {
-        const edges = await this.repo.getDependents(nodeId);
+    async getDependents(query: string): Promise<NodeRecord[]> {
+        const nodeIds = await this.resolveNodeIds(query);
         const nodes: NodeRecord[] = [];
-        for (const e of edges) {
-            const node = await this.repo.getNodeById(e.sourceId);
-            if (node) nodes.push(node);
+        const seen = new Set<string>();
+        for (const id of nodeIds) {
+            for (const e of await this.repo.getDependents(id)) {
+                if (seen.has(e.sourceId)) continue;
+                seen.add(e.sourceId);
+                const node = await this.repo.getNodeById(e.sourceId);
+                if (node) nodes.push(node);
+            }
         }
         return nodes;
+    }
+
+    private async resolveNodeIds(query: string): Promise<string[]> {
+        const direct = await this.repo.getNodeById(query);
+        if (direct) return [query];
+
+        const fileNode = await this.repo.getNodeById(`file:${query}`);
+        if (fileNode) return [`file:${query}`];
+
+        const byFile = await this.repo.getNodesByFile(query);
+        if (byFile.length > 0) return byFile.map((n) => n.id);
+
+        const byName = await this.repo.searchNodesByName(query);
+        if (byName.length > 0) return byName.slice(0, 20).map((n) => n.id);
+
+        return [query];
+    }
+
+    async getHubs(limit: number = 20): Promise<Array<{ node: NodeRecord; edgeCount: number }>> {
+        return this.repo.getHubs(limit);
     }
 
     async searchNodes(query: string): Promise<NodeRecord[]> {
