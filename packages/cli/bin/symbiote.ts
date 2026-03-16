@@ -21,7 +21,12 @@ import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import { createServerContext } from '../src/mcp/context.js';
-import { handleApiRequest, handleInternalEvent, handleSseConnection } from '../src/mcp/http-api.js';
+import {
+    handleApiRequest,
+    handleInternalEvent,
+    handleSseConnection,
+    handleHookContext,
+} from '../src/mcp/http-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -396,10 +401,10 @@ async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
 async function cmdHookPre(): Promise<void> {
     const { readStdinPayload, writeResponse, fireHookEvent } =
         await import('../src/hooks/types.js');
-    const { getServerPort } = await import('../src/utils/config.js');
+    const http = await import('node:http');
 
     const projectRoot = process.cwd();
-    const dbPath = getBrainDbPath(projectRoot);
+    const port = getProjectPort(projectRoot);
 
     const payload = await readStdinPayload();
     if (payload.type !== 'pre_tool_use') {
@@ -407,47 +412,58 @@ async function cmdHookPre(): Promise<void> {
         return;
     }
 
-    let response: { decision: 'allow' | 'block'; message?: string } = { decision: 'allow' };
+    const filePath = payload.tool_input.file_path as string | undefined;
+    const FILE_TOOLS = new Set(['Read', 'Edit', 'Write']);
 
-    try {
-        const db = await createDatabase(dbPath);
-        const { buildGraphFromDb } = await import('../src/core/graph-builder.js');
-        const graph = await buildGraphFromDb(db);
-        await db.close();
-
-        const brainDir = path.join(projectRoot, '.brain');
-        let constraints: Array<{ scope: string; content: string }> = [];
+    if (filePath && FILE_TOOLS.has(payload.tool_name)) {
         try {
-            const { IntentStore } = await import('../src/brain/intent.js');
-            const intent = new IntentStore(brainDir);
-            constraints = intent
-                .listEntries('constraint', { status: 'active' })
-                .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
-        } catch {
-            // No intent store
-        }
+            const params = new URLSearchParams({
+                file: filePath,
+                tool: payload.tool_name,
+                root: projectRoot,
+            });
+            const url = `http://127.0.0.1:${port}/internal/hook-context?${params}`;
 
-        const { PreToolUseHandler } = await import('../src/hooks/pre-tool-use.js');
-        const handler = new PreToolUseHandler({
-            graph,
-            projectRoot,
-            constraints,
-            dnaEntries: [],
-        });
-        response = handler.handle(payload);
-    } catch {
-        // DB locked or unavailable — skip context injection, still fire IPC
+            const response = await new Promise<{ decision: string; message?: string }>(
+                (resolve) => {
+                    const req = http.get(url, { timeout: 3000 }, (res) => {
+                        let data = '';
+                        res.on('data', (chunk) => {
+                            data += chunk;
+                        });
+                        res.on('end', () => {
+                            try {
+                                resolve(JSON.parse(data));
+                            } catch {
+                                resolve({ decision: 'allow' });
+                            }
+                        });
+                    });
+                    req.on('error', () => resolve({ decision: 'allow' }));
+                    req.on('timeout', () => {
+                        req.destroy();
+                        resolve({ decision: 'allow' });
+                    });
+                },
+            );
+
+            writeResponse({
+                decision: response.decision as 'allow' | 'block',
+                message: response.message,
+            });
+        } catch {
+            writeResponse({ decision: 'allow' });
+        }
+    } else {
+        writeResponse({ decision: 'allow' });
     }
 
-    writeResponse(response);
-
-    const filePath = payload.tool_input.file_path as string | undefined;
     if (filePath && payload.tool_name === 'Read') {
         const relativePath = path.relative(projectRoot, filePath);
         await fireHookEvent(
             'file:read',
             { filePath: relativePath, toolName: payload.tool_name },
-            getServerPort(),
+            port,
         );
     }
 }
@@ -455,11 +471,9 @@ async function cmdHookPre(): Promise<void> {
 async function cmdHookPost(): Promise<void> {
     const { readStdinPayload, writeResponse, fireHookEvent } =
         await import('../src/hooks/types.js');
-    const { getServerPort } = await import('../src/utils/config.js');
-    const { PostToolUseHandler } = await import('../src/hooks/post-tool-use.js');
 
     const projectRoot = process.cwd();
-    const dbPath = getBrainDbPath(projectRoot);
+    const port = getProjectPort(projectRoot);
 
     const payload = await readStdinPayload();
     if (payload.type !== 'post_tool_use') {
@@ -467,35 +481,7 @@ async function cmdHookPost(): Promise<void> {
         return;
     }
 
-    const handler = new PostToolUseHandler({
-        projectRoot,
-        onReindexFile: async (relativePath: string) => {
-            try {
-                const db = await createDatabase(dbPath);
-                const repo = new Repository(db);
-                const fullPath = path.join(projectRoot, relativePath);
-                const { parseFile } = await import('../src/core/parser.js');
-                const { hashFileContent } = await import('../src/utils/files.js');
-                const hash = hashFileContent(fullPath);
-                const parsed = parseFile(fullPath);
-                if (parsed) {
-                    await repo.clearNodesForFile(fullPath);
-                    await repo.insertNodes(parsed.nodes);
-                    await repo.insertEdges(parsed.edges);
-                    await repo.upsertFile(fullPath, hash);
-                }
-                await db.close();
-            } catch {
-                // DB locked or unavailable — skip reindex
-            }
-        },
-        onFullRescan: async () => {
-            // Full rescan too slow for hook — next scan will catch up
-        },
-    });
-
-    const response = await handler.handle(payload);
-    writeResponse(response);
+    writeResponse({ decision: 'allow' });
 
     if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
         const filePath = payload.tool_input.file_path as string | undefined;
@@ -505,7 +491,7 @@ async function cmdHookPost(): Promise<void> {
             await fireHookEvent(
                 isCreate ? 'file:create' : 'file:edit',
                 { filePath: relativePath, toolName: payload.tool_name },
-                getServerPort(),
+                port,
             );
         }
     }
@@ -636,6 +622,11 @@ async function handleHttpRequest(
 
     if (url.pathname === '/internal/events' && req.method === 'POST') {
         handleInternalEvent(ctx.eventBus, req, res);
+        return;
+    }
+
+    if (url.pathname === '/internal/hook-context' && req.method === 'GET') {
+        await handleHookContext(ctx, req, res);
         return;
     }
 

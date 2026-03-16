@@ -205,6 +205,131 @@ function handleUpdateDna(
     return true;
 }
 
+export async function handleHookContext(
+    ctx: ServerContext,
+    req: IncomingMessage,
+    res: ServerResponse,
+): Promise<void> {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const filePath = url.searchParams.get('file');
+    const toolName = url.searchParams.get('tool');
+    const projectRoot = url.searchParams.get('root');
+
+    if (!filePath || !toolName || !projectRoot) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ decision: 'allow' }));
+        return;
+    }
+
+    try {
+        const path = await import('node:path');
+        const relativePath = path.default.isAbsolute(filePath)
+            ? path.default.relative(projectRoot, filePath)
+            : filePath;
+
+        const fileNodeId = `file:${relativePath}`;
+
+        if (!ctx.graphology.hasNode(fileNodeId)) {
+            res.writeHead(200);
+            res.end(JSON.stringify({ decision: 'allow' }));
+            return;
+        }
+
+        const symbols: string[] = [];
+        ctx.graphology.forEachOutEdge(
+            fileNodeId,
+            (_e: string, attrs: Record<string, unknown>, _s: string, target: string) => {
+                if (attrs.type === 'contains') symbols.push(target);
+            },
+        );
+
+        const dependencies = new Set<string>();
+        for (const sym of symbols) {
+            ctx.graphology.forEachOutEdge(
+                sym,
+                (_e: string, attrs: Record<string, unknown>, _s: string, target: string) => {
+                    if (attrs.type !== 'contains' && !symbols.includes(target)) {
+                        dependencies.add(target);
+                    }
+                },
+            );
+        }
+
+        const dependents = new Set<string>();
+        for (const sym of symbols) {
+            ctx.graphology.forEachInEdge(
+                sym,
+                (_e: string, attrs: Record<string, unknown>, source: string) => {
+                    if (attrs.type !== 'contains' && !symbols.includes(source)) {
+                        dependents.add(source);
+                    }
+                },
+            );
+        }
+
+        const constraints = ctx.intent
+            .listEntries('constraint', { status: 'active' })
+            .filter(
+                (c) => c.frontmatter.scope === '*' || relativePath.includes(c.frontmatter.scope),
+            )
+            .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
+
+        const dna = ctx.dnaEngine
+            .getActiveEntries()
+            .slice(0, 10)
+            .map((e) => `[${e.frontmatter.category}] ${e.content}`);
+
+        const lines: string[] = [];
+        lines.push(`File context for ${relativePath}:`);
+
+        if (symbols.length > 0) {
+            lines.push('', 'Symbols:');
+            for (const sym of symbols) {
+                const attrs = ctx.graphology.getNodeAttributes(sym);
+                lines.push(
+                    `  - ${attrs.name} (${attrs.type}, lines ${attrs.lineStart}-${attrs.lineEnd})`,
+                );
+            }
+        }
+
+        if (dependencies.size > 0) {
+            lines.push('', 'Dependencies:');
+            for (const dep of dependencies) {
+                const attrs = ctx.graphology.getNodeAttributes(dep);
+                lines.push(`  - ${attrs.name} (${attrs.filePath})`);
+            }
+        }
+
+        if (dependents.size > 0) {
+            lines.push('', 'Dependents (will be affected by changes):');
+            for (const dep of dependents) {
+                const attrs = ctx.graphology.getNodeAttributes(dep);
+                lines.push(`  - ${attrs.name} (${attrs.filePath})`);
+            }
+        }
+
+        if (constraints.length > 0) {
+            lines.push('', 'Constraints:');
+            for (const c of constraints) {
+                lines.push(`  - [${c.scope}] ${c.content}`);
+            }
+        }
+
+        if (dna.length > 0) {
+            lines.push('', 'Developer DNA:');
+            for (const d of dna) {
+                lines.push(`  - ${d}`);
+            }
+        }
+
+        res.writeHead(200);
+        res.end(JSON.stringify({ decision: 'allow', message: lines.join('\n') }));
+    } catch {
+        res.writeHead(200);
+        res.end(JSON.stringify({ decision: 'allow' }));
+    }
+}
+
 export function handleInternalEvent(
     bus: EventBus,
     req: IncomingMessage,
