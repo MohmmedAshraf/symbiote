@@ -11,14 +11,14 @@ describe('Scanner', () => {
     let repo: Repository;
     let scanner: Scanner;
 
-    beforeEach(() => {
-        db = createDatabase(':memory:');
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         repo = new Repository(db);
         scanner = new Scanner(repo);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
     });
 
     it('scans a simple JS project and populates the graph', async () => {
@@ -29,7 +29,7 @@ describe('Scanner', () => {
         expect(result.filesScanned).toBeGreaterThan(0);
         expect(result.nodesCreated).toBeGreaterThan(0);
 
-        const stats = repo.getStats();
+        const stats = await repo.getStats();
         expect(stats.nodes).toBeGreaterThan(0);
         expect(stats.files).toBeGreaterThan(0);
     });
@@ -42,7 +42,7 @@ describe('Scanner', () => {
         expect(result.filesScanned).toBeGreaterThan(0);
         expect(result.nodesCreated).toBeGreaterThan(0);
 
-        const stats = repo.getStats();
+        const stats = await repo.getStats();
         expect(stats.nodes).toBeGreaterThan(0);
     });
 

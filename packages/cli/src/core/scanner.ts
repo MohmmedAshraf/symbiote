@@ -36,7 +36,7 @@ export class Scanner {
 
                 if (
                     !options.force &&
-                    !this.repo.isFileChanged(filePath, hash)
+                    !(await this.repo.isFileChanged(filePath, hash))
                 ) {
                     result.filesSkipped++;
                     continue;
@@ -48,10 +48,10 @@ export class Scanner {
                     continue;
                 }
 
-                this.repo.clearNodesForFile(filePath);
-                this.repo.insertNodes(parsed.nodes);
-                this.repo.insertEdges(parsed.edges);
-                this.repo.upsertFile(filePath, hash);
+                await this.repo.clearNodesForFile(filePath);
+                await this.repo.insertNodes(parsed.nodes);
+                await this.repo.insertEdges(parsed.edges);
+                await this.repo.upsertFile(filePath, hash);
 
                 result.filesScanned++;
                 result.nodesCreated += parsed.nodes.length;
