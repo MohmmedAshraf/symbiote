@@ -12,6 +12,7 @@
         "test": {
             "cache": false
         },
-        "lint": {}
+        "lint": {},
+        "type-check": {}
     }
 }

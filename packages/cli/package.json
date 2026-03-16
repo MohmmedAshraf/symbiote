@@ -12,7 +12,8 @@
         "build": "tsc",
         "dev": "tsc --watch",
         "test": "vitest run",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
         "@clack/prompts": "^0.10.0",
