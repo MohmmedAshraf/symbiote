@@ -1,9 +1,11 @@
 import { walkFiles, hashFileContent } from '../utils/files.js';
 import { parseFile } from './parser.js';
+import { GraphAlgorithms } from './algorithms.js';
 import type { Repository } from '../storage/repository.js';
 
 export interface ScanOptions {
     force?: boolean;
+    skipAlgorithms?: boolean;
 }
 
 export interface ScanResult {
@@ -64,6 +66,15 @@ export class Scanner {
                             ? error.message
                             : String(error),
                 });
+            }
+        }
+
+        if (!options.skipAlgorithms && result.filesScanned > 0) {
+            try {
+                const algorithms = new GraphAlgorithms(this.repo);
+                await algorithms.runAll();
+            } catch {
+                // Algorithm failures are non-fatal
             }
         }
 

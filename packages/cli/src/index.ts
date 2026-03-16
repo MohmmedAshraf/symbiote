@@ -13,6 +13,10 @@ export {
 } from './core/graph.js';
 export { parseFile, type ParseResult } from './core/parser.js';
 export {
+    GraphAlgorithms,
+    type AlgorithmResults,
+} from './core/algorithms.js';
+export {
     detectLanguage,
     getGrammar,
     SUPPORTED_LANGUAGES,
