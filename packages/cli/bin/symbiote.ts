@@ -566,7 +566,22 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = await createDatabase(dbPath);
+
+    let db: Awaited<ReturnType<typeof createDatabase>>;
+    try {
+        db = await createDatabase(dbPath);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('lock')) {
+            p.log.error(
+                'Database is locked by another Symbiote process.\n' +
+                    '  Kill it first: ' +
+                    pc.cyan('pkill -f "symbiote mcp"'),
+            );
+            process.exit(1);
+        }
+        throw err;
+    }
 
     const ctx = await createServerContext({
         db,
@@ -646,7 +661,7 @@ async function cmdServe(flags: Record<string, string | boolean>): Promise<void> 
     }
 
     httpServer.listen(port, () => {
-        p.intro(pc.bold('Symbiote') + pc.dim(' — Server running'));
+        p.intro(pc.bold('Symbiote') + pc.dim(' — Brain is alive'));
         p.log.info(
             `${pc.dim('Web UI:')}       http://localhost:${port}\n` +
                 `${pc.dim('MCP SSE:')}      http://localhost:${port}/sse\n` +
@@ -669,6 +684,7 @@ async function cmdMcp(): Promise<void> {
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
+
     const db = await createDatabase(dbPath);
 
     const ctx = await createServerContext({
