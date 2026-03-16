@@ -58,3 +58,42 @@ describe('Scanner', () => {
         expect(second.filesSkipped).toBe(0);
     });
 });
+
+describe('Scanner with embeddings', () => {
+    let db: SymbioteDB;
+    let repo: Repository;
+    let scanner: Scanner;
+
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
+        repo = new Repository(db);
+        scanner = new Scanner(repo, db);
+    });
+
+    afterEach(async () => {
+        await db.close();
+    });
+
+    it('generates embeddings when --embeddings flag is set', async () => {
+        const result = await scanner.scan(path.join(FIXTURES, 'simple-project'), {
+            embeddings: true,
+        });
+        expect(result.embeddingsGenerated).toBeGreaterThan(0);
+        const rows = await db.all('SELECT COUNT(*) as count FROM embeddings');
+        expect((rows[0] as { count: number }).count).toBeGreaterThan(0);
+    }, 60000);
+
+    it('skips embeddings by default', async () => {
+        const result = await scanner.scan(path.join(FIXTURES, 'simple-project'));
+        expect(result.embeddingsGenerated).toBe(0);
+    });
+
+    it('only regenerates embeddings for changed files', async () => {
+        await scanner.scan(path.join(FIXTURES, 'simple-project'), { embeddings: true });
+        const result = await scanner.scan(path.join(FIXTURES, 'simple-project'), {
+            embeddings: true,
+        });
+        expect(result.embeddingsGenerated).toBe(0);
+        expect(result.filesSkipped).toBeGreaterThan(0);
+    }, 60000);
+});

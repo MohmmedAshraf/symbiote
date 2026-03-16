@@ -32,6 +32,7 @@ const DEFAULT_SCAN_RESULT: ScanResult = {
     filesSkipped: 0,
     nodesCreated: 0,
     edgesCreated: 0,
+    embeddingsGenerated: 0,
     errors: [],
 };
 
