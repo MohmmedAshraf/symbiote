@@ -104,3 +104,41 @@ describe('import binding resolution', () => {
         expect(userEntry!.sourcePath).toContain('types');
     });
 });
+
+describe('call expression detection', () => {
+    it('detects direct function calls within a function body', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'service.ts'));
+        const calls = result!.edges.filter((e) => e.type === 'calls');
+        expect(calls.length).toBeGreaterThanOrEqual(2);
+        expect(
+            calls.find(
+                (e) => e.sourceId.includes('.create') && e.targetId.includes(':validateEmail'),
+            ),
+        ).toBeDefined();
+    });
+
+    it('detects method calls on objects', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'index.ts'));
+        const calls = result!.edges.filter((e) => e.type === 'calls');
+        expect(calls.find((e) => e.targetId.includes(':create'))).toBeDefined();
+    });
+
+    it('resolves cross-file calls using the symbol table', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'service.ts'));
+        const calls = result!.edges.filter((e) => e.type === 'calls');
+        expect(
+            calls.find((e) => e.targetId.includes('utils') && e.targetId.includes('generateId')),
+        ).toBeDefined();
+    });
+
+    it('resolves imported function calls from index to service', () => {
+        const result = parseFile(path.join(DEEP_FIXTURES, 'index.ts'));
+        const calls = result!.edges.filter((e) => e.type === 'calls');
+        expect(
+            calls.find(
+                (e) =>
+                    e.targetId.includes('service') && e.targetId.includes('createDefaultService'),
+            ),
+        ).toBeDefined();
+    });
+});

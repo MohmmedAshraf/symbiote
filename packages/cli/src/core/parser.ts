@@ -72,6 +72,7 @@ export function parseFile(filePath: string): ParseResult | null {
 
     const symbolTable = buildSymbolTable(tree.rootNode, filePath);
     extractImportBindings(symbolTable, filePath, edges);
+    extractCalls(tree.rootNode, filePath, nodes, symbolTable, edges);
 
     for (const node of nodes) {
         if (node.type !== 'file') {
@@ -240,6 +241,127 @@ function getFunctionName(node: SyntaxNode): string | null {
 function getClassName(node: SyntaxNode): string | null {
     const nameNode = node.childForFieldName('name');
     return nameNode?.text ?? null;
+}
+
+interface CallInfo {
+    callerNodeId: string;
+    calledName: string;
+    isMethodCall: boolean;
+    objectName?: string;
+}
+
+function extractCalls(
+    root: SyntaxNode,
+    filePath: string,
+    nodes: NodeRecord[],
+    symbolTable: Map<string, SymbolEntry>,
+    edges: EdgeRecord[],
+): void {
+    const fnScopes = new Map(
+        nodes
+            .filter((n) => n.type === 'function' || n.type === 'method')
+            .map((n) => [n.id, { lineStart: n.lineStart, lineEnd: n.lineEnd, id: n.id }]),
+    );
+
+    const cursor = root.walk();
+    let done = false;
+    while (!done) {
+        const node = cursor.currentNode;
+        if (node.type === 'call_expression') {
+            const info = resolveCallExpression(node, filePath, fnScopes);
+            if (info) {
+                const targetId = resolveCallTarget(info, filePath, symbolTable);
+                if (targetId) {
+                    edges.push({ sourceId: info.callerNodeId, targetId, type: 'calls' });
+                }
+            }
+        }
+        if (node.type === 'new_expression') {
+            const nameNode = node.childForFieldName('constructor');
+            if (nameNode) {
+                const caller = findEnclosingFunction(node, filePath, fnScopes);
+                if (caller) {
+                    const entry = symbolTable.get(nameNode.text);
+                    const target = entry
+                        ? `class:${entry.resolvedSourcePath}:${entry.originalName}`
+                        : `class:${filePath}:${nameNode.text}`;
+                    edges.push({ sourceId: caller, targetId: target, type: 'calls' });
+                }
+            }
+        }
+        if (cursor.gotoFirstChild()) continue;
+        if (cursor.gotoNextSibling()) continue;
+        while (true) {
+            if (!cursor.gotoParent()) {
+                done = true;
+                break;
+            }
+            if (cursor.gotoNextSibling()) break;
+        }
+    }
+}
+
+function findEnclosingFunction(
+    node: SyntaxNode,
+    filePath: string,
+    fnScopes: Map<string, { lineStart: number; lineEnd: number; id: string }>,
+): string | null {
+    const line = node.startPosition.row + 1;
+    let best: string | null = null;
+    let bestSize = Infinity;
+    for (const [, fn] of fnScopes) {
+        if (line >= fn.lineStart && line <= fn.lineEnd) {
+            const size = fn.lineEnd - fn.lineStart;
+            if (size < bestSize) {
+                bestSize = size;
+                best = fn.id;
+            }
+        }
+    }
+    return best ?? `file:${filePath}`;
+}
+
+function resolveCallExpression(
+    node: SyntaxNode,
+    filePath: string,
+    fnScopes: Map<string, { lineStart: number; lineEnd: number; id: string }>,
+): CallInfo | null {
+    const fnField = node.childForFieldName('function');
+    if (!fnField) return null;
+    const callerNodeId = findEnclosingFunction(node, filePath, fnScopes);
+    if (!callerNodeId) return null;
+
+    if (fnField.type === 'member_expression') {
+        const property = fnField.childForFieldName('property');
+        if (!property) return null;
+        return {
+            callerNodeId,
+            calledName: property.text,
+            isMethodCall: true,
+            objectName: fnField.childForFieldName('object')?.text,
+        };
+    }
+    if (fnField.type === 'identifier') {
+        return { callerNodeId, calledName: fnField.text, isMethodCall: false };
+    }
+    return null;
+}
+
+function resolveCallTarget(
+    call: CallInfo,
+    filePath: string,
+    symbolTable: Map<string, SymbolEntry>,
+): string | null {
+    if (call.isMethodCall && call.objectName) {
+        const entry = symbolTable.get(call.objectName);
+        if (entry) {
+            return `method:${entry.resolvedSourcePath}:${entry.originalName}.${call.calledName}`;
+        }
+        return `method:${filePath}:${call.objectName}.${call.calledName}`;
+    }
+    const entry = symbolTable.get(call.calledName);
+    if (entry) return `fn:${entry.resolvedSourcePath}:${entry.originalName}`;
+    return `fn:${filePath}:${call.calledName}`;
 }
 
 function buildSymbolTable(root: SyntaxNode, filePath: string): Map<string, SymbolEntry> {
