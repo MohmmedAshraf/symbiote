@@ -186,6 +186,10 @@ export function disconnectWithHooks(agent: AgentInfo): {
     return { mcp, hooks };
 }
 
+export function ensureClaudeHooks(): { success: boolean; message: string } {
+    return installGlobalClaudeHooks();
+}
+
 function installGlobalClaudeHooks(): { success: boolean; message: string } {
     try {
         fs.mkdirSync(CLAUDE_HOOKS_DIR, { recursive: true });

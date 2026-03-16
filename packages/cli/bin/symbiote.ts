@@ -293,7 +293,7 @@ async function cmdInit(): Promise<void> {
         p.log.warn(`${scanResult.errors.length} files had parse errors.`);
     }
 
-    const { detectInstalledAgents, isBonded, connectWithHooks } =
+    const { detectInstalledAgents, isBonded, connectWithHooks, ensureClaudeHooks } =
         await import('../src/init/agent-connector.js');
 
     const agents = detectInstalledAgents();
@@ -312,6 +312,9 @@ async function cmdInit(): Promise<void> {
 
         if (alreadyBonded.length > 0) {
             for (const agent of alreadyBonded) {
+                if (agent.id === 'claude-code') {
+                    ensureClaudeHooks();
+                }
                 p.log.info(`${pc.green('✓')} ${agent.name} ${pc.dim('[already bonded]')}`);
             }
         }
