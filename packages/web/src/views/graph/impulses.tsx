@@ -9,6 +9,7 @@ interface ImpulsesProps {
     curves: THREE.CatmullRomCurve3[];
     nodeClusterMap: Map<string, number>;
     selectedId: string | null;
+    triggeredEdgeIndices?: Set<number>;
 }
 
 interface ImpulseState {
@@ -22,7 +23,13 @@ interface ImpulseState {
 const MAX_ACTIVE_RATIO = 0.3;
 const OFFSCREEN = new THREE.Vector3(99999, 99999, 99999);
 
-export function Impulses({ edges, curves, nodeClusterMap, selectedId }: ImpulsesProps) {
+export function Impulses({
+    edges,
+    curves,
+    nodeClusterMap,
+    selectedId,
+    triggeredEdgeIndices,
+}: ImpulsesProps) {
     const meshRef = useRef<THREE.InstancedMesh>(null);
 
     const states = useMemo(() => {
@@ -60,6 +67,12 @@ export function Impulses({ edges, curves, nodeClusterMap, selectedId }: Impulses
 
         for (let i = 0; i < states.length; i++) {
             const state = states[i];
+
+            if (triggeredEdgeIndices?.has(i) && !state.active) {
+                state.active = true;
+                state.t = 0;
+                state.speed = 0.6 + Math.random() * 0.2;
+            }
 
             if (!state.active) {
                 state.cooldown -= delta;

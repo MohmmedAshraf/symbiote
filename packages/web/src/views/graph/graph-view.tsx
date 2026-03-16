@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import type { GraphData, NodeContext } from '@/lib/types';
 import type { BrainSceneHandle } from './brain-scene';
@@ -6,6 +6,7 @@ import { NodeSidebar } from './node-sidebar';
 import { GraphControls } from './graph-controls';
 import { StatusBar } from './status-bar';
 import { useEvents } from '@/lib/events-context';
+import { useNodeEffects } from './event-effects';
 
 const BrainScene = lazy(() =>
     import('./brain-scene').then((m) => ({
@@ -59,6 +60,61 @@ export function GraphView() {
     const handleZoomOut = useCallback(() => sceneRef.current?.zoomOut(), []);
     const handleResetView = useCallback(() => sceneRef.current?.resetView(), []);
 
+    const fileNodeMap = useMemo(() => {
+        if (!graphData) return new Map<string, string>();
+        const map = new Map<string, string>();
+        for (const node of graphData.nodes) {
+            if (node.filePath) {
+                map.set(node.filePath, node.id);
+                const shortPath = node.filePath.replace(/^.*?\//, '');
+                if (!map.has(shortPath)) map.set(shortPath, node.id);
+            }
+        }
+        return map;
+    }, [graphData]);
+
+    const fileToNodeId = useCallback(
+        (filePath: string) => {
+            return fileNodeMap.get(filePath) ?? null;
+        },
+        [fileNodeMap],
+    );
+
+    const { processEvent, getActiveEffects } = useNodeEffects(fileToNodeId);
+
+    useEffect(() => {
+        if (lastEvent) processEvent(lastEvent);
+    }, [lastEvent, processEvent]);
+
+    const lastReadFile = useRef<string | null>(null);
+    const [triggeredEdgeIndices, setTriggeredEdgeIndices] = useState<Set<number>>(new Set());
+
+    useEffect(() => {
+        if (!lastEvent || !graphData) return;
+
+        if (lastEvent.type === 'file:read' && lastEvent.data.filePath) {
+            lastReadFile.current = lastEvent.data.filePath;
+            return;
+        }
+
+        if (lastEvent.type === 'file:edit' && lastEvent.data.filePath && lastReadFile.current) {
+            const readFile = lastReadFile.current;
+            const editFile = lastEvent.data.filePath;
+            lastReadFile.current = null;
+
+            const edgeIndex = graphData.edges.findIndex(
+                (e) =>
+                    (e.sourceId.includes(readFile) && e.targetId.includes(editFile)) ||
+                    (e.targetId.includes(readFile) && e.sourceId.includes(editFile)),
+            );
+
+            if (edgeIndex >= 0) {
+                setTriggeredEdgeIndices(new Set([edgeIndex]));
+                setTimeout(() => setTriggeredEdgeIndices(new Set()), 500);
+            }
+        }
+    }, [lastEvent, graphData]);
+
     async function handleNodeClick(nodeId: string) {
         try {
             const context = await api.graph.getNodeContext(nodeId);
@@ -101,6 +157,7 @@ export function GraphView() {
                         data={graphData}
                         onNodeClick={handleNodeClick}
                         selectedNodeId={selectedNode?.node.id ?? null}
+                        getActiveEffects={getActiveEffects}
                     />
                 </Suspense>
             )}
