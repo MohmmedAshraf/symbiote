@@ -11,6 +11,7 @@ export interface IntentFrontmatter {
     status: IntentStatus;
     author: string;
     createdAt: string;
+    pattern?: string;
 }
 
 export interface IntentEntry {
@@ -136,6 +137,12 @@ export function parseIntentFrontmatter(
                         new Date().toISOString().split('T')[0]
                 )
             ),
+            pattern: fields.pattern
+                ? stripQuotes(String(fields.pattern)).replace(
+                      /\\"/g,
+                      '"'
+                  )
+                : undefined,
         },
         content,
     };
@@ -151,11 +158,11 @@ export function serializeIntentEntry(entry: IntentEntry): string {
         `status: ${fm.status}`,
         `author: ${fm.author}`,
         `createdAt: "${fm.createdAt}"`,
-        '---',
-        '',
-        entry.content,
-        '',
     ];
+    if (fm.pattern) {
+        lines.push(`pattern: "${fm.pattern}"`);
+    }
+    lines.push('---', '', entry.content, '');
     return lines.join('\n');
 }
 
