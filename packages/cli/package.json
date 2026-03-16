@@ -33,6 +33,9 @@
         "tree-sitter-ruby": "^0.23.0",
         "tree-sitter-rust": "^0.23.0",
         "tree-sitter-typescript": "^0.23.0",
+        "graphology": "^0.25.4",
+        "graphology-communities-louvain": "^2.0.1",
+        "graphology-metrics": "^2.3.0",
         "zod": "^4.3.6"
     },
     "devDependencies": {
