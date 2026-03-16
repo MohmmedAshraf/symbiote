@@ -20,7 +20,6 @@ export {
     type CategoryScore,
 } from './health/index.js';
 export {
-    ensureEmbeddingsTable,
     storeEmbedding,
     deleteEmbeddingsForFile,
     semanticSearch,

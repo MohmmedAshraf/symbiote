@@ -109,7 +109,7 @@ export class Repository {
         const rows = await this.db.all(
             'SELECT * FROM nodes WHERE file_path = $1',
             filePath
-        ) as NodeRow[];
+        ) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
@@ -118,7 +118,7 @@ export class Repository {
         const rows = await this.db.all(
             'SELECT * FROM nodes WHERE id = $1',
             id
-        ) as NodeRow[];
+        ) as unknown as NodeRow[];
 
         if (rows.length === 0) return undefined;
         return this.mapNodeRow(rows[0]);
@@ -128,7 +128,7 @@ export class Repository {
         const rows = await this.db.all(
             "SELECT * FROM nodes WHERE name ILIKE $1 LIMIT 50",
             `%${query}%`
-        ) as NodeRow[];
+        ) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
@@ -149,7 +149,7 @@ export class Repository {
         const rows = await this.db.all(
             'SELECT * FROM edges WHERE source_id = $1',
             nodeId
-        ) as EdgeRow[];
+        ) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
@@ -158,7 +158,7 @@ export class Repository {
         const rows = await this.db.all(
             'SELECT * FROM edges WHERE target_id = $1',
             nodeId
-        ) as EdgeRow[];
+        ) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }
@@ -190,7 +190,7 @@ export class Repository {
     async getAllNodes(): Promise<NodeRecord[]> {
         const rows = await this.db.all(
             'SELECT * FROM nodes'
-        ) as NodeRow[];
+        ) as unknown as NodeRow[];
 
         return rows.map(this.mapNodeRow);
     }
@@ -198,7 +198,7 @@ export class Repository {
     async getAllEdges(): Promise<EdgeRecord[]> {
         const rows = await this.db.all(
             'SELECT * FROM edges'
-        ) as EdgeRow[];
+        ) as unknown as EdgeRow[];
 
         return rows.map(this.mapEdgeRow);
     }

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
 import { Repository } from '../../src/storage/repository.js';
 import {
-    ensureEmbeddingsTable,
     storeEmbedding,
     semanticSearch,
 } from '../../src/brain/embeddings.js';
@@ -11,27 +10,24 @@ describe('brain embeddings', () => {
     let db: SymbioteDB;
     let repo: Repository;
 
-    beforeEach(() => {
-        db = createDatabase(':memory:');
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         repo = new Repository(db);
-        ensureEmbeddingsTable(db);
     });
 
-    afterEach(() => {
-        db.close();
+    afterEach(async () => {
+        await db.close();
     });
 
-    it('creates the embeddings virtual table', () => {
-        const tables = db
-            .prepare(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings'"
-            )
-            .get();
-        expect(tables).toBeDefined();
+    it('creates the embeddings table with schema', async () => {
+        const tables = await db.all(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_name = 'embeddings'"
+        ) as { table_name: string }[];
+        expect(tables.length).toBe(1);
     });
 
-    it('stores and retrieves an embedding for a node', () => {
-        repo.insertNodes([
+    it('stores and retrieves an embedding for a node', async () => {
+        await repo.insertNodes([
             {
                 id: 'fn:test.ts:hello',
                 type: 'function',
@@ -45,16 +41,16 @@ describe('brain embeddings', () => {
         const fakeVector = new Array(384)
             .fill(0)
             .map((_, i) => i / 384);
-        storeEmbedding(db, 'fn:test.ts:hello', fakeVector);
+        await storeEmbedding(db, 'fn:test.ts:hello', fakeVector);
 
-        const count = db
-            .prepare('SELECT COUNT(*) as count FROM embeddings')
-            .get() as { count: number };
-        expect(count.count).toBe(1);
+        const count = await db.all(
+            'SELECT COUNT(*) as count FROM embeddings'
+        ) as Array<{ count: number | bigint }>;
+        expect(Number(count[0].count)).toBe(1);
     });
 
-    it('performs semantic search and returns ranked results', () => {
-        repo.insertNodes([
+    it('performs semantic search and returns ranked results', async () => {
+        await repo.insertNodes([
             {
                 id: 'fn:auth.ts:login',
                 type: 'function',
@@ -79,11 +75,11 @@ describe('brain embeddings', () => {
         const mathVector = new Array(384)
             .fill(0)
             .map((_, i) => (i % 2 === 0 ? 0 : 1));
-        storeEmbedding(db, 'fn:auth.ts:login', authVector);
-        storeEmbedding(db, 'fn:math.ts:add', mathVector);
+        await storeEmbedding(db, 'fn:auth.ts:login', authVector);
+        await storeEmbedding(db, 'fn:math.ts:add', mathVector);
 
         const queryVector = authVector;
-        const results = semanticSearch(db, queryVector, 5);
+        const results = await semanticSearch(db, queryVector, 5);
 
         expect(results.length).toBeGreaterThanOrEqual(1);
         expect(results[0].nodeId).toBe('fn:auth.ts:login');

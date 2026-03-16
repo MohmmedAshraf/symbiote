@@ -206,7 +206,7 @@ async function cmdInit(): Promise<void> {
     const brainDir = ensureBrainDir(projectRoot);
 
     const dbPath = getBrainDbPath(projectRoot);
-    const db = createDatabase(dbPath);
+    const db = await createDatabase(dbPath);
     const repo = new Repository(db);
     const scanner = new Scanner(repo);
 
@@ -231,7 +231,7 @@ async function cmdInit(): Promise<void> {
     const result = init.run();
     s2.stop('Project analyzed');
 
-    db.close();
+    await db.close();
 
     const lines: string[] = [];
     if (result.rulesImported > 0) {
@@ -291,7 +291,7 @@ async function cmdScan(
 ): Promise<void> {
     const projectRoot = process.cwd();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = createDatabase(dbPath);
+    const db = await createDatabase(dbPath);
     const repo = new Repository(db);
     const scanner = new Scanner(repo);
 
@@ -300,7 +300,7 @@ async function cmdScan(
     const result = await scanner.scan(projectRoot, {
         force: flags.force === true,
     });
-    db.close();
+    await db.close();
 
     s.stop(
         `Scanned: ${result.filesScanned}` +
@@ -322,7 +322,7 @@ async function cmdServe(
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = createDatabase(dbPath);
+    const db = await createDatabase(dbPath);
 
     const ctx = createServerContext({
         db,
@@ -392,7 +392,7 @@ async function cmdServe(
 
         if (url.pathname.startsWith('/api/')) {
             if (
-                handleApiRequest(
+                await handleApiRequest(
                     ctx,
                     url.pathname,
                     req,
@@ -446,7 +446,7 @@ async function cmdMcp(): Promise<void> {
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
-    const db = createDatabase(dbPath);
+    const db = await createDatabase(dbPath);
 
     const ctx = createServerContext({
         db,

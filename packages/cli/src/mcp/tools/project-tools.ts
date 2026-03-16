@@ -1,10 +1,7 @@
 import type { ServerContext } from '../context.js';
 import type { NodeRecord } from '../../storage/repository.js';
 import type { IntentEntry } from '../../brain/intent.js';
-import {
-    semanticSearch,
-    ensureEmbeddingsTable,
-} from '../../brain/embeddings.js';
+import { semanticSearch } from '../../brain/embeddings.js';
 
 export interface ProjectOverviewOutput {
     totalNodes: number;
@@ -128,7 +125,6 @@ export async function handleSemanticSearch(
     input: SemanticSearchInput
 ): Promise<SemanticSearchOutput> {
     try {
-        ensureEmbeddingsTable(ctx.db);
         const queryVector = new Array(384).fill(0);
         const searchResults = await semanticSearch(
             ctx.db,

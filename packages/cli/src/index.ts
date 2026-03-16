@@ -65,7 +65,6 @@ export {
     type DeadCodeEntry,
     type CouplingHotspot,
     type CategoryScore,
-    ensureEmbeddingsTable,
     storeEmbedding,
     deleteEmbeddingsForFile,
     semanticSearch,
