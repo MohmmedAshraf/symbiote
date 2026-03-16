@@ -16,6 +16,7 @@ import { DnaStorage } from '../src/dna/storage.js';
 import { DnaEngine } from '../src/dna/engine.js';
 import { createMcpServer } from '../src/mcp/server.js';
 import { createServerContext } from '../src/mcp/context.js';
+import { handleApiRequest } from '../src/mcp/http-api.js';
 
 const program = new Command();
 
@@ -154,6 +155,18 @@ program
                 });
                 res.end(JSON.stringify({ status: 'ok' }));
                 return;
+            }
+
+            if (url.pathname.startsWith('/api/')) {
+                if (
+                    handleApiRequest(
+                        ctx,
+                        url.pathname,
+                        req,
+                        res
+                    )
+                )
+                    return;
             }
 
             res.writeHead(404);
