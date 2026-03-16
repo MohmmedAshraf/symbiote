@@ -1,6 +1,6 @@
 <div align="center">
 
-# Synapse
+<img src="art/cover.png" alt="Symbiote" width="100%" />
 
 **Your codebase gets a brain. Your AI never forgets who you are.**
 
