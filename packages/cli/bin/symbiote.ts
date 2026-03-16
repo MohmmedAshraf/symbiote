@@ -93,6 +93,7 @@ function showHelp(): void {
     console.log(
         `  ${pc.bold('$')} ${pc.cyan('symbiote impact')}        Analyze impact of working changes`,
     );
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote unbond')}        Detach from all AI agents`);
     console.log();
     console.log(pc.dim('  Claude Code Hooks:'));
     console.log(
@@ -850,6 +851,40 @@ async function cmdDna(
     process.exit(1);
 }
 
+async function cmdUnbond(targetId?: string): Promise<void> {
+    const { detectInstalledAgents, isBonded, disconnectWithHooks } =
+        await import('../src/init/agent-connector.js');
+
+    p.intro(pc.bold('Symbiote') + pc.dim(' — Detaching'));
+
+    const agents = detectInstalledAgents();
+    const bonded = agents.filter((a) => a.installed && isBonded(a));
+
+    if (bonded.length === 0) {
+        p.outro('No bonded hosts found.');
+        return;
+    }
+
+    const toUnbond = targetId ? bonded.filter((a) => a.id === targetId) : bonded;
+
+    if (targetId && toUnbond.length === 0) {
+        p.log.error(`Host not found or not bonded: ${targetId}`);
+        p.outro('');
+        return;
+    }
+
+    for (const agent of toUnbond) {
+        const result = disconnectWithHooks(agent);
+        if (result.mcp.success) {
+            p.log.success(`Detached from ${agent.name}`);
+        } else {
+            p.log.error(`Failed to detach from ${agent.name}: ${result.mcp.message}`);
+        }
+    }
+
+    p.outro('Symbiote detached.');
+}
+
 async function main(): Promise<void> {
     const { command, args, flags } = parseArgs(process.argv);
 
@@ -912,6 +947,11 @@ async function main(): Promise<void> {
             const subcommand = args[0];
             const subArgs = args.slice(1);
             await cmdDna(subcommand, subArgs, flags);
+            break;
+        }
+        case 'unbond': {
+            const targetId = args[0];
+            await cmdUnbond(targetId);
             break;
         }
         default:
