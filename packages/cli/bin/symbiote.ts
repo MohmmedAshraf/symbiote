@@ -250,10 +250,14 @@ async function cmdInit(): Promise<void> {
     const s1 = p.spinner();
     s1.start('Scanning codebase...');
     const scanResult = await scanner.scan(projectRoot, { embeddings: true });
-    s1.stop(
-        `${scanResult.filesScanned} files` +
-            pc.dim(` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`),
-    );
+    if (scanResult.filesScanned === 0 && scanResult.filesSkipped > 0) {
+        s1.stop(`Up to date ${pc.dim(`(${scanResult.filesSkipped} files, no changes)`)}`);
+    } else {
+        s1.stop(
+            `${scanResult.filesScanned} files` +
+                pc.dim(` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`),
+        );
+    }
 
     const s2 = p.spinner();
     s2.start('Analyzing project...');
