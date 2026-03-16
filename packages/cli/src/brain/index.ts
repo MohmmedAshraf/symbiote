@@ -9,11 +9,16 @@ export {
     type ListIntentOptions,
 } from './intent.js';
 export {
-    HealthAnalyzer,
+    HealthEngine,
     type HealthReport,
-    type HealthViolation,
+    type HealthSnapshot,
+    type ConstraintViolation,
+    type DescriptiveConstraint,
     type CircularDep,
-} from './health.js';
+    type DeadCodeEntry,
+    type CouplingHotspot,
+    type CategoryScore,
+} from './health/index.js';
 export {
     ensureEmbeddingsTable,
     storeEmbedding,

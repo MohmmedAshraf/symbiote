@@ -68,25 +68,33 @@ describe('Health Tools', () => {
         expect(result.score).toBeLessThanOrEqual(100);
     });
 
-    it('includes orphan files list', () => {
+    it('returns category breakdowns', () => {
         const result = handleGetHealth(ctx);
-        expect(Array.isArray(result.orphanFiles)).toBe(true);
+        expect(result.categories.constraints).toBeDefined();
+        expect(result.categories.circularDeps).toBeDefined();
+        expect(result.categories.deadCode).toBeDefined();
+        expect(result.categories.coupling).toBeDefined();
     });
 
-    it('includes circular deps list', () => {
+    it('returns constraint violations array', () => {
+        const result = handleGetHealth(ctx);
+        expect(Array.isArray(result.constraintViolations)).toBe(true);
+    });
+
+    it('returns circular deps array', () => {
         const result = handleGetHealth(ctx);
         expect(Array.isArray(result.circularDeps)).toBe(true);
     });
 
-    it('includes constraint violations', () => {
-        const result = handleGetHealth(ctx);
-        expect(Array.isArray(result.constraintViolations)).toBe(
-            true
-        );
-    });
-
-    it('includes dead code list', () => {
+    it('returns dead code array', () => {
         const result = handleGetHealth(ctx);
         expect(Array.isArray(result.deadCode)).toBe(true);
+    });
+
+    it('saves a snapshot on each call', () => {
+        handleGetHealth(ctx);
+        handleGetHealth(ctx);
+        const history = ctx.health.getHistory(10);
+        expect(history.length).toBe(2);
     });
 });

@@ -69,39 +69,54 @@ export function handleProjectOverviewResource(
 export function handleProjectHealthResource(
     ctx: ServerContext
 ): string {
-    const report = handleGetHealth(ctx);
+    const report = ctx.health.analyze();
 
     const lines = [
         `Health Score: ${report.score}/100`,
         '',
-        `Orphan Files: ${report.orphanFiles.length}`,
+        `Constraints: ${report.categories.constraints.score}/100 (${report.constraintViolations.length} violations, weight: ${report.categories.constraints.weight * 100}%)`,
+        `Circular Dependencies: ${report.categories.circularDeps.score}/100 (${report.circularDeps.length} cycles, weight: ${report.categories.circularDeps.weight * 100}%)`,
+        `Dead Code: ${report.categories.deadCode.score}/100 (${report.deadCode.length} unreferenced, weight: ${report.categories.deadCode.weight * 100}%)`,
+        `Coupling: ${report.categories.coupling.score}/100 (${report.couplingHotspots.length} hotspots, weight: ${report.categories.coupling.weight * 100}%)`,
     ];
 
-    for (const f of report.orphanFiles.slice(0, 10)) {
-        lines.push(`  - ${f}`);
+    if (report.constraintViolations.length > 0) {
+        lines.push('', '--- Constraint Violations ---');
+        for (const v of report.constraintViolations) {
+            lines.push(
+                `  ${v.filePath}:${v.lineStart} — ${v.constraintId}: ${v.matchedText}`
+            );
+        }
     }
 
-    lines.push(
-        `\nCircular Dependencies: ${report.circularDeps.length}`
-    );
-    for (const c of report.circularDeps.slice(0, 10)) {
-        lines.push(`  - ${c.filePaths.join(' <-> ')}`);
-    }
-
-    lines.push(
-        `\nConstraint Violations: ${report.constraintViolations.length}`
-    );
-    for (const v of report.constraintViolations.slice(0, 10)) {
+    if (report.descriptiveConstraints.length > 0) {
         lines.push(
-            `  - [${v.constraintId}] ${v.description.slice(0, 80)}`
+            '',
+            '--- Active Constraints (descriptive) ---'
         );
+        for (const c of report.descriptiveConstraints) {
+            lines.push(
+                `  [${c.constraintId}] ${c.description.slice(0, 80)}`
+            );
+        }
     }
 
-    lines.push(`\nDead Code: ${report.deadCode.length}`);
-    for (const d of report.deadCode.slice(0, 10)) {
-        lines.push(
-            `  - ${d.name} (${d.filePath}:${d.lineStart})`
-        );
+    if (report.circularDeps.length > 0) {
+        lines.push('', '--- Circular Dependencies ---');
+        for (const cycle of report.circularDeps) {
+            lines.push(
+                `  ${cycle.filePaths.join(' → ')} → ${cycle.filePaths[0]}`
+            );
+        }
+    }
+
+    if (report.couplingHotspots.length > 0) {
+        lines.push('', '--- Coupling Hotspots ---');
+        for (const h of report.couplingHotspots) {
+            lines.push(
+                `  ${h.filePath}: ${h.incomingEdges} in, ${h.outgoingEdges} out (${h.totalEdges} total)`
+            );
+        }
     }
 
     return lines.join('\n');
