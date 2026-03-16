@@ -1,37 +1,39 @@
 # Symbiote
 
-AI-powered project brain and developer DNA engine. A living, queryable knowledge layer for your codebase.
+Bonds with your AI coding tools, giving them a brain that understands your project and a DNA that carries your style. One command. Every session. Zero cold start.
 
 ## Tech Stack
 
 - TypeScript (strict mode, zero errors, zero warnings)
 - Turborepo monorepo (packages/cli + packages/web)
-- Tree-sitter (code parsing, all Tier 1 languages)
-- better-sqlite3 + sqlite-vec (graph storage + vector search)
+- Tree-sitter (code parsing, 11 bundled languages)
+- DuckDB + sqlite-vec (graph storage + vector search)
 - @modelcontextprotocol/sdk (MCP server, stdio + HTTP)
 - Transformers.js (local embeddings, all-MiniLM-L6-v2)
-- Commander.js (CLI)
+- Graphology (graph algorithms — Louvain, PageRank, betweenness)
 - Vite + React 19 (web UI)
-- react-three-fiber + three-forcegraph (3D brain graph)
+- react-three-fiber + Three.js + custom GLSL (3D brain visualization)
 - Tailwind CSS v4 (dark theme)
-- Vercel AI SDK (chat interface)
-- Vitest (testing)
+- Vitest (testing — 356 tests across 56 files)
 
 ## Architecture
 
 - `packages/cli/` — Core engine, CLI, MCP server
-    - `src/core/` — Scanner, parser, graph queries, language detection
-    - `src/storage/` — SQLite database, repository (CRUD)
+    - `src/core/` — Scanner, parser, graph queries, language detection, impact analysis
+    - `src/storage/` — DuckDB database, repository (CRUD)
     - `src/dna/` — Developer DNA engine (capture, propose, manage)
-    - `src/mcp/` — MCP server (tools, resources, transports)
+    - `src/mcp/` — MCP server (tools, resources, transports, SSE events)
     - `src/brain/` — Project brain (intent layer, health analysis)
+    - `src/events/` — EventBus, IPC bridge, session tracker
+    - `src/hooks/` — Claude Code pre/post tool-use hooks
+    - `src/init/` — Agent detection, bonding, rule import, DNA bootstrap
     - `src/utils/` — File walking, hashing, config
     - `bin/` — CLI entry point
 - `packages/web/` — Web UI (Vite + React)
-    - `src/views/graph/` — 3D brain graph
-    - `src/views/chat/` — Ask Your Project
+    - `src/views/graph/` — 3D brain graph with real-time event visualization
     - `src/views/health/` — Health Pulse dashboard
     - `src/views/dna/` — DNA Lab
+    - `src/lib/` — SSE events hook, events context, API client
 
 ## Conventions
 
@@ -61,9 +63,11 @@ AI-powered project brain and developer DNA engine. A living, queryable knowledge
 
 ## Key Files
 
-- `.brain/` — Per-project brain directory (gitignored, auto-generated)
+- `.brain/` — Per-project brain directory (DB is gitignored, intent layer is committed)
 - `~/.symbiote/` — Global developer DNA
 - `~/.symbiote/dna/` — DNA entries (style, preferences, anti-patterns, decisions)
+- `~/.claude/hooks/symbiote/` — Global Claude Code hook script
+- `~/.claude/settings.json` — Claude Code hooks registration
 
 ## Testing
 
@@ -75,26 +79,43 @@ AI-powered project brain and developer DNA engine. A living, queryable knowledge
 ## CLI Commands
 
 ```
-npx symbiote              # Scan + launch server + UI
-npx symbiote init         # First-time setup
-npx symbiote scan         # Rescan codebase
-npx symbiote scan --force # Full rescan
-npx symbiote serve        # MCP server + web UI
-npx symbiote mcp          # MCP server only (stdio)
-npx symbiote dna          # View/manage DNA
+symbiote init              # Scan + analyze + auto-bond with AI agents
+symbiote scan              # Rescan codebase (incremental)
+symbiote scan --force      # Full rescan
+symbiote serve             # MCP server + web UI (localhost:3333)
+symbiote mcp               # MCP server only (stdio, for editors)
+symbiote dna               # View/manage developer DNA
+symbiote impact            # Analyze impact of working changes
+symbiote unbond            # Detach from all AI agents
 ```
 
 ## MCP Server
 
-- 11 tools: get_developer_dna, get_project_overview, get_context_for_file, query_graph, semantic_search, get_constraints, get_decisions, get_health, propose_decision, propose_constraint, record_instruction
+- 13 tools: get_developer_dna, get_project_overview, get_context_for_file, query_graph, semantic_search, get_constraints, get_decisions, get_health, get_impact, detect_changes, propose_decision, propose_constraint, record_instruction
 - 3 resources: symbiote://dna, symbiote://project/overview, symbiote://project/health
-- stdio transport for editor integration, HTTP for web UI
+- stdio transport for editor integration, HTTP + SSE for web UI
 - Zod schemas for all tool inputs
+
+## Real-Time Event System
+
+- Hooks fire on every Claude Code tool call (pre + post)
+- Hook processes send events via HTTP POST to running server
+- Server distributes events via SSE to the brain UI
+- Events: file:read, file:edit, file:create, node:reindexed, scan:complete, dna:recorded, dna:promoted, correction:detected, context:cluster, constraint:violated, impact:ripple
+- Brain nodes glow on read, pulse on edit, bloom on create
+
+## Host Integration
+
+- `symbiote init` auto-detects: Claude Code, Cursor, Windsurf, Copilot, OpenCode
+- Claude Code: MCP server + global hooks (deepest integration)
+- Other hosts: MCP server only (AI calls tools when it needs context)
+- Hooks registered globally at `~/.claude/settings.json` — work across all projects
+- `symbiote unbond` cleanly removes MCP config and hooks
 
 ## Design Principles
 
-- **Plug and play** — Zero config, zero extra work
-- **Local-first** — Everything runs locally, no external services (chat is the sole exception)
+- **Plug and play** — Zero config, auto-bonds on init
+- **Local-first** — Everything runs locally, no external services
 - **Tool-agnostic** — Works with any MCP-compatible AI tool
 - **Non-blocking** — Never interrupts the developer's flow
 - **Incremental** — Only re-parses changed files
@@ -108,10 +129,9 @@ When implementing from plans, convert indentation and quote style accordingly.
 ## Internal Docs
 
 Design specs and implementation plans are in `docs/` (gitignored).
-Read them for full architecture context:
 
-- `docs/superpowers/specs/2026-03-16-symbiote-design.md`
-- `docs/superpowers/plans/2026-03-16-symbiote-plan-{1..5}-*.md`
+- `docs/superpowers/specs/2026-03-16-symbiote-v2-design.md`
+- `docs/superpowers/plans/2026-03-16-symbiote-v2-phase-a.md`
 
 ## Author
 
