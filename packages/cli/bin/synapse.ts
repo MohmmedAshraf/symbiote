@@ -76,12 +76,15 @@ program
     .command('init')
     .description('Initialize Synapse for the current project')
     .action(async () => {
+        const { SmartInit } = await import(
+            '../src/init/index.js'
+        );
+
         const projectRoot = process.cwd();
         console.log(`Initializing Synapse in ${projectRoot}...`);
 
-        ensureSynapseHome();
+        const synapseHome = ensureSynapseHome();
         const brainDir = ensureBrainDir(projectRoot);
-        console.log(`Created ${brainDir}`);
 
         const dbPath = getBrainDbPath(projectRoot);
         const db = createDatabase(dbPath);
@@ -89,20 +92,62 @@ program
         const scanner = new Scanner(repo);
 
         console.log('Scanning codebase...');
-        const result = await scanner.scan(projectRoot);
+        const scanResult = await scanner.scan(projectRoot);
 
-        generateOverview(projectRoot, brainDir, result, repo);
+        console.log('Analyzing project...');
+        const init = new SmartInit({
+            projectRoot,
+            synapseHome,
+            brainDir,
+            scanResult,
+        });
+
+        const result = init.run();
         db.close();
 
+        console.log('');
+        console.log('Synapse initialized successfully.');
+        console.log('');
         console.log(
-            `Synapse is ready. Brain: ${result.nodesCreated} nodes, ` +
-                `${result.edgesCreated} edges. ` +
-                `Scanned ${result.filesScanned} files.`
+            `  Brain:         ${scanResult.nodesCreated} nodes, ${scanResult.edgesCreated} edges`
         );
+        console.log(
+            `  Files scanned: ${scanResult.filesScanned}`
+        );
+        console.log(
+            `  Rules imported: ${result.rulesImported}`
+        );
+        console.log(
+            `  Intent entries: ${result.intentEntriesCreated} constraints/decisions`
+        );
+        console.log(
+            `  DNA entries:    ${result.dnaEntriesLoaded} loaded, ${result.dnaEntriesImported} imported`
+        );
+        console.log(
+            `  Tech stack:    ${result.techStack.map((t) => t.name).join(', ') || 'none detected'}`
+        );
+        console.log('');
 
-        if (result.errors.length > 0) {
-            console.log(`${result.errors.length} files had errors.`);
+        if (result.architectureSignals.length > 0) {
+            console.log('  Architecture:');
+            for (const signal of result.architectureSignals.slice(
+                0,
+                5
+            )) {
+                console.log(`    - ${signal.pattern}`);
+            }
+            console.log('');
         }
+
+        if (scanResult.errors.length > 0) {
+            console.log(
+                `  ${scanResult.errors.length} files had parse errors.`
+            );
+        }
+
+        console.log(
+            "Run 'synapse serve' to start the MCP server and web UI."
+        );
     });
 
 program
@@ -456,9 +501,11 @@ dnaCommand.action(async () => {
 });
 
 program.action(async () => {
+    const { SmartInit } = await import('../src/init/index.js');
+
     const projectRoot = process.cwd();
 
-    ensureSynapseHome();
+    const synapseHome = ensureSynapseHome();
     const brainDir = ensureBrainDir(projectRoot);
 
     const dbPath = getBrainDbPath(projectRoot);
@@ -467,63 +514,35 @@ program.action(async () => {
     const scanner = new Scanner(repo);
 
     console.log('Scanning codebase...');
-    const result = await scanner.scan(projectRoot);
+    const scanResult = await scanner.scan(projectRoot);
 
-    generateOverview(projectRoot, brainDir, result, repo);
+    console.log('Analyzing project...');
+    const init = new SmartInit({
+        projectRoot,
+        synapseHome,
+        brainDir,
+        scanResult,
+    });
+
+    const result = init.run();
 
     console.log(
-        `Synapse is ready. Brain: ${result.nodesCreated} nodes, ` +
-            `${result.edgesCreated} edges. ` +
-            `Scanned ${result.filesScanned} files.`
+        `Synapse is ready. Brain: ${scanResult.nodesCreated} nodes, ` +
+            `${scanResult.edgesCreated} edges. ` +
+            `Rules: ${result.rulesImported} imported. ` +
+            `DNA: ${result.dnaEntriesLoaded + result.dnaEntriesImported} entries.`
     );
 
-    if (result.errors.length > 0) {
-        console.log(`${result.errors.length} files had errors.`);
+    if (scanResult.errors.length > 0) {
+        console.log(
+            `${scanResult.errors.length} files had errors.`
+        );
     }
 
     console.log(
-        'MCP server and web UI not yet implemented. Use \'synapse scan\' for now.'
+        "Run 'synapse serve' to start the MCP server and web UI."
     );
     db.close();
 });
 
 program.parse();
-
-function generateOverview(
-    projectRoot: string,
-    brainDir: string,
-    scanResult: ScanResult,
-    repo: Repository
-): void {
-    const graph = new GraphQuery(repo);
-    const overview = graph.getOverview();
-    const projectName = path.basename(projectRoot);
-
-    const typeBreakdown = Object.entries(overview.nodesByType)
-        .map(([type, count]) => `- ${type}: ${count}`)
-        .join('\n');
-
-    const content = `# ${projectName}
-
-Auto-generated project overview by Synapse.
-
-## Stats
-
-- **Files scanned:** ${scanResult.filesScanned}
-- **Total nodes:** ${overview.totalNodes}
-- **Total edges:** ${overview.totalEdges}
-
-## Node Types
-
-${typeBreakdown}
-
----
-
-*Edit this file to add project context, architecture notes, or anything that helps AI understand your project.*
-`;
-
-    const overviewPath = path.join(brainDir, 'intent', 'overview.md');
-    if (!fs.existsSync(overviewPath)) {
-        fs.writeFileSync(overviewPath, content);
-    }
-}
