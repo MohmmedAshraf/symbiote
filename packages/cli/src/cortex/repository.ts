@@ -1167,6 +1167,27 @@ export class CortexRepository {
         };
     }
 
+    async getSymbolByName(name: string): Promise<
+        {
+            id: string;
+            name: string;
+            filePath: string;
+            lineStart: number;
+            lineEnd: number;
+            kind: string;
+        }[]
+    > {
+        const rows = await this.db.all<SymbolRow>('SELECT * FROM symbols WHERE name = $1', name);
+        return rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            filePath: r.file_path,
+            lineStart: r.line_start,
+            lineEnd: r.line_end,
+            kind: r.kind,
+        }));
+    }
+
     async getSymbolTable(fileId: string): Promise<Map<string, SymbolTableEntry> | null> {
         const rows = await this.db.all<MetaRow>(
             'SELECT * FROM cortex_meta WHERE key = $1',

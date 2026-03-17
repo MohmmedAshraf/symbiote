@@ -18,6 +18,8 @@ import {
 import { handleGetHealth } from './tools/health-tools.js';
 import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
 import { ImpactAnalyzer } from '../core/impact.js';
+import { registerTraceTools } from './tools/trace-tools.js';
+import { CortexRepository } from '../cortex/repository.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
@@ -279,6 +281,9 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             ],
         }),
     );
+
+    const cortexRepo = new CortexRepository(ctx.db);
+    registerTraceTools(server, cortexRepo);
 
     return { server };
 }
