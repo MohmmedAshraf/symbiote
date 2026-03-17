@@ -3,10 +3,14 @@ import { GitImpactAnalyzer } from '../../core/git-impact.js';
 import type { ImpactResult } from '../../core/impact.js';
 import type { GitImpactResult } from '../../core/git-impact.js';
 import type { GraphInstance } from '../../core/types.js';
+import type { CortexRepository } from '../../cortex/repository.js';
+import type { ToolResponse } from '../../cortex/types.js';
+import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface ImpactToolContext {
     graph: GraphInstance;
     impact: ImpactAnalyzer;
+    cortexRepo: CortexRepository;
 }
 
 export interface GetImpactInput {
@@ -14,19 +18,28 @@ export interface GetImpactInput {
     maxDepth?: number;
 }
 
-export function handleGetImpact(ctx: ImpactToolContext, input: GetImpactInput): ImpactResult {
+export async function handleGetImpact(
+    ctx: ImpactToolContext,
+    input: GetImpactInput,
+): Promise<ToolResponse<ImpactResult>> {
     const maxDepth = input.maxDepth ?? 3;
+    const depth = await getMaxDepth(ctx.cortexRepo);
 
     if (!ctx.graph.hasNode(input.target)) {
-        return {
-            depths: {
-                0: [{ node: input.target, depth: 0, path: [input.target], confidence: 1.0 }],
+        return wrapResponse(
+            {
+                depths: {
+                    0: [{ node: input.target, depth: 0, path: [input.target], confidence: 1.0 }],
+                },
+                summary: { totalAffected: 0, criticalPaths: 0, riskLevel: 'LOW' },
             },
-            summary: { totalAffected: 0, criticalPaths: 0, riskLevel: 'LOW' },
-        };
+            depth,
+            false,
+        );
     }
 
-    return ctx.impact.getBlastRadius(input.target, maxDepth);
+    const result = ctx.impact.getBlastRadius(input.target, maxDepth);
+    return wrapResponse(result, depth, false);
 }
 
 export interface DetectChangesInput {
@@ -36,7 +49,9 @@ export interface DetectChangesInput {
 export async function handleDetectChanges(
     ctx: ImpactToolContext,
     input: DetectChangesInput,
-): Promise<GitImpactResult> {
+): Promise<ToolResponse<GitImpactResult>> {
     const gitImpact = new GitImpactAnalyzer(ctx.graph);
-    return gitImpact.analyzeWorkingChanges(input.cwd);
+    const result = await gitImpact.analyzeWorkingChanges(input.cwd);
+    const depth = await getMaxDepth(ctx.cortexRepo);
+    return wrapResponse(result, depth, false);
 }

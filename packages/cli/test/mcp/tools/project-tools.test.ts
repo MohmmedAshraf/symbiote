@@ -42,6 +42,7 @@ describe('Project Tools', () => {
 
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: FIXTURES_BRAIN,
             symbioteHome: tmpHome,
         });
@@ -58,15 +59,15 @@ describe('Project Tools', () => {
     describe('handleGetProjectOverview', () => {
         it('returns project stats', async () => {
             const result = await handleGetProjectOverview(ctx);
-            expect(result.totalNodes).toBeGreaterThan(0);
-            expect(result.totalEdges).toBeGreaterThanOrEqual(0);
-            expect(result.nodesByType).toBeDefined();
+            expect(result.data.totalNodes).toBeGreaterThan(0);
+            expect(result.data.totalEdges).toBeGreaterThanOrEqual(0);
+            expect(result.data.nodesByType).toBeDefined();
         });
 
         it('includes active constraints in overview', async () => {
             const result = await handleGetProjectOverview(ctx);
-            expect(result.constraints).toBeDefined();
-            expect(Array.isArray(result.constraints)).toBe(true);
+            expect(result.data.constraints).toBeDefined();
+            expect(Array.isArray(result.data.constraints)).toBe(true);
         });
     });
 
@@ -79,8 +80,8 @@ describe('Project Tools', () => {
             const result = await handleGetContextForFile(ctx, {
                 filePath: testFile,
             });
-            expect(result.filePath).toBe(testFile);
-            expect(result.nodes).toBeDefined();
+            expect(result.data.filePath).toBe(testFile);
+            expect(result.data.nodes).toBeDefined();
         });
 
         it('includes related constraints and decisions', async () => {
@@ -91,8 +92,8 @@ describe('Project Tools', () => {
             const result = await handleGetContextForFile(ctx, {
                 filePath: testFile,
             });
-            expect(result.constraints).toBeDefined();
-            expect(result.decisions).toBeDefined();
+            expect(result.data.constraints).toBeDefined();
+            expect(result.data.decisions).toBeDefined();
         });
     });
 
@@ -102,7 +103,7 @@ describe('Project Tools', () => {
                 query: 'format',
                 type: 'search',
             });
-            expect(result.results.length).toBeGreaterThanOrEqual(1);
+            expect(result.data.results.length).toBeGreaterThanOrEqual(1);
         });
 
         it('finds dependencies for a node', async () => {
@@ -113,7 +114,7 @@ describe('Project Tools', () => {
                 query: nodeWithDeps.id,
                 type: 'dependencies',
             });
-            expect(result.results).toBeDefined();
+            expect(result.data.results).toBeDefined();
         });
 
         it('finds dependents for a node', async () => {
@@ -124,7 +125,7 @@ describe('Project Tools', () => {
                 query: node.id,
                 type: 'dependents',
             });
-            expect(result.results).toBeDefined();
+            expect(result.data.results).toBeDefined();
         });
     });
 
@@ -134,7 +135,7 @@ describe('Project Tools', () => {
                 query: 'authentication',
                 limit: 5,
             });
-            expect(result.results).toEqual([]);
+            expect(result.data.results).toEqual([]);
         });
     });
 });

@@ -41,6 +41,7 @@ describe('createMcpServer', () => {
 
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: tmpBrain,
             symbioteHome: tmpHome,
         });

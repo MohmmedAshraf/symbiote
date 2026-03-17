@@ -253,56 +253,6 @@ async function findImplementors(
     return results;
 }
 
-async function getContextForSymbol(
-    repo: CortexRepository,
-    symbolNameOrId: string,
-): Promise<{
-    symbol: SymbolInfo | null;
-    typeConstraints: Awaited<ReturnType<CortexRepository['getTypeConstraints']>>;
-    callsOut: Awaited<ReturnType<CortexRepository['getCallsFrom']>>;
-    callsIn: Awaited<ReturnType<CortexRepository['getCallsTo']>>;
-    flowsOut: Awaited<ReturnType<CortexRepository['getFlowsFrom']>>;
-    flowsIn: Awaited<ReturnType<CortexRepository['getFlowsTo']>>;
-    implements: Awaited<ReturnType<CortexRepository['getImplementsFrom']>>;
-    implementedBy: Awaited<ReturnType<CortexRepository['getImplementorsOf']>>;
-}> {
-    const symbol = await resolveSymbol(repo, symbolNameOrId);
-    if (!symbol) {
-        return {
-            symbol: null,
-            typeConstraints: [],
-            callsOut: [],
-            callsIn: [],
-            flowsOut: [],
-            flowsIn: [],
-            implements: [],
-            implementedBy: [],
-        };
-    }
-
-    const [typeConstraints, callsOut, callsIn, flowsOut, flowsIn, impls, implementedBy] =
-        await Promise.all([
-            repo.getTypeConstraints(symbol.id),
-            repo.getCallsFrom(symbol.id),
-            repo.getCallsTo(symbol.id),
-            repo.getFlowsFrom(symbol.id),
-            repo.getFlowsTo(symbol.id),
-            repo.getImplementsFrom(symbol.id),
-            repo.getImplementorsOf(symbol.id),
-        ]);
-
-    return {
-        symbol,
-        typeConstraints,
-        callsOut,
-        callsIn,
-        flowsOut,
-        flowsIn,
-        implements: impls,
-        implementedBy,
-    };
-}
-
 function textResult(data: unknown): { type: 'text'; text: string } {
     return { type: 'text', text: JSON.stringify(data, null, 2) };
 }
@@ -385,17 +335,6 @@ export function registerTraceTools(server: McpServer, repo: CortexRepository): v
                     await findImplementors(repo, input.interfaceName, input.includeIndirect),
                 ),
             ],
-        }),
-    );
-
-    server.tool(
-        'get_context_for_symbol',
-        'Get full context for a symbol: type constraints, call graph, data flows, implementations.',
-        {
-            symbol: z.string().describe('Symbol ID or name to get context for'),
-        },
-        async (input) => ({
-            content: [textResult(await getContextForSymbol(repo, input.symbol))],
         }),
     );
 }

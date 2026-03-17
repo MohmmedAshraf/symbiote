@@ -1,5 +1,7 @@
 import type { ServerContext } from '../context.js';
 import type { DnaEntry } from '../../dna/types.js';
+import type { ToolResponse } from '../../cortex/types.js';
+import { wrapResponse } from '../tool-response.js';
 
 export interface GetDeveloperDnaInput {
     category?: string;
@@ -13,7 +15,7 @@ export interface GetDeveloperDnaOutput {
 export function handleGetDeveloperDna(
     ctx: ServerContext,
     input: GetDeveloperDnaInput,
-): GetDeveloperDnaOutput {
+): ToolResponse<GetDeveloperDnaOutput> {
     let entries = ctx.dnaEngine.getActiveEntries();
 
     if (input.category) {
@@ -22,7 +24,7 @@ export function handleGetDeveloperDna(
 
     entries.sort((a, b) => b.frontmatter.confidence - a.frontmatter.confidence);
 
-    return { entries };
+    return wrapResponse({ entries }, 7, false);
 }
 
 export interface RecordInstructionInput {
@@ -38,21 +40,9 @@ export interface RecordInstructionOutput {
 export function handleRecordInstruction(
     ctx: ServerContext,
     input: RecordInstructionInput,
-): RecordInstructionOutput {
+): ToolResponse<RecordInstructionOutput> {
     const source = input.isExplicit ? 'explicit' : 'correction';
     const entry = ctx.dnaEngine.captureInstruction(input.instruction, input.sessionId, source);
 
-    return { entry };
-}
-
-const DEPRECATION_PREFIX = '[symbiote] DEPRECATED:';
-
-export function handleRecordInstructionDeprecated(
-    ctx: ServerContext,
-    input: RecordInstructionInput,
-): RecordInstructionOutput {
-    console.warn(
-        `${DEPRECATION_PREFIX} record_instruction is deprecated. Use get_developer_dna instead.`,
-    );
-    return handleRecordInstruction(ctx, input);
+    return wrapResponse({ entry }, 7, false);
 }

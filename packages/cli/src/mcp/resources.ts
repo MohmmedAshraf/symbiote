@@ -22,7 +22,7 @@ export function handleDnaResource(ctx: ServerContext): string {
 }
 
 export async function handleProjectOverviewResource(ctx: ServerContext): Promise<string> {
-    const overview = await handleGetProjectOverview(ctx);
+    const { data: overview } = await handleGetProjectOverview(ctx);
 
     const lines = [
         'Project Overview',

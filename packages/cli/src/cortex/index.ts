@@ -1,6 +1,8 @@
 export { CortexEngine } from './engine.js';
 export { CortexRepository } from './repository.js';
-export { createCortexSchema, CORTEX_TABLES } from './schema.js';
+export { createCortexSchema, CORTEX_TABLES, refreshSymbolsTable } from './schema.js';
+export { installPgq, createPropertyGraph, isPgqAvailable } from './pgq.js';
+export { executePgqQuery, validatePgqQuery } from './pgq-queries.js';
 export { runStage0 } from './stage-0-structure.js';
 export { runStage1 } from './stage-1-symbols.js';
 export { runStage2 } from './stage-2-resolution.js';

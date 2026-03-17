@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Graph from 'graphology';
 import { ImpactAnalyzer } from '../../../src/core/impact.js';
 import { handleGetImpact } from '../../../src/mcp/tools/impact-tools.js';
 import type { ImpactToolContext } from '../../../src/mcp/tools/impact-tools.js';
+import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
+import { CortexRepository } from '../../../src/cortex/repository.js';
 
 function buildGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });
@@ -37,42 +39,49 @@ function buildGraph(): Graph {
 
 describe('handleGetImpact', () => {
     let ctx: ImpactToolContext;
+    let db: SymbioteDB;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        db = await createDatabase(':memory:');
         const graph = buildGraph();
         ctx = {
             graph,
             impact: new ImpactAnalyzer(graph),
+            cortexRepo: new CortexRepository(db),
         };
     });
 
-    it('returns impact result for a valid target', () => {
-        const result = handleGetImpact(ctx, {
-            target: 'fn:db.ts:query',
-        });
-        expect(result.summary.totalAffected).toBeGreaterThanOrEqual(1);
-        expect(result.depths[1]).toBeDefined();
+    afterEach(async () => {
+        await db.close();
     });
 
-    it('uses default maxDepth of 3', () => {
-        const result = handleGetImpact(ctx, {
+    it('returns impact result for a valid target', async () => {
+        const result = await handleGetImpact(ctx, {
             target: 'fn:db.ts:query',
         });
-        expect(result.depths[0]).toHaveLength(1);
+        expect(result.data.summary.totalAffected).toBeGreaterThanOrEqual(1);
+        expect(result.data.depths[1]).toBeDefined();
     });
 
-    it('respects custom maxDepth', () => {
-        const result = handleGetImpact(ctx, {
+    it('uses default maxDepth of 3', async () => {
+        const result = await handleGetImpact(ctx, {
+            target: 'fn:db.ts:query',
+        });
+        expect(result.data.depths[0]).toHaveLength(1);
+    });
+
+    it('respects custom maxDepth', async () => {
+        const result = await handleGetImpact(ctx, {
             target: 'fn:db.ts:query',
             maxDepth: 1,
         });
-        expect(result.depths[2]).toBeUndefined();
+        expect(result.data.depths[2]).toBeUndefined();
     });
 
-    it('returns empty result for unknown node', () => {
-        const result = handleGetImpact(ctx, {
+    it('returns empty result for unknown node', async () => {
+        const result = await handleGetImpact(ctx, {
             target: 'fn:unknown:missing',
         });
-        expect(result.summary.totalAffected).toBe(0);
+        expect(result.data.summary.totalAffected).toBe(0);
     });
 });

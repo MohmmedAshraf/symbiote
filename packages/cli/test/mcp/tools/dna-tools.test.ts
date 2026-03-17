@@ -44,6 +44,7 @@ describe('DNA Tools', () => {
 
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: tmpBrain,
             symbioteHome: tmpHome,
         });
@@ -58,7 +59,7 @@ describe('DNA Tools', () => {
     describe('handleGetDeveloperDna', () => {
         it('returns empty array when no DNA entries exist', () => {
             const result = handleGetDeveloperDna(ctx, {});
-            expect(result.entries).toEqual([]);
+            expect(result.data.entries).toEqual([]);
         });
 
         it('returns DNA entries filtered by category', () => {
@@ -70,14 +71,14 @@ describe('DNA Tools', () => {
             const result = handleGetDeveloperDna(ctx, {
                 category: 'style',
             });
-            expect(result.entries.length).toBeGreaterThanOrEqual(1);
+            expect(result.data.entries.length).toBeGreaterThanOrEqual(1);
         });
 
         it('returns all active entries when no filter', () => {
             ctx.dnaEngine.captureInstruction('Use early returns', 'session-1', 'correction');
             ctx.dnaEngine.captureInstruction('Prefer Drizzle over Prisma', 'session-1', 'explicit');
             const result = handleGetDeveloperDna(ctx, {});
-            expect(result.entries.length).toBeGreaterThanOrEqual(2);
+            expect(result.data.entries.length).toBeGreaterThanOrEqual(2);
         });
     });
 
@@ -89,8 +90,8 @@ describe('DNA Tools', () => {
                 isExplicit: false,
             });
 
-            expect(result.entry).toBeDefined();
-            expect(result.entry.content).toContain('server actions');
+            expect(result.data.entry).toBeDefined();
+            expect(result.data.entry.content).toContain('server actions');
         });
 
         it('stores explicit instructions with approved status', () => {
@@ -100,8 +101,8 @@ describe('DNA Tools', () => {
                 isExplicit: true,
             });
 
-            expect(result.entry.frontmatter.status).toBe('approved');
-            expect(result.entry.frontmatter.confidence).toBe(1.0);
+            expect(result.data.entry.frontmatter.status).toBe('approved');
+            expect(result.data.entry.frontmatter.confidence).toBe(1.0);
         });
     });
 });

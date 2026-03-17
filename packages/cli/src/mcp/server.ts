@@ -8,13 +8,19 @@ import {
     handleGetContextForFile,
     handleQueryGraph,
     handleSemanticSearch,
+    type QueryGraphInput,
 } from './tools/project-tools.js';
 import { handleGetHealth } from './tools/health-tools.js';
 import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
 import { ImpactAnalyzer } from '../core/impact.js';
 import { registerTraceTools } from './tools/trace-tools.js';
 import { handleFindPatterns, handleGetArchitecture } from './tools/architecture-tools.js';
-import { CortexRepository } from '../cortex/repository.js';
+import {
+    handleQueryGraphV2,
+    handleGetContextForSymbol,
+    isLegacyQueryFormat,
+} from './tools/graph-tools.js';
+import { handleRenameSymbol } from './tools/rename-tool.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
@@ -82,28 +88,33 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'query_graph',
-        'Search the code graph: find symbols by name, trace dependencies/dependents, or find the most connected hub nodes.',
+        'Query the code graph using SQL/PGQ or plain SQL. Accepts any read-only SELECT query against cortex tables and the code_graph property graph.',
         {
-            query: z
-                .string()
-                .default('')
-                .describe(
-                    'Search query or node ID (required for search/dependencies/dependents, ignored for hubs)',
-                ),
+            query: z.string().describe('SQL or SQL/PGQ query (read-only SELECT only)'),
             type: z
                 .enum(['search', 'dependencies', 'dependents', 'hubs'])
-                .describe(
-                    'Query type: search, dependencies, dependents, or hubs (most connected nodes)',
-                ),
+                .optional()
+                .describe('[DEPRECATED] Legacy query type — use SQL query instead'),
             limit: z
                 .number()
                 .optional()
                 .default(20)
-                .describe('Max results for hubs query (default: 20)'),
+                .describe('[DEPRECATED] Legacy limit — use SQL LIMIT instead'),
         },
-        async (input) => ({
-            content: [textResult(await handleQueryGraph(ctx, input))],
-        }),
+        async (input) => {
+            if (isLegacyQueryFormat(input)) {
+                console.warn(
+                    '[symbiote] DEPRECATED: query_graph legacy format (type/limit) is deprecated. Use SQL/PGQ query string instead.',
+                );
+                const result = await handleQueryGraph(ctx, input as QueryGraphInput);
+                return { content: [textResult(result)] };
+            }
+            const result = await handleQueryGraphV2(
+                { db: ctx.db, cortexRepo: ctx.cortexRepo },
+                { query: input.query },
+            );
+            return { content: [textResult(result)] };
+        },
     );
 
     server.tool(
@@ -141,8 +152,8 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('Maximum traversal depth (default: 3)'),
         },
         async (input) => {
-            const result = handleGetImpact(
-                { graph: ctx.graphology, impact: getImpactAnalyzer() },
+            const result = await handleGetImpact(
+                { graph: ctx.graphology, impact: getImpactAnalyzer(), cortexRepo: ctx.cortexRepo },
                 input,
             );
             return { content: [textResult(result)] };
@@ -155,7 +166,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         {},
         async () => {
             const result = await handleDetectChanges(
-                { graph: ctx.graphology, impact: getImpactAnalyzer() },
+                { graph: ctx.graphology, impact: getImpactAnalyzer(), cortexRepo: ctx.cortexRepo },
                 {},
             );
             return { content: [textResult(result)] };
@@ -213,8 +224,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         }),
     );
 
-    const cortexRepo = new CortexRepository(ctx.db);
-    registerTraceTools(server, cortexRepo);
+    registerTraceTools(server, ctx.cortexRepo);
 
     server.tool(
         'find_patterns',
@@ -245,7 +255,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('Minimum severity to include'),
         },
         async (input) => {
-            const result = await handleFindPatterns(cortexRepo, input);
+            const result = await handleFindPatterns(ctx.cortexRepo, input);
             return { content: [textResult(result)] };
         },
     );
@@ -255,7 +265,48 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         'Get detected architectural layers, boundaries, dependency direction, and violation summary',
         {},
         async () => {
-            const result = await handleGetArchitecture(cortexRepo);
+            const result = await handleGetArchitecture(ctx.cortexRepo);
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'get_context_for_symbol',
+        'Deep dive into one function, class, or method: callers, callees, type relationships, import references.',
+        {
+            symbol: z
+                .string()
+                .describe(
+                    'Symbol name or ID (e.g., "validateEmail" or "fn:utils.ts:validateEmail")',
+                ),
+        },
+        async (input) => {
+            const result = await handleGetContextForSymbol(
+                { db: ctx.db, cortexRepo: ctx.cortexRepo },
+                input,
+            );
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'rename_symbol',
+        'Graph-aware multi-file rename preview. Returns a diff — does NOT write to disk.',
+        {
+            symbol: z.string().describe('Symbol name or ID to rename'),
+            new_name: z.string().describe('New name for the symbol'),
+            scope: z
+                .enum(['file', 'project'])
+                .optional()
+                .default('project')
+                .describe('Scope of rename: file or project (default: project)'),
+        },
+        async (input) => {
+            const { new_name: newName, ...rest } = input;
+            const result = await handleRenameSymbol(
+                { cortexRepo: ctx.cortexRepo, rootDir: ctx.rootDir },
+                { ...rest, newName },
+            );
             return { content: [textResult(result)] };
         },
     );

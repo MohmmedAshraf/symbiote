@@ -13,6 +13,7 @@ describe('createServerContext', () => {
         const db = await createDatabase(':memory:');
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: '/tmp/test-brain',
             symbioteHome: '/tmp/test-symbiote',
         });
@@ -28,6 +29,7 @@ describe('createServerContext', () => {
         const db = await createDatabase(':memory:');
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: '/tmp/test-brain',
             symbioteHome: '/tmp/test-symbiote',
         });

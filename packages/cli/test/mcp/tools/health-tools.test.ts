@@ -37,6 +37,7 @@ describe('Health Tools', () => {
 
         ctx = await createServerContext({
             db,
+            rootDir: process.cwd(),
             brainDir: FIXTURES_BRAIN,
             symbioteHome: tmpHome,
         });
@@ -52,31 +53,31 @@ describe('Health Tools', () => {
 
     it('returns a health report with score', async () => {
         const result = await handleGetHealth(ctx);
-        expect(result.score).toBeGreaterThanOrEqual(0);
-        expect(result.score).toBeLessThanOrEqual(100);
+        expect(result.data.score).toBeGreaterThanOrEqual(0);
+        expect(result.data.score).toBeLessThanOrEqual(100);
     });
 
     it('returns category breakdowns', async () => {
         const result = await handleGetHealth(ctx);
-        expect(result.categories.constraints).toBeDefined();
-        expect(result.categories.circularDeps).toBeDefined();
-        expect(result.categories.deadCode).toBeDefined();
-        expect(result.categories.coupling).toBeDefined();
+        expect(result.data.categories.constraints).toBeDefined();
+        expect(result.data.categories.circularDeps).toBeDefined();
+        expect(result.data.categories.deadCode).toBeDefined();
+        expect(result.data.categories.coupling).toBeDefined();
     });
 
     it('returns constraint violations array', async () => {
         const result = await handleGetHealth(ctx);
-        expect(Array.isArray(result.constraintViolations)).toBe(true);
+        expect(Array.isArray(result.data.constraintViolations)).toBe(true);
     });
 
     it('returns circular deps array', async () => {
         const result = await handleGetHealth(ctx);
-        expect(Array.isArray(result.circularDeps)).toBe(true);
+        expect(Array.isArray(result.data.circularDeps)).toBe(true);
     });
 
     it('returns dead code array', async () => {
         const result = await handleGetHealth(ctx);
-        expect(Array.isArray(result.deadCode)).toBe(true);
+        expect(Array.isArray(result.data.deadCode)).toBe(true);
     });
 
     it('does not save snapshots as a side effect', async () => {
