@@ -56,6 +56,26 @@ async function traceExecutionFlow(
     const resolved = await resolveSymbol(repo, entryPoint);
     if (!resolved) return [];
 
+    const precomputed = await repo.getFlowsByEntryPoint(resolved.id);
+    if (precomputed.length > 0) {
+        const flow = precomputed[0];
+        const steps: FlowStep[] = [];
+        for (let i = 0; i < flow.nodeIds.length; i++) {
+            const nodeId = flow.nodeIds[i];
+            if (nodeId === resolved.id) continue;
+            const sym = await repo.getSymbolById(nodeId);
+            steps.push({
+                symbolId: nodeId,
+                symbol: sym,
+                depth: i,
+                edgeType: 'precomputed_flow',
+                isAsync: flow.hasAsync,
+                confidence: 1.0,
+            });
+        }
+        return steps;
+    }
+
     const steps: FlowStep[] = [];
     const visited = new Set<string>();
     const queue: { id: string; depth: number }[] = [{ id: resolved.id, depth: 0 }];
