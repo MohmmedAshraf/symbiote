@@ -214,6 +214,15 @@ interface GenericInstantiationRow extends Record<string, unknown> {
     line: number;
 }
 
+interface CortexFlowRow extends Record<string, unknown> {
+    id: string;
+    name: string;
+    entry_point_id: string;
+    node_ids: string[];
+    has_async: boolean;
+    has_error_path: boolean;
+}
+
 interface IdRow extends Record<string, unknown> {
     id: string;
 }
@@ -1207,6 +1216,62 @@ export class CortexRepository {
         );
     }
 
+    async insertFlows(
+        flows: Array<{
+            id: string;
+            name: string;
+            entryPointId: string;
+            nodeIds: string[];
+            hasAsync: boolean;
+            hasErrorPath: boolean;
+        }>,
+    ): Promise<void> {
+        if (flows.length === 0) return;
+        await this.db.exec('BEGIN TRANSACTION');
+        try {
+            for (const flow of flows) {
+                const listLiteral = `[${flow.nodeIds.map((n) => `'${n.replace(/'/g, "''")}'`).join(', ')}]`;
+                await this.db.run(
+                    `INSERT OR REPLACE INTO cortex_flows (id, name, entry_point_id, node_ids, has_async, has_error_path)
+                     VALUES ($1, $2, $3, ${listLiteral}::VARCHAR[], $4, $5)`,
+                    flow.id,
+                    flow.name,
+                    flow.entryPointId,
+                    flow.hasAsync,
+                    flow.hasErrorPath,
+                );
+            }
+            await this.db.exec('COMMIT');
+        } catch (err) {
+            await this.db.exec('ROLLBACK');
+            throw err;
+        }
+    }
+
+    async getFlowsByEntryPoint(entryPointId: string): Promise<
+        Array<{
+            id: string;
+            name: string;
+            entryPointId: string;
+            nodeIds: string[];
+            hasAsync: boolean;
+            hasErrorPath: boolean;
+        }>
+    > {
+        const rows = await this.db.all<CortexFlowRow>(
+            'SELECT * FROM cortex_flows WHERE entry_point_id = $1',
+            entryPointId,
+        );
+        return rows.map(this.mapCortexFlowRow);
+    }
+
+    async deleteFlowsForFile(filePath: string): Promise<void> {
+        await this.db.run(
+            `DELETE FROM cortex_flows WHERE entry_point_id LIKE 'fn:' || $1 || '%' OR entry_point_id LIKE 'method:' || $1 || '%'`,
+            filePath,
+        );
+    }
+
     private async batchInsert<T>(
         items: T[],
         colCount: number,
@@ -1461,6 +1526,28 @@ export class CortexRepository {
             typeArguments,
             filePath: row.file_path,
             line: row.line,
+        };
+    }
+
+    private mapCortexFlowRow(row: CortexFlowRow): {
+        id: string;
+        name: string;
+        entryPointId: string;
+        nodeIds: string[];
+        hasAsync: boolean;
+        hasErrorPath: boolean;
+    } {
+        const rawIds = row.node_ids;
+        const nodeIds = Array.isArray(rawIds)
+            ? rawIds
+            : Array.from((rawIds as { items: string[] }).items);
+        return {
+            id: row.id,
+            name: row.name,
+            entryPointId: row.entry_point_id,
+            nodeIds,
+            hasAsync: row.has_async,
+            hasErrorPath: row.has_error_path,
         };
     }
 }

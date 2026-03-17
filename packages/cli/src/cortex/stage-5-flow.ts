@@ -162,6 +162,15 @@ export async function runStage5(
         await scoreEntryPoints(repo, functions);
         await repo.upsertFileNode({ ...file, depthLevel: 5 });
         filesProcessed++;
+
+        await repo.deleteFlowsForFile(file.path);
+        const entryPoints = functions.filter((fn) => fn.isEntryPoint);
+        if (entryPoints.length > 0) {
+            const flows = await discoverFlows(repo, entryPoints, callGraph);
+            if (flows.length > 0) {
+                await repo.insertFlows(flows);
+            }
+        }
     }
 
     return {
@@ -816,4 +825,69 @@ function isInsideNestedFunction(node: SyntaxNode, container: SyntaxNode): boolea
         parent = parent.parent;
     }
     return false;
+}
+
+async function discoverFlows(
+    repo: CortexRepository,
+    entryPoints: FunctionNode[],
+    callGraph: Map<string, CallGraphEntry>,
+): Promise<
+    Array<{
+        id: string;
+        name: string;
+        entryPointId: string;
+        nodeIds: string[];
+        hasAsync: boolean;
+        hasErrorPath: boolean;
+    }>
+> {
+    const flows: Array<{
+        id: string;
+        name: string;
+        entryPointId: string;
+        nodeIds: string[];
+        hasAsync: boolean;
+        hasErrorPath: boolean;
+    }> = [];
+
+    for (const ep of entryPoints) {
+        const visited = new Set<string>();
+        const queue: { id: string; depth: number }[] = [{ id: ep.id, depth: 0 }];
+        let hasAsync = false;
+        let hasErrorPath = false;
+
+        while (queue.length > 0) {
+            const { id, depth } = queue.shift()!;
+            if (visited.has(id) || depth > 10) continue;
+            visited.add(id);
+
+            const entry = callGraph.get(id);
+            if (!entry) continue;
+
+            for (const call of entry.callsFrom) {
+                if (call.isAsync) hasAsync = true;
+                if (!visited.has(call.targetId) && depth + 1 <= 10) {
+                    queue.push({ id: call.targetId, depth: depth + 1 });
+                }
+            }
+
+            const flowsTo = await repo.getFlowsFrom(id);
+            for (const flow of flowsTo) {
+                if (flow.reason === 'try_catch' || flow.reason === 'throw') {
+                    hasErrorPath = true;
+                }
+            }
+        }
+
+        flows.push({
+            id: `flow:${ep.id}`,
+            name: ep.name,
+            entryPointId: ep.id,
+            nodeIds: [...visited],
+            hasAsync,
+            hasErrorPath,
+        });
+    }
+
+    return flows;
 }
