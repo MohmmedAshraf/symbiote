@@ -141,3 +141,45 @@ export function handleProposeConstraint(
     ctx.intent.writeEntry(entry);
     return { entry };
 }
+
+const DEPRECATION_PREFIX = '[symbiote] DEPRECATED:';
+
+export async function handleGetConstraintsDeprecated(
+    ctx: ServerContext,
+    input: GetConstraintsInput,
+): Promise<GetConstraintsOutput> {
+    console.warn(
+        `${DEPRECATION_PREFIX} get_constraints is deprecated. Use get_architecture instead.`,
+    );
+    return handleGetConstraints(ctx, input);
+}
+
+export async function handleGetDecisionsDeprecated(
+    ctx: ServerContext,
+    input: GetDecisionsInput,
+): Promise<GetDecisionsOutput> {
+    console.warn(
+        `${DEPRECATION_PREFIX} get_decisions is deprecated. Use get_developer_dna instead.`,
+    );
+    return handleGetDecisions(ctx, input);
+}
+
+export function handleProposeDecisionDeprecated(
+    ctx: ServerContext,
+    input: ProposeDecisionInput,
+): ProposeEntryOutput {
+    console.warn(
+        `${DEPRECATION_PREFIX} propose_decision is deprecated. Use get_developer_dna instead.`,
+    );
+    return handleProposeDecision(ctx, input);
+}
+
+export function handleProposeConstraintDeprecated(
+    ctx: ServerContext,
+    input: ProposeConstraintInput,
+): ProposeEntryOutput {
+    console.warn(
+        `${DEPRECATION_PREFIX} propose_constraint is deprecated. Use get_architecture instead.`,
+    );
+    return handleProposeConstraint(ctx, input);
+}

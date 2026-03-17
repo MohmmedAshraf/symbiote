@@ -44,3 +44,15 @@ export function handleRecordInstruction(
 
     return { entry };
 }
+
+const DEPRECATION_PREFIX = '[symbiote] DEPRECATED:';
+
+export function handleRecordInstructionDeprecated(
+    ctx: ServerContext,
+    input: RecordInstructionInput,
+): RecordInstructionOutput {
+    console.warn(
+        `${DEPRECATION_PREFIX} record_instruction is deprecated. Use get_developer_dna instead.`,
+    );
+    return handleRecordInstruction(ctx, input);
+}
