@@ -112,3 +112,12 @@ export interface DnaEntry {
     occurrences: number;
     content: string;
 }
+
+export type {
+    CortexNode,
+    CortexEdge,
+    CortexGraphData,
+    ToolResponse,
+    ExecutionFlow,
+    IntelligenceFinding,
+} from './cortex-types';

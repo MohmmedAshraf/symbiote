@@ -7,6 +7,9 @@ export interface SymbioteEvent {
         filePath?: string;
         nodeIds?: string[];
         toolName?: string;
+        nodeKind?: string;
+        flowId?: string;
+        community?: number;
         metadata?: Record<string, unknown>;
     };
 }
