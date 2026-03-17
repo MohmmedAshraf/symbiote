@@ -912,6 +912,15 @@ export class CortexRepository {
         );
     }
 
+    async updateCallEdgeAsync(sourceId: string, targetId: string, isAsync: boolean): Promise<void> {
+        await this.db.run(
+            'UPDATE edges_calls SET is_async = $3 WHERE source_id = $1 AND target_id = $2',
+            sourceId,
+            targetId,
+            isAsync,
+        );
+    }
+
     async updateEntryPointScore(
         functionId: string,
         score: number,
