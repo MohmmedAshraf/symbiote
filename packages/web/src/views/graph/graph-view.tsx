@@ -86,14 +86,14 @@ export function GraphView() {
         if (lastEvent) processEvent(lastEvent);
     }, [lastEvent, processEvent]);
 
-    async function handleNodeClick(nodeId: string) {
+    const handleNodeClick = useCallback(async (nodeId: string) => {
         try {
             const context = await api.graph.getNodeContext(nodeId);
             setSelectedNode(context);
         } catch {
             setSelectedNode(null);
         }
-    }
+    }, []);
 
     if (loading) {
         return (

@@ -157,13 +157,20 @@ export class HybridSearch {
 
     private async buildFtsIndex(): Promise<void> {
         try {
-            await this.db.exec('DROP TABLE IF EXISTS nodes_fts;');
-            await this.db.exec(
-                'CREATE TABLE nodes_fts AS SELECT id as node_id, name, file_path FROM nodes;',
-            );
-            await this.db.exec(
-                "PRAGMA create_fts_index('nodes_fts', 'node_id', 'name', 'file_path');",
-            );
+            await this.db.exec('BEGIN TRANSACTION');
+            try {
+                await this.db.exec('DROP TABLE IF EXISTS nodes_fts;');
+                await this.db.exec(
+                    'CREATE TABLE nodes_fts AS SELECT id as node_id, name, file_path FROM nodes;',
+                );
+                await this.db.exec(
+                    "PRAGMA create_fts_index('nodes_fts', 'node_id', 'name', 'file_path');",
+                );
+                await this.db.exec('COMMIT');
+            } catch (err) {
+                await this.db.exec('ROLLBACK');
+                throw err;
+            }
             this.ftsReady = true;
         } catch (err) {
             this.ftsReady = false;
@@ -184,8 +191,8 @@ export class HybridSearch {
 
     private async hasEmbeddings(): Promise<boolean> {
         try {
-            const rows = await this.db.all<CountRow>('SELECT COUNT(*) as count FROM embeddings');
-            return rows[0].count > 0;
+            const rows = await this.db.all<CountRow>('SELECT 1 as count FROM embeddings LIMIT 1');
+            return rows.length > 0;
         } catch {
             return false;
         }

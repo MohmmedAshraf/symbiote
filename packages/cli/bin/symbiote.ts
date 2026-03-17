@@ -75,6 +75,8 @@ function showHelp(): void {
     console.log();
 }
 
+const VALUE_FLAGS = new Set(['port', 'status', 'category']);
+
 function parseArgs(argv: string[]): {
     command: string;
     args: string[];
@@ -97,13 +99,18 @@ function parseArgs(argv: string[]): {
         }
         if (arg.startsWith('--')) {
             const eqIdx = arg.indexOf('=');
+            const flagName = eqIdx !== -1 ? arg.slice(2, eqIdx) : arg.slice(2);
             if (eqIdx !== -1) {
-                flags[arg.slice(2, eqIdx)] = arg.slice(eqIdx + 1);
-            } else if (i + 1 < raw.length && !raw[i + 1].startsWith('-')) {
-                flags[arg.slice(2)] = raw[i + 1];
+                flags[flagName] = arg.slice(eqIdx + 1);
+            } else if (
+                VALUE_FLAGS.has(flagName) &&
+                i + 1 < raw.length &&
+                !raw[i + 1].startsWith('-')
+            ) {
+                flags[flagName] = raw[i + 1];
                 skipNext = true;
             } else {
-                flags[arg.slice(2)] = true;
+                flags[flagName] = true;
             }
         } else if (arg.startsWith('-') && arg.length === 2) {
             const short = arg[1];
@@ -117,7 +124,7 @@ function parseArgs(argv: string[]): {
                 v: 'version',
             };
             const long = longMap[short] ?? short;
-            if (i + 1 < raw.length && !raw[i + 1].startsWith('-')) {
+            if (VALUE_FLAGS.has(long) && i + 1 < raw.length && !raw[i + 1].startsWith('-')) {
                 flags[long] = raw[i + 1];
                 skipNext = true;
             } else {
@@ -132,11 +139,7 @@ function parseArgs(argv: string[]): {
 }
 
 function forceExit(code: number): void {
-    try {
-        process.kill(process.pid, code === 0 ? 'SIGTERM' : 'SIGTERM');
-    } catch {
-        process.exit(code);
-    }
+    setTimeout(() => process.exit(code), 100).unref();
 }
 
 async function main(): Promise<void> {
@@ -148,7 +151,8 @@ async function main(): Promise<void> {
     }
 
     if (flags.version) {
-        console.log('0.1.0');
+        const { VERSION } = await import('../src/index.js');
+        console.log(VERSION);
         process.exit(0);
     }
 
@@ -216,11 +220,11 @@ async function main(): Promise<void> {
 }
 
 const LONG_RUNNING_COMMANDS = new Set(['serve', 'mcp', 'hook']);
+const parsedCommand = parseArgs(process.argv).command;
 
 main()
     .then(() => {
-        const { command } = parseArgs(process.argv);
-        if (!LONG_RUNNING_COMMANDS.has(command)) {
+        if (!LONG_RUNNING_COMMANDS.has(parsedCommand)) {
             forceExit(0);
         }
     })

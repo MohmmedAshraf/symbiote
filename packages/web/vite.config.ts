@@ -30,6 +30,7 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': getBackendUrl(),
+            '/events': getBackendUrl(),
         },
     },
 });

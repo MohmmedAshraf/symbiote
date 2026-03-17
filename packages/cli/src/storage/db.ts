@@ -147,7 +147,9 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
 
     await db.exec('INSTALL fts; LOAD fts;');
 
-    const existing = await db.all("SELECT value FROM meta WHERE key = 'schema_version'");
+    const existing = await db.all<{ value: string } & Record<string, unknown>>(
+        "SELECT value FROM meta WHERE key = 'schema_version'",
+    );
 
     if (existing.length === 0) {
         await db.run(
@@ -155,7 +157,21 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
             'schema_version',
             String(SCHEMA_VERSION),
         );
+    } else {
+        const storedVersion = parseInt(existing[0].value, 10);
+        if (storedVersion < SCHEMA_VERSION) {
+            await migrateSchema(db, storedVersion, SCHEMA_VERSION);
+            await db.run(
+                "UPDATE meta SET value = $1 WHERE key = 'schema_version'",
+                String(SCHEMA_VERSION),
+            );
+        }
     }
 
     return db;
+}
+
+async function migrateSchema(_db: SymbioteDB, _from: number, _to: number): Promise<void> {
+    // Future migrations go here:
+    // if (_from < 2) { await _db.exec('ALTER TABLE ...'); }
 }

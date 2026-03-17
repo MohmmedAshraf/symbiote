@@ -36,13 +36,14 @@ export class GitImpactAnalyzer {
     }
 
     async getWorkingChanges(cwd?: string): Promise<string[]> {
-        const opts = cwd ? { cwd } : {};
+        const opts = {
+            encoding: 'utf-8' as const,
+            maxBuffer: 10 * 1024 * 1024,
+            ...(cwd ? { cwd } : {}),
+        };
         const [unstaged, staged] = await Promise.all([
-            execFileAsync('git', ['diff', '--name-only'], { encoding: 'utf-8', ...opts }),
-            execFileAsync('git', ['diff', '--name-only', '--cached'], {
-                encoding: 'utf-8',
-                ...opts,
-            }),
+            execFileAsync('git', ['diff', '--name-only'], opts),
+            execFileAsync('git', ['diff', '--name-only', '--cached'], opts),
         ]);
 
         const files = new Set<string>([
@@ -93,11 +94,10 @@ export class GitImpactAnalyzer {
         const affectedFiles: AffectedFile[] = [...fileMap.entries()].map(([filePath, nodes]) => ({
             filePath,
             nodes,
-            maxConfidence: Math.max(...nodes.map((n) => n.confidence)),
+            maxConfidence: nodes.reduce((max, n) => Math.max(max, n.confidence), 0),
         }));
 
-        const maxConf =
-            allAffected.length > 0 ? Math.max(...allAffected.map((e) => e.confidence)) : 0;
+        const maxConf = allAffected.reduce((max, e) => Math.max(max, e.confidence), 0);
 
         const riskLevel = computeRiskLevel(maxConf);
 

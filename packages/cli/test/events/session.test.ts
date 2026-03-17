@@ -17,19 +17,19 @@ describe('SessionTracker', () => {
         expect(session!.filesTouched).toContain('src/a.ts');
     });
 
-    it('tracks files touched in order', () => {
+    it('tracks files touched', () => {
         tracker.processEvent(createEvent('file:read', { filePath: 'src/a.ts' }));
         tracker.processEvent(createEvent('file:edit', { filePath: 'src/b.ts' }));
         tracker.processEvent(createEvent('file:read', { filePath: 'src/c.ts' }));
         const session = tracker.currentSession()!;
-        expect(session.filesTouched).toEqual(['src/a.ts', 'src/b.ts', 'src/c.ts']);
+        expect(session.filesTouched).toEqual(new Set(['src/a.ts', 'src/b.ts', 'src/c.ts']));
     });
 
-    it('does not duplicate files in touch list', () => {
+    it('does not duplicate files in touch set', () => {
         tracker.processEvent(createEvent('file:read', { filePath: 'src/a.ts' }));
         tracker.processEvent(createEvent('file:read', { filePath: 'src/a.ts' }));
         const session = tracker.currentSession()!;
-        expect(session.filesTouched).toEqual(['src/a.ts']);
+        expect(session.filesTouched).toEqual(new Set(['src/a.ts']));
     });
 
     it('tracks event count', () => {

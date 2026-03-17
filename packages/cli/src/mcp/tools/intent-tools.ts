@@ -41,7 +41,10 @@ export async function handleGetConstraints(
     if (input.scope) {
         return {
             constraints: constraints.filter(
-                (c) => c.frontmatter.scope === 'global' || c.frontmatter.scope === input.scope,
+                (c) =>
+                    c.frontmatter.scope === 'global' ||
+                    c.frontmatter.scope === '*' ||
+                    input.scope!.startsWith(c.frontmatter.scope),
             ),
         };
     }
@@ -66,7 +69,10 @@ export async function handleGetDecisions(
     if (input.scope) {
         return {
             decisions: decisions.filter(
-                (d) => d.frontmatter.scope === 'global' || d.frontmatter.scope === input.scope,
+                (d) =>
+                    d.frontmatter.scope === 'global' ||
+                    d.frontmatter.scope === '*' ||
+                    input.scope!.startsWith(d.frontmatter.scope),
             ),
         };
     }

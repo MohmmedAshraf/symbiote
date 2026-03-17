@@ -131,19 +131,26 @@ export class Repository {
     }
 
     async clearNodesForFile(filePath: string): Promise<void> {
-        await this.db.run(
-            'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-            filePath,
-        );
-        await this.db.run(
-            'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-            filePath,
-        );
-        await this.db.run(
-            'DELETE FROM embeddings WHERE node_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-            filePath,
-        );
-        await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
+        await this.db.exec('BEGIN TRANSACTION');
+        try {
+            await this.db.run(
+                'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
+            await this.db.run(
+                'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
+            await this.db.run(
+                'DELETE FROM embeddings WHERE node_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
+            await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
+            await this.db.exec('COMMIT');
+        } catch (err) {
+            await this.db.exec('ROLLBACK');
+            throw err;
+        }
     }
 
     async updateFileNodes(
@@ -156,10 +163,6 @@ export class Repository {
         try {
             await this.db.run(
                 'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
-                filePath,
-            );
-            await this.db.run(
-                'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
                 filePath,
             );
             await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);

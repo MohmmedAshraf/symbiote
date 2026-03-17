@@ -23,6 +23,7 @@ interface ImpulseState {
 const MAX_ACTIVE_RATIO = 0.3;
 const OFFSCREEN = new THREE.Vector3(99999, 99999, 99999);
 const frameObject3D = new THREE.Object3D();
+const frameColor = new THREE.Color();
 
 export function Impulses({
     edges,
@@ -67,7 +68,7 @@ export function Impulses({
         const maxActive = Math.floor(edges.length * MAX_ACTIVE_RATIO);
         let activeCount = 0;
         const dummy = frameObject3D;
-        const tempColor = new THREE.Color();
+        const tempColor = frameColor;
 
         for (let i = 0; i < states.length; i++) {
             if (states[i].active) activeCount++;

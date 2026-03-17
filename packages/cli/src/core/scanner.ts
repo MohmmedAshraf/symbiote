@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import { walkFiles, hashFileContent } from '../utils/files.js';
 import { parseFile } from './parser.js';
 import { EmbeddingService } from './embeddings.js';
@@ -47,7 +47,7 @@ export class Scanner {
 
         for (const filePath of files) {
             try {
-                const source = fs.readFileSync(filePath, 'utf-8');
+                const source = await fs.readFile(filePath, 'utf-8');
                 const hash = hashFileContent(filePath, source);
 
                 if (!options.force && !(await this.repo.isFileChanged(filePath, hash))) {

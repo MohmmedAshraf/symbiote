@@ -60,9 +60,15 @@ export class EmbeddingService {
             });
         }
 
+        const CONCURRENCY = 6;
         for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
             const batch = eligible.slice(i, i + BATCH_SIZE);
-            const vectors = await Promise.all(batch.map((item) => this.embed(item.text)));
+            const vectors: number[][] = [];
+            for (let c = 0; c < batch.length; c += CONCURRENCY) {
+                const chunk = batch.slice(c, c + CONCURRENCY);
+                const results = await Promise.all(chunk.map((item) => this.embed(item.text)));
+                vectors.push(...results);
+            }
 
             const placeholders = batch
                 .map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2}::FLOAT[384])`)

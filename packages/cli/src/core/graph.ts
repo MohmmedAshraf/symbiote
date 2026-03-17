@@ -12,7 +12,6 @@ export interface ProjectOverview {
     totalEdges: number;
     totalFiles: number;
     nodesByType: Record<string, number>;
-    filesByLanguage: Record<string, number>;
 }
 
 export class GraphQuery {
@@ -113,7 +112,6 @@ export class GraphQuery {
             totalEdges: stats.edges,
             totalFiles: stats.files,
             nodesByType,
-            filesByLanguage: {},
         };
     }
 }

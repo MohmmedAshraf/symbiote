@@ -112,6 +112,10 @@ export function Neurons({
         [nodes, onNodeClick, raycaster, pointer, camera],
     );
 
+    const handlePointerLeave = useCallback(() => {
+        onNodeHover(null, null);
+    }, [onNodeHover]);
+
     const handlePointerMove = useCallback(() => {
         const mesh = meshRef.current;
         if (!mesh) return;
@@ -134,10 +138,10 @@ export function Neurons({
     return (
         <instancedMesh
             ref={meshRef}
-            args={[geometry, undefined!, nodes.length]}
+            args={[geometry, undefined as unknown as THREE.Material, nodes.length]}
             onClick={handleClick}
             onPointerMove={handlePointerMove}
-            onPointerLeave={() => onNodeHover(null, null)}
+            onPointerLeave={handlePointerLeave}
             frustumCulled={false}
         >
             <meshBasicMaterial attach="material" transparent opacity={0.9} />

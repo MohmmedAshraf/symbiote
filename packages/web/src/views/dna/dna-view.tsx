@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import type { DnaEntry } from '@/lib/types';
 import { DnaEntryCard } from './dna-entry-card';
@@ -25,44 +25,54 @@ export function DnaView() {
         fetchEntries();
     }, [fetchEntries]);
 
-    async function handleApprove(id: string) {
-        try {
-            await api.dna.update(id, { status: 'approved' });
-            fetchEntries();
-        } catch (e) {
-            console.error('Failed to approve DNA entry:', e);
-            setError(e instanceof Error ? e.message : 'Failed to approve entry');
-        }
-    }
+    const handleApprove = useCallback(
+        async (id: string) => {
+            try {
+                await api.dna.update(id, { status: 'approved' });
+                fetchEntries();
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to approve entry');
+            }
+        },
+        [fetchEntries],
+    );
 
-    async function handleReject(id: string) {
-        try {
-            await api.dna.update(id, { status: 'rejected' });
-            fetchEntries();
-        } catch (e) {
-            console.error('Failed to reject DNA entry:', e);
-            setError(e instanceof Error ? e.message : 'Failed to reject entry');
-        }
-    }
+    const handleReject = useCallback(
+        async (id: string) => {
+            try {
+                await api.dna.update(id, { status: 'rejected' });
+                fetchEntries();
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to reject entry');
+            }
+        },
+        [fetchEntries],
+    );
 
-    async function handleUpdate(id: string, content: string) {
-        try {
-            await api.dna.update(id, { content });
-            fetchEntries();
-        } catch (e) {
-            console.error('Failed to update DNA entry:', e);
-            setError(e instanceof Error ? e.message : 'Failed to update entry');
-        }
-    }
+    const handleUpdate = useCallback(
+        async (id: string, content: string) => {
+            try {
+                await api.dna.update(id, { content });
+                fetchEntries();
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to update entry');
+            }
+        },
+        [fetchEntries],
+    );
 
     const filtered = filter === 'all' ? entries : entries.filter((e) => e.status === filter);
 
-    const counts = {
-        all: entries.length,
-        suggested: entries.filter((e) => e.status === 'suggested').length,
-        approved: entries.filter((e) => e.status === 'approved').length,
-        rejected: entries.filter((e) => e.status === 'rejected').length,
-    };
+    const counts = useMemo(() => {
+        const result = { all: 0, suggested: 0, approved: 0, rejected: 0 };
+        result.all = entries.length;
+        for (const e of entries) {
+            if (e.status === 'suggested') result.suggested++;
+            else if (e.status === 'approved') result.approved++;
+            else if (e.status === 'rejected') result.rejected++;
+        }
+        return result;
+    }, [entries]);
 
     if (loading) {
         return (

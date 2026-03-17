@@ -125,16 +125,20 @@ export function Synapses({
         }
     }, [opacities]);
 
-    const setMaterialRef = (index: number) => (el: THREE.MeshBasicMaterial | null) => {
-        if (el) materialsRef.current[index] = el;
-    };
+    const materialRefCallbacks = useMemo(
+        () =>
+            tubes.map((_, i) => (el: THREE.MeshBasicMaterial | null) => {
+                if (el) materialsRef.current[i] = el;
+            }),
+        [tubes],
+    );
 
     return (
         <group>
             {tubes.map((tube, i) => (
                 <mesh key={tube.key} geometry={tube.geometry}>
                     <meshBasicMaterial
-                        ref={setMaterialRef(i)}
+                        ref={materialRefCallbacks[i]}
                         color={tube.color}
                         transparent
                         opacity={opacities[i]}

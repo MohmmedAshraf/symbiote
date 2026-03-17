@@ -71,7 +71,7 @@ export function getBrainDbPath(projectRoot: string): string {
 
 export const DEFAULT_PORT = 3333;
 const PORT_RANGE_START = 3334;
-const PORT_RANGE_END = 3999;
+const PORT_RANGE_END = 9999;
 
 export function getProjectPort(projectRoot: string): number {
     const envPort = process.env.SYMBIOTE_PORT;

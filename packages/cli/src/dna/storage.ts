@@ -17,6 +17,8 @@ export interface ListOptions {
 }
 
 export class DnaStorage {
+    private cachedIndex: DnaIndex | null = null;
+
     constructor(private dnaDir: string) {}
 
     ensureDirectories(): void {
@@ -33,9 +35,11 @@ export class DnaStorage {
     }
 
     readIndex(): DnaIndex {
+        if (this.cachedIndex) return this.cachedIndex;
         const indexPath = path.join(this.dnaDir, 'index.json');
         const raw = fs.readFileSync(indexPath, 'utf-8');
-        return JSON.parse(raw) as DnaIndex;
+        this.cachedIndex = JSON.parse(raw) as DnaIndex;
+        return this.cachedIndex;
     }
 
     readEntry(id: string): DnaEntry | null {
@@ -111,8 +115,11 @@ export class DnaStorage {
 
         const entries: DnaEntry[] = [];
         for (const indexEntry of filtered) {
-            const entry = this.readEntry(indexEntry.id);
-            if (entry) entries.push(entry);
+            const filePath = path.join(this.dnaDir, indexEntry.category, indexEntry.fileName);
+            if (!fs.existsSync(filePath)) continue;
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            const parsed = parseFrontmatter(raw);
+            if (parsed) entries.push({ frontmatter: parsed.frontmatter, content: parsed.content });
         }
 
         return entries;
@@ -123,6 +130,7 @@ export class DnaStorage {
         const tmpPath = indexPath + '.tmp';
         fs.writeFileSync(tmpPath, JSON.stringify(index, null, 4) + '\n');
         fs.renameSync(tmpPath, indexPath);
+        this.cachedIndex = index;
     }
 
     private idToFileName(id: string, category: DnaCategory): string {

@@ -4,7 +4,7 @@ export interface Session {
     id: string;
     startedAt: number;
     lastEventAt: number;
-    filesTouched: string[];
+    filesTouched: Set<string>;
     eventCount: number;
 }
 
@@ -27,7 +27,7 @@ export class SessionTracker {
                 id: `session-${now}`,
                 startedAt: now,
                 lastEventAt: now,
-                filesTouched: [],
+                filesTouched: new Set(),
                 eventCount: 0,
             };
         }
@@ -36,8 +36,8 @@ export class SessionTracker {
         this.session.eventCount++;
 
         const filePath = event.data.filePath;
-        if (filePath && !this.session.filesTouched.includes(filePath)) {
-            this.session.filesTouched.push(filePath);
+        if (filePath) {
+            this.session.filesTouched.add(filePath);
         }
     }
 
@@ -54,5 +54,9 @@ export class SessionTracker {
             filesTouched: [...this.session.filesTouched],
             eventCount: this.session.eventCount,
         };
+    }
+
+    currentSessionId(): string | null {
+        return this.session?.id ?? null;
     }
 }

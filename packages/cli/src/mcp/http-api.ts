@@ -297,19 +297,15 @@ export async function handleHookContext(
         });
         const constraints = activeConstraints
             .filter(
-                (c) => c.frontmatter.scope === '*' || relativePath.includes(c.frontmatter.scope),
+                (c) =>
+                    c.frontmatter.scope === 'global' ||
+                    c.frontmatter.scope === '*' ||
+                    relativePath.startsWith(c.frontmatter.scope),
             )
             .map((c) => ({ scope: c.frontmatter.scope, content: c.content }));
 
-        const NOISE_PATTERNS = [
-            /^(TypeScript|Turborepo|Tree-sitter|DuckDB|better-sqlite|Transformers|Commander|Vite|React|Tailwind|Vitest|react-three|Graphology|@modelcontextprotocol)/i,
-            /monorepo|MCP server|stdio|HTTP|graph storage|vector search|code parsing/i,
-            /packages\/cli|packages\/web|src\/core|src\/storage|src\/mcp|src\/brain|src\/dna/,
-            /^\.brain|^~\/\.symbiote/,
-        ];
         const dna = ctx.dnaEngine
             .getActiveEntries()
-            .filter((e) => !NOISE_PATTERNS.some((p) => p.test(e.content)))
             .slice(0, 10)
             .map((e) => `[${e.frontmatter.category}] ${e.content}`);
 

@@ -145,11 +145,16 @@ export function parseYamlBlock(block: string): Record<string, unknown> | null {
             continue;
         }
 
-        const num = Number(value);
-        if (!isNaN(num) && value !== '') {
-            result[key] = num;
+        const stripped = stripQuotes(value);
+        if (/^\d{4}-\d{2}-\d{2}/.test(stripped)) {
+            result[key] = stripped;
         } else {
-            result[key] = stripQuotes(value);
+            const num = Number(value);
+            if (!isNaN(num) && value !== '') {
+                result[key] = num;
+            } else {
+                result[key] = stripped;
+            }
         }
     }
 
