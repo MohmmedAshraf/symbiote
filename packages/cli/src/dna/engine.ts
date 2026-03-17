@@ -1,5 +1,7 @@
+import crypto from 'node:crypto';
 import { DnaStorage } from './storage.js';
 import { type EmbeddingModel, cosineSimilarity } from './embeddings.js';
+import { slugify } from '../utils/strings.js';
 import type { DnaCategory, DnaEntry, DnaFrontmatter, DnaSource } from './types.js';
 
 const SIMILARITY_THRESHOLD = 0.85;
@@ -7,12 +9,18 @@ const AUTO_PROMOTE_SESSIONS = 3;
 const BASE_CONFIDENCE = 0.3;
 const EXPLICIT_CONFIDENCE = 1.0;
 
+function contentHash(text: string): string {
+    return crypto.createHash('sha256').update(text).digest('hex');
+}
+
 export interface SimilarMatch {
     entry: DnaEntry;
     similarity: number;
 }
 
 export class DnaEngine {
+    private embeddingCache = new Map<string, number[]>();
+
     constructor(
         private storage: DnaStorage,
         private embeddings?: EmbeddingModel,
@@ -50,6 +58,16 @@ export class DnaEngine {
         return entry;
     }
 
+    private async cachedEmbed(text: string): Promise<number[]> {
+        const hash = contentHash(text);
+        const cached = this.embeddingCache.get(hash);
+        if (cached) return cached;
+
+        const embedding = await this.embeddings!.embed(text);
+        this.embeddingCache.set(hash, embedding);
+        return embedding;
+    }
+
     async captureInstructionWithPatternMatch(
         instruction: string,
         sessionId: string,
@@ -63,13 +81,13 @@ export class DnaEngine {
         const sameCategoryEntries = this.storage.listEntries({ category });
 
         if (sameCategoryEntries.length > 0) {
-            const queryEmbedding = await this.embeddings.embed(instruction);
+            const queryEmbedding = await this.cachedEmbed(instruction);
 
             let bestMatch: DnaEntry | null = null;
             let bestSimilarity = 0;
 
             for (const entry of sameCategoryEntries) {
-                const entryEmbedding = await this.embeddings.embed(entry.content);
+                const entryEmbedding = await this.cachedEmbed(entry.content);
                 const similarity = cosineSimilarity(queryEmbedding, entryEmbedding);
 
                 if (similarity > SIMILARITY_THRESHOLD && similarity > bestSimilarity) {
@@ -92,11 +110,11 @@ export class DnaEngine {
         const allEntries = this.storage.listEntries();
         if (allEntries.length === 0) return [];
 
-        const queryEmbedding = await this.embeddings.embed(instruction);
+        const queryEmbedding = await this.cachedEmbed(instruction);
         const matches: SimilarMatch[] = [];
 
         for (const entry of allEntries) {
-            const entryEmbedding = await this.embeddings.embed(entry.content);
+            const entryEmbedding = await this.cachedEmbed(entry.content);
             const similarity = cosineSimilarity(queryEmbedding, entryEmbedding);
 
             if (similarity > 0.3) {
@@ -151,6 +169,9 @@ export class DnaEngine {
 
         if (!fm.sessionIds.includes(sessionId)) {
             fm.sessionIds.push(sessionId);
+            if (fm.sessionIds.length > 50) {
+                fm.sessionIds = fm.sessionIds.slice(-50);
+            }
         }
 
         if (source === 'explicit') {
@@ -228,16 +249,7 @@ export class DnaEngine {
     }
 
     static generateId(category: DnaCategory, content: string): string {
-        const slug = content
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '');
-
         const maxSlugLength = 60 - category.length - 1;
-        const truncated = slug.slice(0, maxSlugLength).replace(/-$/, '');
-
-        return `${category}-${truncated}`;
+        return `${category}-${slugify(content, maxSlugLength)}`;
     }
 }

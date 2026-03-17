@@ -5,8 +5,10 @@ const EMBEDDING_DIM = 384;
 
 type PoolingType = 'none' | 'mean' | 'cls';
 
+type ExtractorInput = string | string[];
+
 type Extractor = (
-    text: string,
+    input: ExtractorInput,
     opts: { pooling: PoolingType; normalize: boolean },
 ) => Promise<{ data: Float32Array }>;
 
@@ -36,12 +38,15 @@ export class EmbeddingModel {
     }
 
     async embedBatch(texts: string[]): Promise<number[][]> {
+        if (texts.length === 0) return [];
+
         const extractor = await this.getExtractor();
+        const output = await extractor(texts, { pooling: 'mean', normalize: true });
+        const flat = Array.from(output.data);
         const results: number[][] = [];
 
-        for (const text of texts) {
-            const output = await extractor(text, { pooling: 'mean', normalize: true });
-            results.push(Array.from(output.data).slice(0, EMBEDDING_DIM));
+        for (let i = 0; i < texts.length; i++) {
+            results.push(flat.slice(i * EMBEDDING_DIM, (i + 1) * EMBEDDING_DIM));
         }
 
         return results;
@@ -50,7 +55,7 @@ export class EmbeddingModel {
     private async getExtractor(): Promise<Extractor> {
         if (!this.extractor) {
             const raw = await pipeline('feature-extraction', MODEL_NAME, { dtype: 'fp32' });
-            this.extractor = (text, opts) => raw(text, opts) as Promise<{ data: Float32Array }>;
+            this.extractor = (input, opts) => raw(input, opts) as Promise<{ data: Float32Array }>;
         }
         return this.extractor;
     }

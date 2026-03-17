@@ -44,8 +44,10 @@ interface FileRow extends Record<string, unknown> {
     last_scanned: string;
 }
 
-interface CountRow extends Record<string, unknown> {
-    count: number | bigint;
+interface StatsRow extends Record<string, unknown> {
+    nodes: number | bigint;
+    edges: number | bigint;
+    files: number | bigint;
 }
 
 interface TypeCountRow extends Record<string, unknown> {
@@ -92,19 +94,33 @@ export class Repository {
 
     async insertNodes(nodes: NodeRecord[]): Promise<void> {
         if (nodes.length === 0) return;
+        const CHUNK_SIZE = 500;
         await this.db.exec('BEGIN TRANSACTION');
         try {
-            for (const node of nodes) {
+            for (let i = 0; i < nodes.length; i += CHUNK_SIZE) {
+                const chunk = nodes.slice(i, i + CHUNK_SIZE);
+                const placeholders: string[] = [];
+                const params: unknown[] = [];
+                for (let j = 0; j < chunk.length; j++) {
+                    const offset = j * 7;
+                    placeholders.push(
+                        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`,
+                    );
+                    const node = chunk[j];
+                    params.push(
+                        node.id,
+                        node.type,
+                        node.name,
+                        node.filePath,
+                        node.lineStart,
+                        node.lineEnd,
+                        JSON.stringify(node.metadata ?? {}),
+                    );
+                }
                 await this.db.run(
                     `INSERT OR REPLACE INTO nodes (id, type, name, file_path, line_start, line_end, metadata)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                    node.id,
-                    node.type,
-                    node.name,
-                    node.filePath,
-                    node.lineStart,
-                    node.lineEnd,
-                    JSON.stringify(node.metadata ?? {}),
+                     VALUES ${placeholders.join(', ')}`,
+                    ...params,
                 );
             }
             await this.db.exec('COMMIT');
@@ -124,6 +140,90 @@ export class Repository {
             filePath,
         );
         await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
+    }
+
+    async updateFileNodes(
+        filePath: string,
+        hash: string,
+        nodes: NodeRecord[],
+        edges: EdgeRecord[],
+    ): Promise<void> {
+        await this.db.exec('BEGIN TRANSACTION');
+        try {
+            await this.db.run(
+                'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
+            await this.db.run(
+                'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
+            await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
+
+            if (nodes.length > 0) {
+                const CHUNK_SIZE = 500;
+                for (let i = 0; i < nodes.length; i += CHUNK_SIZE) {
+                    const chunk = nodes.slice(i, i + CHUNK_SIZE);
+                    const placeholders: string[] = [];
+                    const params: unknown[] = [];
+                    for (let j = 0; j < chunk.length; j++) {
+                        const offset = j * 7;
+                        placeholders.push(
+                            `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`,
+                        );
+                        const node = chunk[j];
+                        params.push(
+                            node.id,
+                            node.type,
+                            node.name,
+                            node.filePath,
+                            node.lineStart,
+                            node.lineEnd,
+                            JSON.stringify(node.metadata ?? {}),
+                        );
+                    }
+                    await this.db.run(
+                        `INSERT OR REPLACE INTO nodes (id, type, name, file_path, line_start, line_end, metadata)
+                         VALUES ${placeholders.join(', ')}`,
+                        ...params,
+                    );
+                }
+            }
+
+            if (edges.length > 0) {
+                const CHUNK_SIZE = 500;
+                for (let i = 0; i < edges.length; i += CHUNK_SIZE) {
+                    const chunk = edges.slice(i, i + CHUNK_SIZE);
+                    const placeholders: string[] = [];
+                    const params: unknown[] = [];
+                    for (let j = 0; j < chunk.length; j++) {
+                        const offset = j * 3;
+                        placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+                        params.push(chunk[j].sourceId, chunk[j].targetId, chunk[j].type);
+                    }
+                    await this.db.run(
+                        `INSERT INTO edges (source_id, target_id, type) VALUES ${placeholders.join(', ')}
+                         ON CONFLICT DO NOTHING`,
+                        ...params,
+                    );
+                }
+            }
+
+            const now = new Date().toISOString();
+            await this.db.run(
+                `INSERT INTO files (path, hash, last_scanned)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT(path) DO UPDATE SET hash = $2, last_scanned = $3`,
+                filePath,
+                hash,
+                now,
+            );
+
+            await this.db.exec('COMMIT');
+        } catch (err) {
+            await this.db.exec('ROLLBACK');
+            throw err;
+        }
     }
 
     async getNodesByFile(filePath: string): Promise<NodeRecord[]> {
@@ -167,15 +267,22 @@ export class Repository {
 
     async insertEdges(edges: EdgeRecord[]): Promise<void> {
         if (edges.length === 0) return;
+        const CHUNK_SIZE = 500;
         await this.db.exec('BEGIN TRANSACTION');
         try {
-            for (const edge of edges) {
+            for (let i = 0; i < edges.length; i += CHUNK_SIZE) {
+                const chunk = edges.slice(i, i + CHUNK_SIZE);
+                const placeholders: string[] = [];
+                const params: unknown[] = [];
+                for (let j = 0; j < chunk.length; j++) {
+                    const offset = j * 3;
+                    placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+                    params.push(chunk[j].sourceId, chunk[j].targetId, chunk[j].type);
+                }
                 await this.db.run(
-                    `INSERT INTO edges (source_id, target_id, type) VALUES ($1, $2, $3)
+                    `INSERT INTO edges (source_id, target_id, type) VALUES ${placeholders.join(', ')}
                      ON CONFLICT DO NOTHING`,
-                    edge.sourceId,
-                    edge.targetId,
-                    edge.type,
+                    ...params,
                 );
             }
             await this.db.exec('COMMIT');
@@ -197,15 +304,37 @@ export class Repository {
         return rows.map(this.mapEdgeRow);
     }
 
-    async getStats(): Promise<{ nodes: number; edges: number; files: number }> {
-        const nodeResult = await this.db.all<CountRow>('SELECT COUNT(*) as count FROM nodes');
-        const edgeResult = await this.db.all<CountRow>('SELECT COUNT(*) as count FROM edges');
-        const fileResult = await this.db.all<CountRow>('SELECT COUNT(*) as count FROM files');
+    async getDependenciesBatch(nodeIds: string[]): Promise<EdgeRecord[]> {
+        if (nodeIds.length === 0) return [];
+        const placeholders = nodeIds.map((_, i) => `$${i + 1}`).join(', ');
+        const rows = await this.db.all<EdgeRow>(
+            `SELECT * FROM edges WHERE source_id IN (${placeholders})`,
+            ...nodeIds,
+        );
+        return rows.map(this.mapEdgeRow);
+    }
 
+    async getDependentsBatch(nodeIds: string[]): Promise<EdgeRecord[]> {
+        if (nodeIds.length === 0) return [];
+        const placeholders = nodeIds.map((_, i) => `$${i + 1}`).join(', ');
+        const rows = await this.db.all<EdgeRow>(
+            `SELECT * FROM edges WHERE target_id IN (${placeholders})`,
+            ...nodeIds,
+        );
+        return rows.map(this.mapEdgeRow);
+    }
+
+    async getStats(): Promise<{ nodes: number; edges: number; files: number }> {
+        const rows = await this.db.all<StatsRow>(
+            `SELECT
+                (SELECT COUNT(*) FROM nodes) as nodes,
+                (SELECT COUNT(*) FROM edges) as edges,
+                (SELECT COUNT(*) FROM files) as files`,
+        );
         return {
-            nodes: Number(nodeResult[0].count),
-            edges: Number(edgeResult[0].count),
-            files: Number(fileResult[0].count),
+            nodes: Number(rows[0].nodes),
+            edges: Number(rows[0].edges),
+            files: Number(rows[0].files),
         };
     }
 
@@ -255,6 +384,12 @@ export class Repository {
     }
 
     private mapNodeRow(row: NodeRow): NodeRecord {
+        let metadata: Record<string, unknown> = {};
+        try {
+            metadata = JSON.parse(row.metadata);
+        } catch {
+            metadata = {};
+        }
         return {
             id: row.id,
             type: row.type,
@@ -262,7 +397,7 @@ export class Repository {
             filePath: row.file_path,
             lineStart: row.line_start,
             lineEnd: row.line_end,
-            metadata: JSON.parse(row.metadata),
+            metadata,
         };
     }
 

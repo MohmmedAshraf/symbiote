@@ -82,14 +82,8 @@ export class GraphQuery {
         const nodes = await this.repo.getNodesByFile(filePath);
         const nodeIds = nodes.map((n) => n.id);
 
-        const allDeps: EdgeRecord[] = [];
-        const allDependents: EdgeRecord[] = [];
-        for (const id of nodeIds) {
-            const deps = await this.repo.getDependencies(id);
-            allDeps.push(...deps);
-            const dependentEdges = await this.repo.getDependents(id);
-            allDependents.push(...dependentEdges);
-        }
+        const allDeps = await this.repo.getDependenciesBatch(nodeIds);
+        const allDependents = await this.repo.getDependentsBatch(nodeIds);
 
         const targetIds = allDeps.map((e) => e.targetId);
         const sourceIds = allDependents.map((e) => e.sourceId);

@@ -57,7 +57,10 @@ export function parseFile(filePath: string, content?: string): ParseResult | nul
     const nodes: NodeRecord[] = [];
     const edges: EdgeRecord[] = [];
 
-    const lineCount = source.split('\n').length;
+    let lineCount = 1;
+    for (let i = 0; i < source.length; i++) {
+        if (source[i] === '\n') lineCount++;
+    }
     nodes.push({
         id: `file:${filePath}`,
         type: 'file',
@@ -423,8 +426,9 @@ function extractImportBindings(
 }
 
 function guessNodePrefix(name: string): string {
+    if (!name) return 'fn';
     if (name === 'default') return 'fn';
-    if (name[0] === name[0].toUpperCase() && !name.includes('_')) return 'class';
+    if (name[0] === name[0].toUpperCase() && !name.includes('_')) return 'function';
     return 'fn';
 }
 

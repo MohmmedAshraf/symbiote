@@ -1,5 +1,6 @@
 import type { Repository } from '../../storage/repository.js';
 import type { DeadCodeEntry } from './types.js';
+import type { PreFetchedData } from './cycle-detector.js';
 
 const ENTRY_POINT_PATTERNS = [
     /^index\.[jt]sx?$/,
@@ -12,11 +13,11 @@ const ENTRY_POINT_PATTERNS = [
 export class DeadCodeDetector {
     constructor(private repo: Repository) {}
 
-    async detect(): Promise<DeadCodeEntry[]> {
-        const allNodes = await this.repo.getAllNodes();
+    async detect(preFetched?: PreFetchedData): Promise<DeadCodeEntry[]> {
+        const allNodes = preFetched?.nodes ?? (await this.repo.getAllNodes());
         if (allNodes.length === 0) return [];
 
-        const allEdges = await this.repo.getAllEdges();
+        const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
         const referencedIds = new Set<string>();
 
         for (const edge of allEdges) {

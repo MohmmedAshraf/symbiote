@@ -20,15 +20,21 @@ export class ConstraintChecker {
     ) {}
 
     async check(): Promise<ConstraintCheckResult> {
-        const constraints = this.intent.listEntries('constraint', {
+        const constraints = await this.intent.listEntries('constraint', {
             status: 'active',
         });
         const violations: ConstraintViolation[] = [];
         const descriptive: DescriptiveConstraint[] = [];
 
+        const allNodes = await this.repo.getAllNodes();
+        const allFilePaths = new Set<string>();
+        for (const node of allNodes) {
+            allFilePaths.add(node.filePath);
+        }
+
         for (const constraint of constraints) {
             if (constraint.frontmatter.pattern) {
-                const found = await this.checkWithPattern(constraint);
+                const found = await this.checkWithPattern(constraint, allFilePaths);
                 violations.push(...found);
             } else {
                 descriptive.push({
@@ -42,12 +48,15 @@ export class ConstraintChecker {
         return { violations, descriptive };
     }
 
-    private async checkWithPattern(constraint: IntentEntry): Promise<ConstraintViolation[]> {
+    private async checkWithPattern(
+        constraint: IntentEntry,
+        allFilePaths: Set<string>,
+    ): Promise<ConstraintViolation[]> {
         const pattern = constraint.frontmatter.pattern!;
         const violations: ConstraintViolation[] = [];
         const scope = constraint.frontmatter.scope;
 
-        const filePaths = await this.getFilesInScope(scope);
+        const filePaths = this.getFilesInScope(scope, allFilePaths);
 
         for (const filePath of filePaths) {
             const lang = detectLanguage(filePath);
@@ -94,18 +103,11 @@ export class ConstraintChecker {
         return violations;
     }
 
-    private async getFilesInScope(scope: string): Promise<string[]> {
-        const allNodes = await this.repo.getAllNodes();
-        const filePaths = new Set<string>();
-
-        for (const node of allNodes) {
-            filePaths.add(node.filePath);
-        }
-
+    private getFilesInScope(scope: string, allFilePaths: Set<string>): string[] {
         if (scope === 'global') {
-            return [...filePaths];
+            return [...allFilePaths];
         }
 
-        return [...filePaths].filter((fp) => fp.includes(scope));
+        return [...allFilePaths].filter((fp) => fp.includes(scope));
     }
 }

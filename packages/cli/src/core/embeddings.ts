@@ -42,7 +42,9 @@ export class EmbeddingService {
         nodes: NodeRecord[],
         sourceByFile: Map<string, string>,
     ): Promise<number> {
-        let count = 0;
+        const BATCH_SIZE = 50;
+        const eligible: { id: string; text: string }[] = [];
+
         for (const node of nodes) {
             if (node.type === 'file') continue;
             const source = sourceByFile.get(node.filePath);
@@ -52,16 +54,28 @@ export class EmbeddingService {
                       .slice(node.lineStart - 1, node.lineEnd)
                       .join('\n')
                 : undefined;
-            const text = EmbeddingService.buildEmbeddingText(node.name, body);
-            const vector = await this.embed(text);
-            await db.run(
-                'INSERT OR REPLACE INTO embeddings (node_id, vector) VALUES ($1, $2::FLOAT[384])',
-                node.id,
-                JSON.stringify(vector),
-            );
-            count++;
+            eligible.push({
+                id: node.id,
+                text: EmbeddingService.buildEmbeddingText(node.name, body),
+            });
         }
-        return count;
+
+        for (let i = 0; i < eligible.length; i += BATCH_SIZE) {
+            const batch = eligible.slice(i, i + BATCH_SIZE);
+            const vectors = await Promise.all(batch.map((item) => this.embed(item.text)));
+
+            const placeholders = batch
+                .map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2}::FLOAT[384])`)
+                .join(', ');
+            const params = batch.flatMap((item, idx) => [item.id, JSON.stringify(vectors[idx])]);
+
+            await db.run(
+                `INSERT OR REPLACE INTO embeddings (node_id, vector) VALUES ${placeholders}`,
+                ...params,
+            );
+        }
+
+        return eligible.length;
     }
 
     async clearForFile(db: SymbioteDB, filePath: string): Promise<void> {

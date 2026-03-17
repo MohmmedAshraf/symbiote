@@ -30,7 +30,7 @@ export class Scanner {
     ) {}
 
     async scan(rootDir: string, options: ScanOptions = {}): Promise<ScanResult> {
-        const files = walkFiles(rootDir);
+        const files = await walkFiles(rootDir);
         const result: ScanResult = {
             filesScanned: 0,
             filesSkipped: 0,
@@ -61,10 +61,7 @@ export class Scanner {
                     continue;
                 }
 
-                await this.repo.clearNodesForFile(filePath);
-                await this.repo.insertNodes(parsed.nodes);
-                await this.repo.insertEdges(parsed.edges);
-                await this.repo.upsertFile(filePath, hash);
+                await this.repo.updateFileNodes(filePath, hash, parsed.nodes, parsed.edges);
 
                 if (this.embeddingService && this.db) {
                     await this.embeddingService.clearForFile(this.db, filePath);

@@ -1,12 +1,11 @@
 import { createRequire } from 'node:module';
 import type { Repository } from '../storage/repository.js';
+import { Graph } from './types.js';
+import type { GraphInstance } from './types.js';
 
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-const louvain = require('graphology-communities-louvain');
-const centrality = require('graphology-metrics/centrality');
-
-type GraphInstance = InstanceType<typeof Graph>;
+const req = createRequire(import.meta.url);
+const louvain = req('graphology-communities-louvain');
+const centrality = req('graphology-metrics/centrality');
 
 export interface AlgorithmResults {
     communities: Record<string, number>;
@@ -30,6 +29,7 @@ export class GraphAlgorithms {
                 filePath: node.filePath,
                 lineStart: node.lineStart,
                 lineEnd: node.lineEnd,
+                metadata: node.metadata,
             });
         }
 
@@ -76,16 +76,25 @@ export class GraphAlgorithms {
         const ranks = centrality.pagerank(graph);
         const betweenness = centrality.betweenness(graph);
 
-        const allNodes = await this.repo.getAllNodes();
+        const updatedNodes: import('../storage/repository.js').NodeRecord[] = [];
+        graph.forEachNode((nodeId: string, attrs: Record<string, unknown>) => {
+            updatedNodes.push({
+                id: nodeId,
+                type: attrs.type as string,
+                name: attrs.name as string,
+                filePath: attrs.filePath as string,
+                lineStart: attrs.lineStart as number,
+                lineEnd: attrs.lineEnd as number,
+                metadata: {
+                    ...((attrs.metadata as Record<string, unknown>) ?? {}),
+                    community: communities[nodeId] ?? -1,
+                    pageRank: ranks[nodeId] ?? 0,
+                    betweenness: betweenness[nodeId] ?? 0,
+                },
+            });
+        });
 
-        for (const node of allNodes) {
-            const metadata = node.metadata ?? {};
-            metadata.community = communities[node.id] ?? -1;
-            metadata.pageRank = ranks[node.id] ?? 0;
-            metadata.betweenness = betweenness[node.id] ?? 0;
-
-            await this.repo.insertNodes([{ ...node, metadata }]);
-        }
+        await this.repo.insertNodes(updatedNodes);
 
         return { communities, pageRank: ranks, betweenness };
     }

@@ -1,6 +1,7 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { detectLanguage } from '../core/languages.js';
 
 const DEFAULT_IGNORE = [
@@ -18,12 +19,15 @@ const DEFAULT_IGNORE = [
     'target',
 ];
 
-export function walkFiles(rootDir: string, ignoreDirs: string[] = DEFAULT_IGNORE): string[] {
+export async function walkFiles(
+    rootDir: string,
+    ignoreDirs: string[] = DEFAULT_IGNORE,
+): Promise<string[]> {
     const files: string[] = [];
     const ignoreSet = new Set(ignoreDirs);
 
-    function walk(dir: string): void {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
+    async function walk(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
 
         for (const entry of entries) {
             if (ignoreSet.has(entry.name)) continue;
@@ -32,18 +36,18 @@ export function walkFiles(rootDir: string, ignoreDirs: string[] = DEFAULT_IGNORE
             const fullPath = path.join(dir, entry.name);
 
             if (entry.isDirectory()) {
-                walk(fullPath);
+                await walk(fullPath);
             } else if (entry.isFile() && detectLanguage(fullPath)) {
                 files.push(fullPath);
             }
         }
     }
 
-    walk(rootDir);
+    await walk(rootDir);
     return files;
 }
 
 export function hashFileContent(filePath: string, content?: string): string {
-    const source = content ?? fs.readFileSync(filePath, 'utf-8');
+    const source = content ?? readFileSync(filePath, 'utf-8');
     return crypto.createHash('sha256').update(source).digest('hex').slice(0, 16);
 }

@@ -29,6 +29,7 @@ interface CountRow extends Record<string, unknown> {
 
 export class HybridSearch {
     private ftsReady = false;
+    private ftsLock: Promise<void> | null = null;
     private embeddingService: EmbeddingService | null = null;
 
     constructor(
@@ -38,6 +39,9 @@ export class HybridSearch {
 
     private async getEmbeddingService(): Promise<EmbeddingService> {
         if (!this.embeddingService) {
+            console.warn(
+                '[symbiote] First vector search — downloading embedding model, this may take a moment.',
+            );
             this.embeddingService = new EmbeddingService();
             await this.embeddingService.initialize();
         }
@@ -137,6 +141,21 @@ export class HybridSearch {
 
     private async ensureFts(): Promise<void> {
         if (this.ftsReady) return;
+
+        if (this.ftsLock) {
+            await this.ftsLock;
+            return;
+        }
+
+        this.ftsLock = this.buildFtsIndex();
+        try {
+            await this.ftsLock;
+        } finally {
+            this.ftsLock = null;
+        }
+    }
+
+    private async buildFtsIndex(): Promise<void> {
         try {
             await this.db.exec('DROP TABLE IF EXISTS nodes_fts;');
             await this.db.exec(
@@ -146,8 +165,11 @@ export class HybridSearch {
                 "PRAGMA create_fts_index('nodes_fts', 'node_id', 'name', 'file_path');",
             );
             this.ftsReady = true;
-        } catch {
+        } catch (err) {
             this.ftsReady = false;
+            throw new Error(
+                `Failed to build FTS index: ${err instanceof Error ? err.message : String(err)}`,
+            );
         }
     }
 

@@ -10,6 +10,7 @@ import { computeHealthScore } from './scorer.js';
 import { HealthHistory, type SaveSnapshotInput } from './history.js';
 
 export class HealthEngine {
+    private repo: Repository;
     private cycleDetector: CycleDetector;
     private deadCodeDetector: DeadCodeDetector;
     private couplingAnalyzer: CouplingAnalyzer;
@@ -17,6 +18,7 @@ export class HealthEngine {
     private history: HealthHistory;
 
     constructor(repo: Repository, intent: IntentStore, db: SymbioteDB) {
+        this.repo = repo;
         this.cycleDetector = new CycleDetector(repo);
         this.deadCodeDetector = new DeadCodeDetector(repo);
         this.couplingAnalyzer = new CouplingAnalyzer(repo);
@@ -25,10 +27,16 @@ export class HealthEngine {
     }
 
     async analyze(): Promise<HealthReport> {
+        const [allNodes, allEdges] = await Promise.all([
+            this.repo.getAllNodes(),
+            this.repo.getAllEdges(),
+        ]);
+        const preFetched = { nodes: allNodes, edges: allEdges };
+
         const constraintResult = await this.constraintChecker.check();
-        const circularDeps = await this.cycleDetector.detect();
-        const deadCode = await this.deadCodeDetector.detect();
-        const couplingHotspots = await this.couplingAnalyzer.detect();
+        const circularDeps = await this.cycleDetector.detect(preFetched);
+        const deadCode = await this.deadCodeDetector.detect(preFetched);
+        const couplingHotspots = await this.couplingAnalyzer.detect(preFetched);
 
         const scored = computeHealthScore({
             constraintViolations: constraintResult.violations.length,

@@ -1,14 +1,15 @@
 import type { Repository } from '../../storage/repository.js';
 import type { CouplingHotspot } from './types.js';
+import type { PreFetchedData } from './cycle-detector.js';
 
 const HOTSPOT_THRESHOLD = 8;
 
 export class CouplingAnalyzer {
     constructor(private repo: Repository) {}
 
-    async detect(): Promise<CouplingHotspot[]> {
-        const allNodes = await this.repo.getAllNodes();
-        const allEdges = await this.repo.getAllEdges();
+    async detect(preFetched?: PreFetchedData): Promise<CouplingHotspot[]> {
+        const allNodes = preFetched?.nodes ?? (await this.repo.getAllNodes());
+        const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
         if (allEdges.length === 0) return [];
 
         const nodeToFile = new Map<string, string>();
