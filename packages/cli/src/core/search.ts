@@ -18,18 +18,36 @@ export interface SearchOptions {
     useVector?: boolean;
 }
 
+interface SearchRow extends Record<string, unknown> {
+    node_id: string;
+    score: number;
+}
+
+interface CountRow extends Record<string, unknown> {
+    count: number;
+}
+
 export class HybridSearch {
     private ftsReady = false;
+    private embeddingService: EmbeddingService | null = null;
 
     constructor(
         private db: SymbioteDB,
         private repo: Repository,
     ) {}
 
+    private async getEmbeddingService(): Promise<EmbeddingService> {
+        if (!this.embeddingService) {
+            this.embeddingService = new EmbeddingService();
+            await this.embeddingService.initialize();
+        }
+        return this.embeddingService;
+    }
+
     async textSearch(query: string, limit: number = 20): Promise<SearchResult[]> {
         await this.ensureFts();
 
-        const rows = (await this.db.all(
+        const rows = await this.db.all<SearchRow>(
             `SELECT node_id, MAX(score) as score FROM (
                 SELECT *, fts_main_nodes_fts.match_bm25(node_id, $1, fields := 'name') as score
                 FROM nodes_fts WHERE score IS NOT NULL
@@ -39,39 +57,38 @@ export class HybridSearch {
             ) GROUP BY node_id ORDER BY score DESC LIMIT $2`,
             query,
             limit,
-        )) as Array<{ node_id: string; score: number }>;
+        );
 
         if (rows.length === 0) return this.fallback(query, limit);
 
+        const ids = rows.map((r) => r.node_id);
+        const nodeMap = await this.repo.getNodesByIds(ids);
         const results: SearchResult[] = [];
         for (const row of rows) {
-            const node = await this.repo.getNodeById(row.node_id);
+            const node = nodeMap.get(row.node_id);
             if (node) results.push({ node, score: row.score, source: 'text' });
         }
         return results;
     }
 
     async vectorSearch(query: string, limit: number = 20): Promise<SearchResult[]> {
-        const svc = new EmbeddingService();
-        try {
-            await svc.initialize();
-            const qv = await svc.embed(query);
-            const rows = (await this.db.all(
-                `SELECT e.node_id, array_cosine_similarity(e.vector, $1::FLOAT[384]) as score
+        const svc = await this.getEmbeddingService();
+        const qv = await svc.embed(query);
+        const rows = await this.db.all<SearchRow>(
+            `SELECT e.node_id, array_cosine_similarity(e.vector, $1::FLOAT[384]) as score
                  FROM embeddings e WHERE e.vector IS NOT NULL ORDER BY score DESC LIMIT $2`,
-                JSON.stringify(qv),
-                limit,
-            )) as Array<{ node_id: string; score: number }>;
+            JSON.stringify(qv),
+            limit,
+        );
 
-            const results: SearchResult[] = [];
-            for (const row of rows) {
-                const node = await this.repo.getNodeById(row.node_id);
-                if (node) results.push({ node, score: row.score, source: 'vector' });
-            }
-            return results;
-        } finally {
-            svc.dispose();
+        const ids = rows.map((r) => r.node_id);
+        const nodeMap = await this.repo.getNodesByIds(ids);
+        const results: SearchResult[] = [];
+        for (const row of rows) {
+            const node = nodeMap.get(row.node_id);
+            if (node) results.push({ node, score: row.score, source: 'vector' });
         }
+        return results;
     }
 
     async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
@@ -94,9 +111,12 @@ export class HybridSearch {
         if (vectorRanked.length === 0) return textResults.slice(0, limit);
 
         const fused = HybridSearch.rrfFuse(textRanked, vectorRanked);
+        const topItems = fused.slice(0, limit);
+        const ids = topItems.map((item) => item.nodeId);
+        const nodeMap = await this.repo.getNodesByIds(ids);
         const results: SearchResult[] = [];
-        for (const item of fused.slice(0, limit)) {
-            const node = await this.repo.getNodeById(item.nodeId);
+        for (const item of topItems) {
+            const node = nodeMap.get(item.nodeId);
             if (node) results.push({ node, score: item.score, source: 'hybrid' });
         }
         return results;
@@ -142,8 +162,8 @@ export class HybridSearch {
 
     private async hasEmbeddings(): Promise<boolean> {
         try {
-            const rows = await this.db.all('SELECT COUNT(*) as count FROM embeddings');
-            return (rows[0] as { count: number }).count > 0;
+            const rows = await this.db.all<CountRow>('SELECT COUNT(*) as count FROM embeddings');
+            return rows[0].count > 0;
         } catch {
             return false;
         }

@@ -1,6 +1,20 @@
 import type { SymbioteDB } from '../../storage/db.js';
 import type { HealthSnapshot } from './types.js';
 
+interface SnapshotRow extends Record<string, unknown> {
+    id: number;
+    score: number;
+    constraint_score: number;
+    circular_dep_score: number;
+    dead_code_score: number;
+    coupling_score: number;
+    constraint_violation_count: number;
+    circular_dep_count: number;
+    dead_code_count: number;
+    coupling_hotspot_count: number;
+    created_at: string;
+}
+
 export interface SaveSnapshotInput {
     score: number;
     constraintScore: number;
@@ -38,22 +52,10 @@ export class HealthHistory {
     }
 
     async list(limit: number): Promise<HealthSnapshot[]> {
-        const rows = (await this.db.all(
+        const rows = await this.db.all<SnapshotRow>(
             'SELECT * FROM health_snapshots ORDER BY id DESC LIMIT $1',
             limit,
-        )) as Array<{
-            id: number;
-            score: number;
-            constraint_score: number;
-            circular_dep_score: number;
-            dead_code_score: number;
-            coupling_score: number;
-            constraint_violation_count: number;
-            circular_dep_count: number;
-            dead_code_count: number;
-            coupling_hotspot_count: number;
-            created_at: string;
-        }>;
+        );
 
         return rows.map((r) => ({
             id: r.id,

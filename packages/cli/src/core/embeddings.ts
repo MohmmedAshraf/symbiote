@@ -1,29 +1,35 @@
 import type { SymbioteDB } from '../storage/db.js';
 import type { NodeRecord } from '../storage/repository.js';
 
-type Pipeline = (
-    input: string,
-    opts?: { pooling: string; normalize: boolean },
+type PoolingType = 'none' | 'mean' | 'cls';
+
+type Extractor = (
+    text: string,
+    opts: { pooling: PoolingType; normalize: boolean },
 ) => Promise<{ data: Float32Array }>;
 
+async function loadExtractor(model: string): Promise<Extractor> {
+    const { pipeline } = await import('@huggingface/transformers');
+    const extractor = await pipeline('feature-extraction', model, { dtype: 'fp32' });
+    return (text: string, opts: { pooling: PoolingType; normalize: boolean }) =>
+        extractor(text, opts) as Promise<{ data: Float32Array }>;
+}
+
 export class EmbeddingService {
-    private pipeline: Pipeline | null = null;
+    private extractor: Extractor | null = null;
 
     async initialize(): Promise<void> {
-        const { pipeline } = await import('@huggingface/transformers');
-        this.pipeline = (await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
-            dtype: 'fp32',
-        })) as unknown as Pipeline;
+        this.extractor = await loadExtractor('Xenova/all-MiniLM-L6-v2');
     }
 
     async embed(text: string): Promise<number[]> {
-        if (!this.pipeline) throw new Error('EmbeddingService not initialized.');
-        const result = await this.pipeline(text, { pooling: 'mean', normalize: true });
+        if (!this.extractor) throw new Error('EmbeddingService not initialized.');
+        const result = await this.extractor(text, { pooling: 'mean', normalize: true });
         return Array.from(result.data);
     }
 
     dispose(): void {
-        this.pipeline = null;
+        this.extractor = null;
     }
 
     static buildEmbeddingText(name: string, body?: string): string {

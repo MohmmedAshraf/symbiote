@@ -24,23 +24,34 @@ export class SymbioteDB {
             return;
         }
         const prepared = await this.conn.prepare(sql);
-        for (let i = 0; i < params.length; i++) {
-            this.bindParam(prepared, i + 1, params[i]);
+        try {
+            for (let i = 0; i < params.length; i++) {
+                this.bindParam(prepared, i + 1, params[i]);
+            }
+            await prepared.run();
+        } finally {
+            prepared.destroySync();
         }
-        await prepared.run();
     }
 
-    async all(sql: string, ...params: unknown[]): Promise<Record<string, unknown>[]> {
+    async all<T extends Record<string, unknown> = Record<string, unknown>>(
+        sql: string,
+        ...params: unknown[]
+    ): Promise<T[]> {
         if (params.length === 0) {
             const reader = await this.conn.runAndReadAll(sql);
-            return reader.getRowObjects() as Record<string, unknown>[];
+            return reader.getRowObjects() as T[];
         }
         const prepared = await this.conn.prepare(sql);
-        for (let i = 0; i < params.length; i++) {
-            this.bindParam(prepared, i + 1, params[i]);
+        try {
+            for (let i = 0; i < params.length; i++) {
+                this.bindParam(prepared, i + 1, params[i]);
+            }
+            const result = await prepared.run();
+            return (await result.getRowObjects()) as T[];
+        } finally {
+            prepared.destroySync();
         }
-        const result = await prepared.run();
-        return (await result.getRowObjects()) as Record<string, unknown>[];
     }
 
     async close(): Promise<void> {
