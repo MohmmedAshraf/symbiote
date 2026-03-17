@@ -330,3 +330,30 @@ export async function createCortexSchema(db: SymbioteDB): Promise<void> {
     await db.exec(STAGE4_TABLES_DDL);
     await db.exec(SYMBOLS_VIEW_DDL);
 }
+
+export async function refreshSymbolsTable(db: SymbioteDB): Promise<void> {
+    try {
+        await db.exec('DROP VIEW IF EXISTS symbols;');
+    } catch {
+        /* may be a table */
+    }
+    try {
+        await db.exec('DROP TABLE IF EXISTS symbols;');
+    } catch {
+        /* may be a view */
+    }
+    await db.exec(`
+        CREATE TABLE symbols AS
+            SELECT id, name, file_path, line_start, line_end, 'function' AS kind FROM nodes_function
+            UNION ALL
+            SELECT id, name, file_path, line_start, line_end, 'class' AS kind FROM nodes_class
+            UNION ALL
+            SELECT id, name, file_path, line_start, line_end, 'method' AS kind FROM nodes_method
+            UNION ALL
+            SELECT id, name, file_path, line_start, line_end, 'interface' AS kind FROM nodes_interface
+            UNION ALL
+            SELECT id, name, file_path, line_start, line_end, 'type' AS kind FROM nodes_type
+            UNION ALL
+            SELECT id, name, file_path, line_start, line_end, 'variable' AS kind FROM nodes_variable;
+    `);
+}
