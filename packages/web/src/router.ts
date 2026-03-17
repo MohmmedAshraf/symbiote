@@ -2,9 +2,9 @@ import { lazy } from 'react';
 import { createRouter, createRootRoute, createRoute } from '@tanstack/react-router';
 import { App } from './app';
 
-const GraphView = lazy(() =>
-    import('./views/graph/graph-view').then((m) => ({
-        default: m.GraphView,
+const BrainView = lazy(() =>
+    import('./views/brain/brain-view').then((m) => ({
+        default: m.BrainView,
     })),
 );
 
@@ -22,10 +22,10 @@ const DnaView = lazy(() =>
 
 const rootRoute = createRootRoute({ component: App });
 
-const graphRoute = createRoute({
+const brainRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: GraphView,
+    component: BrainView,
 });
 
 const healthRoute = createRoute({
@@ -40,9 +40,12 @@ const dnaRoute = createRoute({
     component: DnaView,
 });
 
-const routeTree = rootRoute.addChildren([graphRoute, healthRoute, dnaRoute]);
+const routeTree = rootRoute.addChildren([brainRoute, healthRoute, dnaRoute]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+    routeTree,
+    defaultPreload: 'intent',
+});
 
 declare module '@tanstack/react-router' {
     interface Register {

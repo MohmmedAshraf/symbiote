@@ -9,8 +9,8 @@ export function App() {
             <Shell>
                 <Suspense
                     fallback={
-                        <div className="flex h-full items-center justify-center">
-                            <div className="text-sm text-text-muted">Loading...</div>
+                        <div className="flex h-full w-full items-center justify-center bg-surface-0">
+                            <div className="text-xs text-text-muted font-mono">Loading...</div>
                         </div>
                     }
                 >

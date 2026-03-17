@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import glsl from 'vite-plugin-glsl';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -17,7 +16,7 @@ function getBackendUrl(): string {
 }
 
 export default defineConfig({
-    plugins: [react(), tailwindcss(), glsl()],
+    plugins: [react(), tailwindcss()],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),
