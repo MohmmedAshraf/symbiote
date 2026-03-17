@@ -1,6 +1,6 @@
 import type { ServerContext } from '../context.js';
-import type { DnaEntry } from '../../dna/types.js';
-import type { ToolResponse } from '../../cortex/types.js';
+import type { DnaEntry } from '#dna/types.js';
+import type { ToolResponse } from '#cortex/types.js';
 import { wrapResponse } from '../tool-response.js';
 
 export interface GetDeveloperDnaInput {

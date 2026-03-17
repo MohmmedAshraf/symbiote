@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { walkFiles, hashFileContent } from '../../src/utils/files.js';
+import { walkFiles, hashFileContent } from '#utils/files.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures');
 

@@ -1,4 +1,4 @@
-import type { Repository, NodeRecord, EdgeRecord } from '../../storage/repository.js';
+import type { Repository, NodeRecord, EdgeRecord } from '#storage/repository.js';
 import type { CircularDep } from './types.js';
 
 export interface PreFetchedData {

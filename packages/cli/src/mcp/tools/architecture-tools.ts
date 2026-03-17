@@ -1,11 +1,11 @@
-import type { CortexRepository } from '../../cortex/repository.js';
+import type { CortexRepository } from '#cortex/repository.js';
 import type {
     Finding,
     FindingKind,
     FindingSeverity,
     ArchitectureOverview,
     ToolResponse,
-} from '../../cortex/types.js';
+} from '#cortex/types.js';
 
 export interface FindPatternsInput {
     scope: string;

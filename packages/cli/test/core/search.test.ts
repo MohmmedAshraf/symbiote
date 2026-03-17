@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import { Repository } from '../../src/storage/repository.js';
-import { HybridSearch } from '../../src/core/search.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { HybridSearch } from '#core/search.js';
 
 const TEST_NODES = [
     {

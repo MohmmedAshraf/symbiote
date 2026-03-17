@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { CortexRepository } from '../../cortex/repository.js';
-import type { ToolResponse } from '../../cortex/types.js';
+import type { CortexRepository } from '#cortex/repository.js';
+import type { ToolResponse } from '#cortex/types.js';
 import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface RenameToolContext {

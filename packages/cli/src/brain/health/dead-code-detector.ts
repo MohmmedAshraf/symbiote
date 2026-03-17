@@ -1,14 +1,14 @@
-import type { Repository } from '../../storage/repository.js';
+import type { Repository } from '#storage/repository.js';
 import type { DeadCodeEntry } from './types.js';
 import type { PreFetchedData } from './cycle-detector.js';
 
-const ENTRY_POINT_PATTERNS = [
-    /^index\.[jt]sx?$/,
-    /^main\.[jt]sx?$/,
-    /^app\.[jt]sx?$/,
-    /^server\.[jt]sx?$/,
-    /^cli\.[jt]sx?$/,
-];
+const TRACKABLE_KINDS = new Set(['function', 'class', 'method', 'type', 'interface', 'variable']);
+
+const ENTRY_POINT_NAMES = new Set(['main', 'cli', 'handler', 'run', 'start', 'app', 'server']);
+
+function isTestFile(filePath: string): boolean {
+    return /\/test\/|\.test\.|\.spec\./.test(filePath);
+}
 
 export class DeadCodeDetector {
     constructor(private repo: Repository) {}
@@ -18,35 +18,64 @@ export class DeadCodeDetector {
         if (allNodes.length === 0) return [];
 
         const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
-        const referencedIds = new Set<string>();
-        const importedFiles = new Set<string>();
+
+        const nodeById = new Map(allNodes.map((n) => [n.id, n]));
+
+        const productionInbound = new Set<string>();
+        const callerMap = new Map<string, Set<string>>();
 
         for (const edge of allEdges) {
-            referencedIds.add(edge.targetId);
-            if (edge.type === 'imports' && edge.targetId.startsWith('file:')) {
-                importedFiles.add(edge.targetId.slice(5));
+            if (edge.type === 'contains') continue;
+
+            const sourceNode = nodeById.get(edge.sourceId);
+            const fromTest = sourceNode
+                ? isTestFile(sourceNode.filePath)
+                : isTestFile(edge.sourceId);
+
+            if (!fromTest) {
+                productionInbound.add(edge.targetId);
             }
+
+            let callers = callerMap.get(edge.targetId);
+            if (!callers) {
+                callers = new Set();
+                callerMap.set(edge.targetId, callers);
+            }
+            callers.add(edge.sourceId);
         }
 
+        const deadSet = new Set<string>();
         const dead: DeadCodeEntry[] = [];
 
         for (const node of allNodes) {
-            if (node.type !== 'function' && node.type !== 'class' && node.type !== 'method') {
-                continue;
-            }
+            if (!TRACKABLE_KINDS.has(node.type)) continue;
+            if (productionInbound.has(node.id)) continue;
+            if (ENTRY_POINT_NAMES.has(node.name)) continue;
 
-            if (referencedIds.has(node.id)) continue;
-            if (this.isEntryPointFile(node.filePath)) continue;
-            if (importedFiles.has(node.filePath)) continue;
-
+            deadSet.add(node.id);
             dead.push({ node, reason: 'No dependents found' });
         }
 
-        return dead;
-    }
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (const node of allNodes) {
+                if (!TRACKABLE_KINDS.has(node.type)) continue;
+                if (deadSet.has(node.id)) continue;
+                if (ENTRY_POINT_NAMES.has(node.name)) continue;
 
-    private isEntryPointFile(filePath: string): boolean {
-        const fileName = filePath.split('/').pop() ?? '';
-        return ENTRY_POINT_PATTERNS.some((pattern) => pattern.test(fileName));
+                const callers = callerMap.get(node.id);
+                if (!callers) continue;
+
+                const allCallersDead = [...callers].every((cid) => deadSet.has(cid));
+                if (!allCallersDead) continue;
+
+                deadSet.add(node.id);
+                dead.push({ node, reason: 'Only referenced by dead code' });
+                changed = true;
+            }
+        }
+
+        return dead;
     }
 }

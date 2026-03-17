@@ -1,10 +1,10 @@
-import { ImpactAnalyzer } from '../../core/impact.js';
-import { GitImpactAnalyzer } from '../../core/git-impact.js';
-import type { ImpactResult } from '../../core/impact.js';
-import type { GitImpactResult } from '../../core/git-impact.js';
-import type { GraphInstance } from '../../core/types.js';
-import type { CortexRepository } from '../../cortex/repository.js';
-import type { ToolResponse } from '../../cortex/types.js';
+import { ImpactAnalyzer } from '#core/impact.js';
+import { GitImpactAnalyzer } from '#core/git-impact.js';
+import type { ImpactResult } from '#core/impact.js';
+import type { GitImpactResult } from '#core/git-impact.js';
+import type { GraphInstance } from '#core/types.js';
+import type { CortexRepository } from '#cortex/repository.js';
+import type { ToolResponse } from '#cortex/types.js';
 import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface ImpactToolContext {

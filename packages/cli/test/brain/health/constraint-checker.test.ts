@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { Repository } from '../../../src/storage/repository.js';
-import { IntentStore } from '../../../src/brain/intent.js';
-import { Scanner } from '../../../src/core/scanner.js';
-import { ConstraintChecker } from '../../../src/brain/health/constraint-checker.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { IntentStore } from '#brain/intent.js';
+import { Scanner } from '#core/scanner.js';
+import { ConstraintChecker } from '#brain/health/constraint-checker.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../../fixtures/health-project');
 

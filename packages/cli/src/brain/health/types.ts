@@ -1,4 +1,4 @@
-import type { NodeRecord } from '../../storage/repository.js';
+import type { NodeRecord } from '#storage/repository.js';
 
 export interface ConstraintViolation {
     constraintId: string;
@@ -31,6 +31,10 @@ export interface CouplingHotspot {
     outgoingEdges: number;
     totalEdges: number;
     coupledFiles: string[];
+    fanIn: number;
+    fanOut: number;
+    weightedCount: number;
+    kind: 'fan-in' | 'fan-out' | 'both';
 }
 
 export interface CategoryScore {

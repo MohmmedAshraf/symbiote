@@ -1,12 +1,13 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { Repository } from '../storage/repository.js';
-import { Scanner } from '../core/scanner.js';
-import { ensureBrainDir, ensureSymbioteHome, getBrainDbPath } from '../utils/config.js';
+import { ensureBrainDir, ensureSymbioteHome, getBrainDbPath } from '#utils/config.js';
 import { createDatabaseWithRetry } from './shared.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { CortexEngine } from '#cortex/engine.js';
+import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
 
 export async function cmdInit(): Promise<void> {
-    const { SmartInit } = await import('../init/index.js');
+    const { SmartInit } = await import('#init/index.js');
 
     const projectRoot = process.cwd();
 
@@ -17,18 +18,29 @@ export async function cmdInit(): Promise<void> {
 
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabaseWithRetry(dbPath);
-    const repo = new Repository(db);
-    const scanner = new Scanner(repo, db);
+
+    await createCortexSchema(db);
+
+    const cortexRepo = new CortexRepository(db);
+    const engine = new CortexEngine(cortexRepo);
 
     const s1 = p.spinner();
-    s1.start('Scanning codebase...');
-    const scanResult = await scanner.scan(projectRoot, { embeddings: true });
-    if (scanResult.filesScanned === 0 && scanResult.filesSkipped > 0) {
-        s1.stop(`Up to date ${pc.dim(`(${scanResult.filesSkipped} files, no changes)`)}`);
+    s1.start('Scanning codebase (cortex pipeline)...');
+    const scanResult = await engine.run({
+        rootDir: projectRoot,
+        force: false,
+    });
+
+    await refreshSymbolsTable(db);
+
+    if (scanResult.totalFiles === 0) {
+        s1.stop(`Up to date ${pc.dim('(no changes)')}`);
     } else {
         s1.stop(
-            `${scanResult.filesScanned} files` +
-                pc.dim(` · ${scanResult.nodesCreated} nodes · ${scanResult.edgesCreated} edges`),
+            `Depth ${scanResult.maxDepth + 1}/8` +
+                pc.dim(
+                    ` · ${scanResult.totalFiles} files · ${scanResult.totalNodes} nodes · ${scanResult.totalEdges} edges`,
+                ),
         );
     }
 
@@ -38,7 +50,14 @@ export async function cmdInit(): Promise<void> {
         projectRoot,
         symbioteHome,
         brainDir,
-        scanResult,
+        scanResult: {
+            filesScanned: scanResult.totalFiles,
+            filesSkipped: 0,
+            nodesCreated: scanResult.totalNodes,
+            edgesCreated: scanResult.totalEdges,
+            embeddingsGenerated: 0,
+            errors: [],
+        },
     });
     const result = await init.run();
     s2.stop('Project analyzed');
@@ -51,14 +70,14 @@ export async function cmdInit(): Promise<void> {
     }
     if (result.techStack.length > 0) {
         lines.push(
-            `${pc.dim('Tech stack:')}      ${result.techStack.map((t) => t.name).join(', ')}`,
+            `${pc.dim('Tech stack:')}      ${result.techStack.map((t: { name: string }) => t.name).join(', ')}`,
         );
     }
     if (result.architectureSignals.length > 0) {
         lines.push(
             `${pc.dim('Architecture:')}    ${result.architectureSignals
                 .slice(0, 3)
-                .map((s) => s.pattern)
+                .map((s: { pattern: string }) => s.pattern)
                 .join(', ')}`,
         );
     }
@@ -77,12 +96,8 @@ export async function cmdInit(): Promise<void> {
         p.log.info(lines.join('\n'));
     }
 
-    if (scanResult.errors.length > 0) {
-        p.log.warn(`${scanResult.errors.length} files had parse errors.`);
-    }
-
     const { detectInstalledAgents, isBonded, connectWithHooks, ensureClaudeHooks } =
-        await import('../init/agent-connector.js');
+        await import('#init/agent-connector.js');
 
     const agents = detectInstalledAgents();
     const installed = agents.filter((a) => a.installed);
@@ -128,19 +143,19 @@ export async function cmdInit(): Promise<void> {
                 for (const agent of toBond) {
                     const s3 = p.spinner();
                     s3.start(`Bonding with ${agent.name}...`);
-                    const result = connectWithHooks(agent);
-                    if (result.mcp.success && result.hooks.success) {
+                    const bondResult = connectWithHooks(agent);
+                    if (bondResult.mcp.success && bondResult.hooks.success) {
                         const detail =
                             agent.id === 'claude-code'
                                 ? 'MCP server added, hooks installed'
                                 : 'MCP config written';
                         s3.stop(`${agent.name} — ${detail}`);
-                    } else if (result.mcp.success) {
+                    } else if (bondResult.mcp.success) {
                         s3.stop(`${agent.name} — MCP server added`);
                         p.log.warn(`Hooks failed — run \`symbiote hooks install\` manually`);
                     } else {
                         s3.stop(`${agent.name} — failed`);
-                        p.log.error(result.mcp.message);
+                        p.log.error(bondResult.mcp.message);
                     }
                 }
             }

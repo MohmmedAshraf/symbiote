@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parsePackageJson } from '../../../src/init/parsers/package-json.js';
-import type { TechStackEntry } from '../../../src/init/parsers/types.js';
+import { parsePackageJson } from '#init/parsers/package-json.js';
+import type { TechStackEntry } from '#init/parsers/types.js';
 
 describe('parsePackageJson', () => {
     it('detects Next.js as framework', () => {

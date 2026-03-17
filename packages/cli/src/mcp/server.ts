@@ -1,6 +1,10 @@
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { ImpactAnalyzer } from '#core/impact.js';
 import type { ServerContext } from './context.js';
 import { handleGetDeveloperDna } from './tools/dna-tools.js';
 import {
@@ -12,7 +16,6 @@ import {
 } from './tools/project-tools.js';
 import { handleGetHealth } from './tools/health-tools.js';
 import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
-import { ImpactAnalyzer } from '../core/impact.js';
 import { registerTraceTools } from './tools/trace-tools.js';
 import { handleFindPatterns, handleGetArchitecture } from './tools/architecture-tools.js';
 import {
@@ -27,8 +30,18 @@ import {
     handleProjectHealthResource,
 } from './resources.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-const { version } = require('../../package.json') as { version: string };
+
+function findPackageJson(dir: string): string {
+    const candidate = path.join(dir, 'package.json');
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) throw new Error('package.json not found');
+    return findPackageJson(parent);
+}
+
+const { version } = require(findPackageJson(__dirname)) as { version: string };
 
 function textResult(data: unknown): { type: 'text'; text: string } {
     return { type: 'text', text: JSON.stringify(data, null, 2) };

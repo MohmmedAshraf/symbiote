@@ -1,13 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { resolve } from 'path';
-import { createDatabase, SymbioteDB } from '../../../src/storage/db.js';
-import { createCortexSchema } from '../../../src/cortex/schema.js';
-import { CortexRepository } from '../../../src/cortex/repository.js';
-import { CortexEngine } from '../../../src/cortex/engine.js';
-import {
-    handleFindPatterns,
-    handleGetArchitecture,
-} from '../../../src/mcp/tools/architecture-tools.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { CortexEngine } from '#cortex/engine.js';
+import { handleFindPatterns, handleGetArchitecture } from '#mcp/tools/architecture-tools.js';
 
 const TOPOLOGY = resolve(__dirname, '../../fixtures/cortex/topology');
 

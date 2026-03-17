@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { importRules } from '../../src/init/rule-importer.js';
+import { importRules } from '#init/rule-importer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = resolve(__dirname, '../fixtures/init-project');

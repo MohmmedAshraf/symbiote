@@ -1,4 +1,4 @@
-import type { SymbioteDB } from '../storage/db.js';
+import type { SymbioteDB } from '#storage/db.js';
 
 const MUTATING_KEYWORDS = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|REPLACE)\b/i;
 const MULTI_STATEMENT = /;/;

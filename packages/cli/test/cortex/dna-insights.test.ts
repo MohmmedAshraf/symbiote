@@ -3,8 +3,8 @@ import {
     detectStyleDeviations,
     detectDecisionContradictions,
     predictImpact,
-} from '../../src/cortex/stage-7-intelligence.js';
-import type { DnaEntry } from '../../src/dna/types.js';
+} from '#cortex/stage-7-intelligence.js';
+import type { DnaEntry } from '#dna/types.js';
 
 describe('DNA-Informed Insights', () => {
     describe('detectStyleDeviations', () => {

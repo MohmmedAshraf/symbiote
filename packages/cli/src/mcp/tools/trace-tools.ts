@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { CortexRepository } from '../../cortex/repository.js';
+import type { CortexRepository } from '#cortex/repository.js';
 
 interface SymbolInfo {
     id: string;
@@ -116,6 +116,32 @@ async function traceExecutionFlow(
             if (!visited.has(flow.targetId) && depth + 1 < maxDepth) {
                 queue.push({ id: flow.targetId, depth: depth + 1 });
             }
+        }
+
+        const reads = await repo.getReadsFrom(id);
+        for (const r of reads) {
+            const sym = await repo.getSymbolById(r.targetId);
+            steps.push({
+                symbolId: r.targetId,
+                symbol: sym,
+                depth: depth + 1,
+                edgeType: 'reads',
+                isAsync: false,
+                confidence: r.confidence,
+            });
+        }
+
+        const writes = await repo.getWritesFrom(id);
+        for (const w of writes) {
+            const sym = await repo.getSymbolById(w.targetId);
+            steps.push({
+                symbolId: w.targetId,
+                symbol: sym,
+                depth: depth + 1,
+                edgeType: 'writes',
+                isAsync: false,
+                confidence: w.confidence,
+            });
         }
 
         if (includeErrors) {

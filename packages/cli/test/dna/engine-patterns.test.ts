@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { DnaEngine } from '../../src/dna/engine.js';
-import { DnaStorage } from '../../src/dna/storage.js';
-import { EmbeddingModel } from '../../src/dna/embeddings.js';
+import { DnaEngine } from '#dna/engine.js';
+import { DnaStorage } from '#dna/storage.js';
+import { EmbeddingModel } from '#dna/embeddings.js';
 
 const SIMILARITY_THRESHOLD_FOR_TEST = 0.5;
 

@@ -4,11 +4,11 @@ import { importRules } from './rule-importer.js';
 import { analyzeProject } from './project-analyzer.js';
 import { bootstrapDna } from './dna-bootstrap.js';
 import { generateSmartOverview } from './overview-generator.js';
-import { IntentStore } from '../brain/intent.js';
-import { slugify } from '../utils/strings.js';
-import type { IntentEntry, IntentType } from '../brain/intent.js';
+import { IntentStore } from '#brain/intent.js';
+import { slugify } from '#utils/strings.js';
+import type { IntentEntry, IntentType } from '#brain/intent.js';
 import type { ClassifiedRule, TechStackEntry, ArchitectureSignal } from './parsers/types.js';
-import type { ScanResult } from '../core/scanner.js';
+import type { ScanResult } from '#core/scanner.js';
 
 export interface SmartInitOptions {
     projectRoot: string;

@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { Scanner } from '../../../src/core/scanner.js';
-import { createServerContext, type ServerContext } from '../../../src/mcp/context.js';
-import { handleGetHealth } from '../../../src/mcp/tools/health-tools.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Scanner } from '#core/scanner.js';
+import { createServerContext, type ServerContext } from '#mcp/context.js';
+import { handleGetHealth } from '#mcp/tools/health-tools.js';
 
 const FIXTURES_SRC = path.join(import.meta.dirname, '../../fixtures/brain-project/src');
 const FIXTURES_BRAIN = path.join(import.meta.dirname, '../../fixtures/brain-project/.brain');

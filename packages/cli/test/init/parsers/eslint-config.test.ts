@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseEslintConfig } from '../../../src/init/parsers/eslint-config.js';
+import { parseEslintConfig } from '#init/parsers/eslint-config.js';
 
 describe('parseEslintConfig', () => {
     it('classifies error rules as constraints', () => {

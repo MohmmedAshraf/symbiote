@@ -2,8 +2,8 @@ import { createRequire } from 'node:module';
 import { CortexRepository } from './repository.js';
 import type { StageResult, StageError } from './types.js';
 import type { ExecutionFlow, LayerAssignment, LayerKind } from './topology-types.js';
-import { Graph } from '../core/types.js';
-import type { GraphInstance } from '../core/types.js';
+import { Graph } from '#core/types.js';
+import type { GraphInstance } from '#core/types.js';
 
 const req = createRequire(import.meta.url);
 const louvain = req('graphology-communities-louvain');

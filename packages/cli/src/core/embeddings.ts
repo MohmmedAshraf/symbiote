@@ -1,5 +1,5 @@
-import type { SymbioteDB } from '../storage/db.js';
-import type { NodeRecord } from '../storage/repository.js';
+import type { SymbioteDB } from '#storage/db.js';
+import type { NodeRecord } from '#storage/repository.js';
 
 type PoolingType = 'none' | 'mean' | 'cls';
 

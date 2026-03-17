@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
-import { getGrammar } from '../core/languages.js';
+import { getGrammar } from '#core/languages.js';
 import { CortexRepository } from './repository.js';
 import type {
     StageResult,

@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import type { Repository } from '../../storage/repository.js';
+import type { Repository } from '#storage/repository.js';
 import type { IntentStore, IntentEntry } from '../intent.js';
-import { detectLanguage, getGrammar } from '../../core/languages.js';
+import { detectLanguage, getGrammar } from '#core/languages.js';
 import type { ConstraintViolation, DescriptiveConstraint } from './types.js';
 
 const require = createRequire(import.meta.url);

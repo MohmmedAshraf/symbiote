@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
-import { EventBus } from '../../src/events/bus.js';
-import { createEvent } from '../../src/events/types.js';
-import { handleInternalEvent, handleSseConnection } from '../../src/mcp/http-api.js';
+import { EventBus } from '#events/bus.js';
+import { createEvent } from '#events/types.js';
+import { handleInternalEvent, handleSseConnection } from '#mcp/http-api.js';
 
 describe('SSE + Internal Events', () => {
     let server: http.Server;

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import Graph from 'graphology';
-import { PreToolUseHandler } from '../../src/hooks/pre-tool-use.js';
-import { PostToolUseHandler } from '../../src/hooks/post-tool-use.js';
-import type { PreToolUsePayload, PostToolUsePayload } from '../../src/hooks/types.js';
+import { PreToolUseHandler } from '#hooks/pre-tool-use.js';
+import { PostToolUseHandler } from '#hooks/post-tool-use.js';
+import type { PreToolUsePayload, PostToolUsePayload } from '#hooks/types.js';
 
 function buildGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });

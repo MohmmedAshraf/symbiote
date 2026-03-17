@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { Repository } from '../../../src/storage/repository.js';
-import { CycleDetector } from '../../../src/brain/health/cycle-detector.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { CycleDetector } from '#brain/health/cycle-detector.js';
 
 describe('CycleDetector', () => {
     let db: SymbioteDB;

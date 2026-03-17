@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { Repository } from '../../../src/storage/repository.js';
-import { Scanner } from '../../../src/core/scanner.js';
-import { IntentStore } from '../../../src/brain/intent.js';
-import { HealthEngine } from '../../../src/brain/health/index.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { Scanner } from '#core/scanner.js';
+import { IntentStore } from '#brain/intent.js';
+import { HealthEngine } from '#brain/health/index.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../../fixtures/brain-project');
 

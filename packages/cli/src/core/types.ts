@@ -14,6 +14,7 @@ export interface GraphInstance {
     addEdge(source: string, target: string, attrs?: Record<string, unknown>): void;
     hasEdge(source: string, target: string): boolean;
     getNodeAttribute(id: string, attr: string): unknown;
+    setNodeAttribute(id: string, attr: string, value: unknown): void;
     getNodeAttributes(id: string): Record<string, unknown>;
     forEachNode(cb: (id: string, attrs: Record<string, unknown>) => void): void;
     forEachEdge(

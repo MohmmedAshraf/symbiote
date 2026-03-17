@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { Repository } from '../../../src/storage/repository.js';
-import { DeadCodeDetector } from '../../../src/brain/health/dead-code-detector.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { DeadCodeDetector } from '#brain/health/dead-code-detector.js';
 
 describe('DeadCodeDetector', () => {
     let db: SymbioteDB;
@@ -78,13 +78,13 @@ describe('DeadCodeDetector', () => {
         ]);
 
         const dead = await detector.detect();
-        expect(dead.length).toBe(2);
+        expect(dead.length).toBe(1);
         const deadNames = dead.map((d) => d.node.name);
-        expect(deadNames).toContain('main');
+        expect(deadNames).not.toContain('main');
         expect(deadNames).toContain('orphan');
     });
 
-    it('excludes entry point files from dead code', async () => {
+    it('exempts entry-point-named symbols but catches others in the same file', async () => {
         await repo.insertNodes([
             {
                 id: 'fn:index.ts:main',
@@ -110,13 +110,22 @@ describe('DeadCodeDetector', () => {
                 lineStart: 1,
                 lineEnd: 5,
             },
+            {
+                id: 'fn:index.ts:unusedInEntry',
+                type: 'function',
+                name: 'unusedInEntry',
+                filePath: 'index.ts',
+                lineStart: 6,
+                lineEnd: 10,
+            },
         ]);
 
         const dead = await detector.detect();
-        const deadFiles = dead.map((d) => d.node.filePath);
-        expect(deadFiles).not.toContain('index.ts');
-        expect(deadFiles).not.toContain('main.ts');
-        expect(deadFiles).not.toContain('app.ts');
+        const deadNames = dead.map((d) => d.node.name);
+        expect(deadNames).not.toContain('main');
+        expect(deadNames).not.toContain('run');
+        expect(deadNames).not.toContain('start');
+        expect(deadNames).toContain('unusedInEntry');
     });
 
     it('detects unreferenced classes', async () => {
@@ -167,5 +176,96 @@ describe('DeadCodeDetector', () => {
         const dead = await detector.detect();
         expect(dead.length).toBe(1);
         expect(dead[0].reason).toBe('No dependents found');
+    });
+
+    it('detects unreferenced types, interfaces, and variables', async () => {
+        await repo.insertNodes([
+            {
+                id: 'type:utils.ts:Config',
+                type: 'type',
+                name: 'Config',
+                filePath: 'src/utils.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
+            {
+                id: 'iface:utils.ts:Logger',
+                type: 'interface',
+                name: 'Logger',
+                filePath: 'src/utils.ts',
+                lineStart: 6,
+                lineEnd: 10,
+            },
+            {
+                id: 'var:utils.ts:TIMEOUT',
+                type: 'variable',
+                name: 'DEFAULT_TIMEOUT',
+                filePath: 'src/utils.ts',
+                lineStart: 11,
+                lineEnd: 11,
+            },
+        ]);
+        const dead = await detector.detect();
+        const deadNames = dead.map((d) => d.node.name);
+        expect(deadNames).toContain('Config');
+        expect(deadNames).toContain('Logger');
+        expect(deadNames).toContain('DEFAULT_TIMEOUT');
+    });
+
+    it('detects transitively dead code', async () => {
+        await repo.insertNodes([
+            {
+                id: 'fn:lib.ts:deadHelper',
+                type: 'function',
+                name: 'deadHelper',
+                filePath: 'src/lib.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
+            {
+                id: 'fn:lib.ts:alsoDeadCaller',
+                type: 'function',
+                name: 'alsoDeadCaller',
+                filePath: 'src/lib.ts',
+                lineStart: 6,
+                lineEnd: 10,
+            },
+        ]);
+        await repo.insertEdges([
+            {
+                sourceId: 'fn:lib.ts:alsoDeadCaller',
+                targetId: 'fn:lib.ts:deadHelper',
+                type: 'calls',
+            },
+        ]);
+        const dead = await detector.detect();
+        const deadNames = dead.map((d) => d.node.name);
+        expect(deadNames).toContain('deadHelper');
+        expect(deadNames).toContain('alsoDeadCaller');
+    });
+
+    it('only exempts entry-point-named symbols, not all exports in entry files', async () => {
+        await repo.insertNodes([
+            {
+                id: 'fn:index.ts:main',
+                type: 'function',
+                name: 'main',
+                filePath: 'index.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            },
+            {
+                id: 'fn:index.ts:unusedHelper',
+                type: 'function',
+                name: 'unusedHelper',
+                filePath: 'index.ts',
+                lineStart: 6,
+                lineEnd: 10,
+            },
+        ]);
+        const dead = await detector.detect();
+        const deadNames = dead.map((d) => d.node.name);
+        expect(deadNames).not.toContain('main');
+        expect(deadNames).toContain('unusedHelper');
     });
 });

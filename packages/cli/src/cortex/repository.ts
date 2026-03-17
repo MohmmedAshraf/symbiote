@@ -1,4 +1,4 @@
-import type { SymbioteDB } from '../storage/db.js';
+import type { SymbioteDB } from '#storage/db.js';
 import type {
     FileNode,
     FunctionNode,
@@ -273,8 +273,11 @@ export class CortexRepository {
 
     async upsertFileNode(node: FileNode): Promise<void> {
         await this.db.run(
-            `INSERT OR REPLACE INTO nodes_file (id, path, hash, language, depth_level, last_indexed)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+            `INSERT INTO nodes_file (id, path, hash, language, depth_level, last_indexed)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO UPDATE SET path = excluded.path, hash = excluded.hash,
+             language = excluded.language, depth_level = excluded.depth_level,
+             last_indexed = excluded.last_indexed`,
             node.id,
             node.path,
             node.hash,
@@ -334,6 +337,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_function (id, name, qualified_name, file_path, line_start, line_end, is_async, is_exported, is_entry_point, entry_point_score, signature, community, page_rank, betweenness) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -358,6 +362,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_class (id, name, file_path, line_start, line_end, is_abstract, is_exported, community, page_rank, betweenness) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -385,6 +390,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_method (id, name, class_name, qualified_name, file_path, line_start, line_end, visibility, is_static, is_async, community, page_rank, betweenness) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -405,6 +411,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_interface (id, name, file_path, line_start, line_end, is_exported) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -426,6 +433,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_type (id, name, kind, file_path, line_start, line_end, is_exported) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -448,6 +456,7 @@ export class CortexRepository {
                 ],
             }),
             `INSERT INTO nodes_variable (id, name, scope, file_path, line_start, line_end, is_exported, inferred_type) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -460,7 +469,8 @@ export class CortexRepository {
                 placeholder: `($${offset + 1}, $${offset + 2}, $${offset + 3})`,
                 params: [node.id, node.path, node.isBarrel],
             }),
-            `INSERT OR REPLACE INTO nodes_module (id, path, is_barrel) VALUES`,
+            `INSERT INTO nodes_module (id, path, is_barrel) VALUES`,
+            'ON CONFLICT (id) DO NOTHING',
         );
     }
 
@@ -803,7 +813,7 @@ export class CortexRepository {
                 placeholder: `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
                 params: [c.symbolId, c.typeName, c.source, c.confidence, c.filePath, c.line],
             }),
-            `INSERT OR IGNORE INTO type_constraints (symbol_id, type_name, source, confidence, file_path, line) VALUES`,
+            `INSERT INTO type_constraints (symbol_id, type_name, source, confidence, file_path, line) VALUES`,
         );
     }
 
@@ -1263,7 +1273,7 @@ export class CortexRepository {
     async setSymbolTable(fileId: string, table: Map<string, SymbolTableEntry>): Promise<void> {
         const serialized = JSON.stringify([...table.entries()]);
         await this.db.run(
-            `INSERT OR REPLACE INTO cortex_meta (key, value) VALUES ($1, $2)`,
+            `INSERT INTO cortex_meta (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
             `symbol_table:${fileId}`,
             serialized,
         );
@@ -1285,8 +1295,10 @@ export class CortexRepository {
             for (const flow of flows) {
                 const listLiteral = `[${flow.nodeIds.map((n) => `'${n.replace(/'/g, "''")}'`).join(', ')}]`;
                 await this.db.run(
-                    `INSERT OR REPLACE INTO cortex_flows (id, name, entry_point_id, node_ids, has_async, has_error_path)
-                     VALUES ($1, $2, $3, ${listLiteral}::VARCHAR[], $4, $5)`,
+                    `INSERT INTO cortex_flows (id, name, entry_point_id, node_ids, has_async, has_error_path)
+                     VALUES ($1, $2, $3, ${listLiteral}::VARCHAR[], $4, $5)
+                     ON CONFLICT (id) DO UPDATE SET name = excluded.name, node_ids = excluded.node_ids,
+                     has_async = excluded.has_async, has_error_path = excluded.has_error_path`,
                     flow.id,
                     flow.name,
                     flow.entryPointId,
@@ -1330,6 +1342,7 @@ export class CortexRepository {
         colCount: number,
         mapItem: (item: T, offset: number) => { placeholder: string; params: unknown[] },
         sqlPrefix: string,
+        sqlSuffix: string = '',
     ): Promise<void> {
         await this.db.exec('BEGIN TRANSACTION');
         try {
@@ -1343,7 +1356,10 @@ export class CortexRepository {
                     placeholders.push(mapped.placeholder);
                     params.push(...mapped.params);
                 }
-                await this.db.run(`${sqlPrefix} ${placeholders.join(', ')}`, ...params);
+                await this.db.run(
+                    `${sqlPrefix} ${placeholders.join(', ')}${sqlSuffix ? ' ' + sqlSuffix : ''}`,
+                    ...params,
+                );
             }
             await this.db.exec('COMMIT');
         } catch (err) {
@@ -1681,7 +1697,7 @@ export class CortexRepository {
 
     async setMeta(key: string, value: string): Promise<void> {
         await this.db.run(
-            'INSERT OR REPLACE INTO cortex_meta (key, value) VALUES ($1, $2)',
+            'INSERT INTO cortex_meta (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
             key,
             value,
         );

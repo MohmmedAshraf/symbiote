@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { detectLanguage, getGrammar } from './languages.js';
-import type { NodeRecord, EdgeRecord } from '../storage/repository.js';
+import type { NodeRecord, EdgeRecord } from '#storage/repository.js';
 
 const cjsRequire = createRequire(import.meta.url);
 const Parser = cjsRequire('tree-sitter');

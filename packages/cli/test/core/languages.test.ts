@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectLanguage, getGrammar, SUPPORTED_LANGUAGES } from '../../src/core/languages.js';
+import { detectLanguage, getGrammar, SUPPORTED_LANGUAGES } from '#core/languages.js';
 
 describe('detectLanguage', () => {
     it('detects JavaScript files', () => {

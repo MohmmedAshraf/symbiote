@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { DnaStorage } from '../dna/storage.js';
-import { DnaEngine } from '../dna/engine.js';
-import type { DnaEntry } from '../dna/types.js';
+import { DnaStorage } from '#dna/storage.js';
+import { DnaEngine } from '#dna/engine.js';
+import type { DnaEntry } from '#dna/types.js';
 import type { ClassifiedRule } from './parsers/types.js';
 
 export interface DnaBootstrapResult {

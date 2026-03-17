@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { IntentStore, type IntentEntry } from '../../src/brain/intent.js';
+import { IntentStore, type IntentEntry } from '#brain/intent.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures/brain-project/.brain');
 

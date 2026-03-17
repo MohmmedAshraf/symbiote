@@ -1,7 +1,7 @@
 import type { ServerContext } from '../context.js';
-import type { NodeRecord } from '../../storage/repository.js';
-import type { IntentEntry } from '../../brain/intent.js';
-import type { ToolResponse } from '../../cortex/types.js';
+import type { NodeRecord } from '#storage/repository.js';
+import type { IntentEntry } from '#brain/intent.js';
+import type { ToolResponse } from '#cortex/types.js';
 import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface ProjectOverviewOutput {

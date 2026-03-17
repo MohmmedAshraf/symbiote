@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { RealTimeEnrichment } from '../../src/cortex/real-time-enrichment.js';
-import type { AttentionWeight, InvestigationContext } from '../../src/cortex/topology-types.js';
+import { RealTimeEnrichment } from '#cortex/real-time-enrichment.js';
+import type { AttentionWeight, InvestigationContext } from '#cortex/topology-types.js';
 
 describe('RealTimeEnrichment', () => {
     let enrichment: RealTimeEnrichment;

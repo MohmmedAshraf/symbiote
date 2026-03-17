@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import http from 'node:http';
-import { sendEvent } from '../../src/events/ipc.js';
-import { createEvent } from '../../src/events/types.js';
+import { sendEvent } from '#events/ipc.js';
+import { createEvent } from '#events/types.js';
 
 describe('IPC Client', () => {
     let server: http.Server;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PostToolUseHandler } from '../../src/hooks/post-tool-use.js';
-import { PostToolUsePayload } from '../../src/hooks/types.js';
+import { PostToolUseHandler } from '#hooks/post-tool-use.js';
+import { PostToolUsePayload } from '#hooks/types.js';
 
 describe('PostToolUseHandler', () => {
     let handler: PostToolUseHandler;

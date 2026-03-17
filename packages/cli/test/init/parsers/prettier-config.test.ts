@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrettierConfig } from '../../../src/init/parsers/prettier-config.js';
+import { parsePrettierConfig } from '#init/parsers/prettier-config.js';
 
 describe('parsePrettierConfig', () => {
     it('parses semicolons setting', () => {

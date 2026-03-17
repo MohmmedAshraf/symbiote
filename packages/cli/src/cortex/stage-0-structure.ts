@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
-import { walkFiles } from '../utils/files.js';
-import { detectLanguage } from '../core/languages.js';
-import { hashFileContent } from '../utils/files.js';
+import { walkFiles } from '#utils/files.js';
+import { detectLanguage } from '#core/languages.js';
+import { hashFileContent } from '#utils/files.js';
 import { CortexRepository } from './repository.js';
 import type { StageResult, StageError, FileNode, ModuleNode, ContainsEdge } from './types.js';
 

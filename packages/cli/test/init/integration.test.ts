@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync, readFileSync, existsSync, readdirSync } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SmartInit } from '../../src/init/index.js';
-import { DnaStorage } from '../../src/dna/storage.js';
-import { IntentStore } from '../../src/brain/intent.js';
-import type { ScanResult } from '../../src/core/scanner.js';
+import { SmartInit } from '#init/index.js';
+import { DnaStorage } from '#dna/storage.js';
+import { IntentStore } from '#brain/intent.js';
+import type { ScanResult } from '#core/scanner.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = resolve(__dirname, '../fixtures/init-project');

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Graph from 'graphology';
-import { ImpactAnalyzer } from '../../../src/core/impact.js';
-import { handleGetImpact } from '../../../src/mcp/tools/impact-tools.js';
-import type { ImpactToolContext } from '../../../src/mcp/tools/impact-tools.js';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { CortexRepository } from '../../../src/cortex/repository.js';
+import { ImpactAnalyzer } from '#core/impact.js';
+import { handleGetImpact } from '#mcp/tools/impact-tools.js';
+import type { ImpactToolContext } from '#mcp/tools/impact-tools.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { CortexRepository } from '#cortex/repository.js';
 
 function buildGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });

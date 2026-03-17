@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import { Repository } from '../../src/storage/repository.js';
-import { GraphAlgorithms } from '../../src/core/algorithms.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { Repository } from '#storage/repository.js';
+import { GraphAlgorithms } from '#core/algorithms.js';
 
 describe('GraphAlgorithms', () => {
     let db: SymbioteDB;

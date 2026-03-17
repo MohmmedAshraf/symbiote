@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { bootstrapDna } from '../../src/init/dna-bootstrap.js';
-import { DnaStorage } from '../../src/dna/storage.js';
-import { DnaEngine } from '../../src/dna/engine.js';
-import type { ClassifiedRule } from '../../src/init/parsers/types.js';
+import { bootstrapDna } from '#init/dna-bootstrap.js';
+import { DnaStorage } from '#dna/storage.js';
+import { DnaEngine } from '#dna/engine.js';
+import type { ClassifiedRule } from '#init/parsers/types.js';
 
 function makeTmpDir(): string {
     return mkdtempSync(join(tmpdir(), 'symbiote-dna-test-'));

@@ -1,4 +1,4 @@
-import { SymbioteDB } from '../storage/db.js';
+import { SymbioteDB } from '#storage/db.js';
 
 export const CORTEX_TABLES = {
     nodes: [
@@ -328,6 +328,16 @@ export async function createCortexSchema(db: SymbioteDB): Promise<void> {
     await db.exec(AUXILIARY_TABLES_DDL);
     await db.exec(INDEXES_DDL);
     await db.exec(STAGE4_TABLES_DDL);
+    try {
+        await db.exec('DROP TABLE IF EXISTS symbols;');
+    } catch {
+        /* */
+    }
+    try {
+        await db.exec('DROP VIEW IF EXISTS symbols;');
+    } catch {
+        /* */
+    }
     await db.exec(SYMBOLS_VIEW_DDL);
 }
 

@@ -1,5 +1,5 @@
 import { DuckDBInstance } from '@duckdb/node-api';
-import { createCortexSchema } from '../cortex/schema.js';
+import { createCortexSchema } from '#cortex/schema.js';
 
 const SCHEMA_VERSION = 1;
 

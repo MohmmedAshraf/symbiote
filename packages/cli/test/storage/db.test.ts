@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
 
 describe('createDatabase', () => {
     let db: SymbioteDB;

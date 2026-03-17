@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { detectLanguage } from '../core/languages.js';
+import { detectLanguage } from '#core/languages.js';
 
 const DEFAULT_IGNORE = [
     'node_modules',

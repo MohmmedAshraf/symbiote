@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { PreToolUsePayload, HookResponse } from './types.js';
-import type { GraphInstance } from '../core/types.js';
+import type { GraphInstance } from '#core/types.js';
 
 export interface ConstraintRef {
     scope: string;

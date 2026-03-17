@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { DnaEngine } from '../../src/dna/engine.js';
-import { DnaStorage } from '../../src/dna/storage.js';
+import { DnaEngine } from '#dna/engine.js';
+import { DnaStorage } from '#dna/storage.js';
 
 describe('DnaEngine', () => {
     let tmpDir: string;

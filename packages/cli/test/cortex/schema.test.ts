@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, SymbioteDB } from '../../src/storage/db.js';
-import { createCortexSchema, CORTEX_TABLES } from '../../src/cortex/schema.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema, CORTEX_TABLES } from '#cortex/schema.js';
 
 describe('Cortex Schema', () => {
     let db: SymbioteDB;

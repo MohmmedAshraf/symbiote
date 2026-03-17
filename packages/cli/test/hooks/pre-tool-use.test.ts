@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Graph from 'graphology';
-import { PreToolUseHandler } from '../../src/hooks/pre-tool-use.js';
-import type { PreToolUsePayload } from '../../src/hooks/types.js';
+import { PreToolUseHandler } from '#hooks/pre-tool-use.js';
+import type { PreToolUsePayload } from '#hooks/types.js';
 
 describe('PreToolUseHandler', () => {
     let graph: InstanceType<typeof Graph>;

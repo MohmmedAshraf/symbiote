@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { parseYamlBlock } from '../dna/types.js';
+import { parseYamlBlock } from '#dna/types.js';
 
 export type IntentType = 'decision' | 'constraint';
 export type IntentStatus = 'active' | 'proposed' | 'rejected' | 'superseded';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEvent, EVENT_TYPES } from '../../src/events/types.js';
+import { createEvent, EVENT_TYPES } from '#events/types.js';
 
 describe('Event Types', () => {
     it('creates a well-formed event', () => {

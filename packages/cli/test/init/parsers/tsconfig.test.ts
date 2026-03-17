@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTsConfig } from '../../../src/init/parsers/tsconfig.js';
+import { parseTsConfig } from '#init/parsers/tsconfig.js';
 
 describe('parseTsConfig', () => {
     it('classifies strict mode as constraint', () => {

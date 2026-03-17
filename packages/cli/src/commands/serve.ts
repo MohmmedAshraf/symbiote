@@ -9,9 +9,9 @@ import {
     getProjectPort,
     writePortFile,
     clearPortFile,
-} from '../utils/config.js';
-import { createMcpServer } from '../mcp/server.js';
-import { createServerContext } from '../mcp/context.js';
+} from '#utils/config.js';
+import { createMcpServer } from '#mcp/server.js';
+import { createServerContext } from '#mcp/context.js';
 import {
     createDatabaseWithRetry,
     isPortServing,
@@ -99,7 +99,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
         p.log.info(
             `${pc.dim('Web UI:')}       ${url}\n` +
                 `${pc.dim('MCP SSE:')}      http://localhost:${port}/sse\n` +
-                `${pc.dim('Health:')}       http://localhost:${port}/health`,
+                `${pc.dim('Health:')}       http://localhost:${port}/internal/health`,
         );
         p.outro(pc.dim('Press Ctrl+C to stop.'));
         openBrowser(url);

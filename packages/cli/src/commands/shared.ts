@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createDatabase } from '../storage/db.js';
+import { createDatabase } from '#storage/db.js';
 import {
     handleApiRequest,
     handleInternalEvent,
     handleSseConnection,
     handleHookContext,
-} from '../mcp/http-api.js';
-import type { createServerContext } from '../mcp/context.js';
+} from '#mcp/http-api.js';
+import type { createServerContext } from '#mcp/context.js';
 
 export type SymbioteDB = Awaited<ReturnType<typeof createDatabase>>;
 
@@ -103,7 +103,7 @@ export async function isPortServing(port: number): Promise<boolean> {
     const http = await import('node:http');
     return new Promise((resolve) => {
         const req = http.request(
-            { hostname: '127.0.0.1', port, path: '/health', timeout: 1000 },
+            { hostname: '127.0.0.1', port, path: '/internal/health', timeout: 1000 },
             (res) => {
                 res.resume();
                 resolve(res.statusCode === 200);
@@ -126,7 +126,7 @@ export async function handleHttpRequest(
     req: IncomingMessage,
     res: ServerResponse,
 ): Promise<void> {
-    if (url.pathname === '/health') {
+    if (url.pathname === '/internal/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok' }));
         return;

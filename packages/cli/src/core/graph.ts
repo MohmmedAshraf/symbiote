@@ -1,4 +1,4 @@
-import type { Repository, NodeRecord, EdgeRecord } from '../storage/repository.js';
+import type { Repository, NodeRecord, EdgeRecord } from '#storage/repository.js';
 
 export interface FileContext {
     filePath: string;

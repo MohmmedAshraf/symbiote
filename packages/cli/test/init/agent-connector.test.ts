@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectInstalledAgents, isBonded } from '../../src/init/agent-connector.js';
+import { detectInstalledAgents, isBonded } from '#init/agent-connector.js';
 
 describe('detectInstalledAgents', () => {
     it('returns a list of agents with installed status', () => {

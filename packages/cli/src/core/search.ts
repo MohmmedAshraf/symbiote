@@ -1,5 +1,5 @@
-import type { SymbioteDB } from '../storage/db.js';
-import type { Repository, NodeRecord } from '../storage/repository.js';
+import type { SymbioteDB } from '#storage/db.js';
+import type { Repository, NodeRecord } from '#storage/repository.js';
 import { EmbeddingService } from './embeddings.js';
 
 export interface SearchResult {

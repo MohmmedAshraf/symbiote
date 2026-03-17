@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFile } from '../../src/core/parser.js';
+import { parseFile } from '#core/parser.js';
 import path from 'node:path';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures');

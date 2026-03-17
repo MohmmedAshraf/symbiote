@@ -5,7 +5,7 @@ import {
     DNA_STATUSES,
     parseFrontmatter,
     serializeEntry,
-} from '../../src/dna/types.js';
+} from '#dna/types.js';
 
 describe('DNA_CATEGORIES', () => {
     it('includes all four categories', () => {

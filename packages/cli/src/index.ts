@@ -1,23 +1,23 @@
-export { createDatabase, type SymbioteDB } from './storage/db.js';
+export { createDatabase, type SymbioteDB } from '#storage/db.js';
 export {
     Repository,
     type NodeRecord,
     type EdgeRecord,
     type FileRecord,
-} from './storage/repository.js';
-export { Scanner, type ScanOptions, type ScanResult } from './core/scanner.js';
-export { GraphQuery, type FileContext, type ProjectOverview } from './core/graph.js';
-export { parseFile, type ParseResult } from './core/parser.js';
-export { GraphAlgorithms, type AlgorithmResults } from './core/algorithms.js';
-export { detectLanguage, getGrammar, SUPPORTED_LANGUAGES } from './core/languages.js';
-export { walkFiles, hashFileContent } from './utils/files.js';
+} from '#storage/repository.js';
+export { Scanner, type ScanOptions, type ScanResult } from '#core/scanner.js';
+export { GraphQuery, type FileContext, type ProjectOverview } from '#core/graph.js';
+export { parseFile, type ParseResult } from '#core/parser.js';
+export { GraphAlgorithms, type AlgorithmResults } from '#core/algorithms.js';
+export { detectLanguage, getGrammar, SUPPORTED_LANGUAGES } from '#core/languages.js';
+export { walkFiles, hashFileContent } from '#utils/files.js';
 export {
     ensureBrainDir,
     ensureSymbioteHome,
     getBrainDbPath,
     BRAIN_DIR,
     SYMBIOTE_HOME,
-} from './utils/config.js';
+} from '#utils/config.js';
 
 export {
     DnaStorage,
@@ -38,7 +38,7 @@ export {
     type DnaIndexEntry,
     type ListOptions,
     type SimilarMatch,
-} from './dna/index.js';
+} from '#dna/index.js';
 
 export {
     IntentStore,
@@ -58,16 +58,16 @@ export {
     type DeadCodeEntry,
     type CouplingHotspot,
     type CategoryScore,
-} from './brain/index.js';
+} from '#brain/index.js';
 
-export { EmbeddingService } from './core/embeddings.js';
-export { HybridSearch, type SearchResult, type SearchOptions } from './core/search.js';
+export { EmbeddingService } from '#core/embeddings.js';
+export { HybridSearch, type SearchResult, type SearchOptions } from '#core/search.js';
 
 export {
     createMcpServer,
     createServerContext,
     type ServerContext,
     type ServerContextOptions,
-} from './mcp/index.js';
+} from '#mcp/index.js';
 
 export const VERSION = '0.1.0';

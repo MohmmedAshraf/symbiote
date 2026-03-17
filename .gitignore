@@ -18,6 +18,7 @@ packages/cli/vitest.config.js
 packages/cli/vitest.config.d.ts
 packages/web/src/**/*.js
 packages/web/src/**/*.d.ts
+!packages/web/src/vite-env.d.ts
 packages/web/vite.config.js
 packages/web/vite.config.d.ts
 

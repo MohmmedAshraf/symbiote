@@ -1,9 +1,9 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { ensureSymbioteHome } from '../utils/config.js';
-import { DnaStorage } from '../dna/storage.js';
-import { DnaEngine } from '../dna/engine.js';
+import { ensureSymbioteHome } from '#utils/config.js';
+import { DnaStorage } from '#dna/storage.js';
+import { DnaEngine } from '#dna/engine.js';
 
 export async function cmdDna(
     subcommand: string | undefined,

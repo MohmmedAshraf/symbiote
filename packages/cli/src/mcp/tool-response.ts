@@ -1,5 +1,5 @@
-import type { ToolResponse } from '../cortex/types.js';
-import type { CortexRepository } from '../cortex/repository.js';
+import type { ToolResponse } from '#cortex/types.js';
+import type { CortexRepository } from '#cortex/repository.js';
 
 export function wrapResponse<T>(
     data: T,

@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { getBrainDbPath } from '../utils/config.js';
+import { getBrainDbPath } from '#utils/config.js';
 import { createDatabaseWithRetry } from './shared.js';
 
 export async function cmdImpact(): Promise<void> {
@@ -13,7 +13,7 @@ export async function cmdImpact(): Promise<void> {
     const s = p.spinner();
     s.start('Loading graph...');
 
-    const { buildGraphFromDb } = await import('../core/graph-builder.js');
+    const { buildGraphFromDb } = await import('#core/graph-builder.js');
     const graph = await buildGraphFromDb(db);
 
     s.stop('Graph loaded');
@@ -21,7 +21,7 @@ export async function cmdImpact(): Promise<void> {
     const s2 = p.spinner();
     s2.start('Analyzing working changes...');
 
-    const { GitImpactAnalyzer } = await import('../core/git-impact.js');
+    const { GitImpactAnalyzer } = await import('#core/git-impact.js');
     const gitImpact = new GitImpactAnalyzer(graph);
     let result;
     try {

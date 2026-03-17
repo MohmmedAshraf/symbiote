@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateSmartOverview } from '../../src/init/overview-generator.js';
-import type { ProjectAnalysis, ClassifiedRule } from '../../src/init/parsers/types.js';
-import type { ScanResult } from '../../src/core/scanner.js';
+import { generateSmartOverview } from '#init/overview-generator.js';
+import type { ProjectAnalysis, ClassifiedRule } from '#init/parsers/types.js';
+import type { ScanResult } from '#core/scanner.js';
 
 function makeScanResult(overrides?: Partial<ScanResult>): ScanResult {
     return {

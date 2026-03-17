@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, SymbioteDB } from '../../src/storage/db.js';
-import { createCortexSchema } from '../../src/cortex/schema.js';
-import { CortexRepository } from '../../src/cortex/repository.js';
-import { wrapResponse, getMaxDepth, getDepthForFile } from '../../src/mcp/tool-response.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { wrapResponse, getMaxDepth, getDepthForFile } from '#mcp/tool-response.js';
 
 describe('ToolResponse', () => {
     let db: SymbioteDB;

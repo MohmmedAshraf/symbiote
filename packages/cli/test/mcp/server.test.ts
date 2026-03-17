@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import { createServerContext, type ServerContext } from '../../src/mcp/context.js';
-import { createMcpServer } from '../../src/mcp/server.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { createServerContext, type ServerContext } from '#mcp/context.js';
+import { createMcpServer } from '#mcp/server.js';
 
 describe('createMcpServer', () => {
     let db: SymbioteDB;

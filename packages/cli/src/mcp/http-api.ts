@@ -1,15 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { ServerContext } from './context.js';
-import type { EventBus } from '../events/bus.js';
-import type { SymbioteEvent } from '../events/types.js';
-import { EVENT_TYPES } from '../events/types.js';
+import type { EventBus } from '#events/bus.js';
+import type { SymbioteEvent } from '#events/types.js';
+import { EVENT_TYPES } from '#events/types.js';
 import type {
     ConstraintViolation,
     CircularDep,
     DeadCodeEntry,
     CouplingHotspot,
-} from '../brain/health/types.js';
+} from '#brain/health/types.js';
 
 const MAX_BODY_SIZE = 1024 * 1024; // 1MB
 
@@ -64,12 +64,83 @@ function json(res: ServerResponse, data: unknown, status = 200): boolean {
 
 async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<boolean> {
     try {
-        const nodes = await ctx.repo.getAllNodes();
+        const symbols = await ctx.cortexRepo.getAllSymbols();
+        const fileNodes = await ctx.repo.getAllNodes();
+        const fileOnly = fileNodes.filter((n) => n.type === 'file');
+
+        const maxDepth = await ctx.cortexRepo.getMaxDepthLevel();
+        const communityCountStr = await ctx.cortexRepo.getMeta('community_count');
+
+        type NodeAttrs = Record<string, unknown>;
+        const getAttrs = (id: string): NodeAttrs =>
+            ctx.graphology.hasNode(id) ? (ctx.graphology.getNodeAttributes(id) as NodeAttrs) : {};
+
+        const nodes = [
+            ...symbols.map((s) => {
+                const attrs = getAttrs(s.id);
+                return {
+                    id: s.id,
+                    type: s.kind,
+                    name: s.name,
+                    filePath: s.filePath,
+                    lineStart: s.lineStart,
+                    lineEnd: s.lineEnd,
+                    metadata: {
+                        community: (attrs.community as number) ?? null,
+                        pageRank: (attrs.pagerank as number) ?? null,
+                        betweenness: (attrs.centrality as number) ?? null,
+                    },
+                };
+            }),
+            ...fileOnly.map((n) => {
+                const attrs = getAttrs(n.id);
+                return {
+                    ...n,
+                    metadata: {
+                        ...n.metadata,
+                        community: (attrs.community as number) ?? n.metadata?.cluster ?? null,
+                        pageRank: (attrs.pagerank as number) ?? n.metadata?.pagerank ?? null,
+                        betweenness: (attrs.centrality as number) ?? n.metadata?.centrality ?? null,
+                    },
+                };
+            }),
+        ];
+
         const nodeIds = new Set(nodes.map((n) => n.id));
-        const edges = (await ctx.repo.getAllEdges()).filter(
-            (e) => nodeIds.has(e.sourceId) && nodeIds.has(e.targetId),
-        );
-        return json(res, { nodes, edges });
+
+        const edgeTables: { table: string; kind: string }[] = [
+            { table: 'edges_calls', kind: 'calls' },
+            { table: 'edges_imports', kind: 'imports' },
+            { table: 'edges_extends', kind: 'extends' },
+            { table: 'edges_implements', kind: 'implements' },
+            { table: 'edges_contains', kind: 'contains' },
+            { table: 'edges_returns', kind: 'returns' },
+            { table: 'edges_reads', kind: 'reads' },
+            { table: 'edges_writes', kind: 'writes' },
+        ];
+
+        const edges: { sourceId: string; targetId: string; type: string }[] = [];
+        for (const { table, kind } of edgeTables) {
+            const rows = await ctx.db.all<{ source_id: string; target_id: string }>(
+                `SELECT source_id, target_id FROM ${table}`,
+            );
+            for (const row of rows) {
+                if (nodeIds.has(row.source_id) && nodeIds.has(row.target_id)) {
+                    edges.push({
+                        sourceId: row.source_id,
+                        targetId: row.target_id,
+                        type: kind,
+                    });
+                }
+            }
+        }
+
+        return json(res, {
+            data: { nodes, edges },
+            depth: maxDepth,
+            deepening: maxDepth < 7,
+            communityCount: communityCountStr ? Number(communityCountStr) : 0,
+        });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return json(res, { error: message, nodes: [], edges: [] }, 500);

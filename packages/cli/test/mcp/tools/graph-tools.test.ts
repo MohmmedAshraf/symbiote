@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, SymbioteDB } from '../../../src/storage/db.js';
-import { createCortexSchema, refreshSymbolsTable } from '../../../src/cortex/schema.js';
-import { CortexRepository } from '../../../src/cortex/repository.js';
-import { installPgq, createPropertyGraph, isPgqAvailable } from '../../../src/cortex/pgq.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { installPgq, createPropertyGraph, isPgqAvailable } from '#cortex/pgq.js';
 import {
     handleQueryGraphV2,
     handleGetContextForSymbol,
     isLegacyQueryFormat,
-} from '../../../src/mcp/tools/graph-tools.js';
-import type { SymbolContext } from '../../../src/mcp/tools/graph-tools.js';
+} from '#mcp/tools/graph-tools.js';
+import type { SymbolContext } from '#mcp/tools/graph-tools.js';
 
 describe('query_graph (SQL/PGQ)', () => {
     let db: SymbioteDB;

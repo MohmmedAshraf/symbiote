@@ -1,10 +1,10 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { getProjectPort } from '../utils/config.js';
+import { getProjectPort } from '#utils/config.js';
 
 export async function cmdHookPre(): Promise<void> {
-    const { readStdinPayload, writeResponse, fireHookEvent } = await import('../hooks/types.js');
+    const { readStdinPayload, writeResponse, fireHookEvent } = await import('#hooks/types.js');
     const http = await import('node:http');
 
     const projectRoot = process.cwd();
@@ -73,7 +73,7 @@ export async function cmdHookPre(): Promise<void> {
 }
 
 export async function cmdHookPost(): Promise<void> {
-    const { readStdinPayload, writeResponse, fireHookEvent } = await import('../hooks/types.js');
+    const { readStdinPayload, writeResponse, fireHookEvent } = await import('#hooks/types.js');
 
     const projectRoot = process.cwd();
     const port = getProjectPort(projectRoot);

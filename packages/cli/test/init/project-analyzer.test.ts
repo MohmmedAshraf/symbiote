@@ -5,7 +5,7 @@ import { dirname } from 'node:path';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { analyzeProject } from '../../src/init/project-analyzer.js';
+import { analyzeProject } from '#init/project-analyzer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = resolve(__dirname, '../fixtures/init-project');

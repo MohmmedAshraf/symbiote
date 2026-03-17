@@ -14,7 +14,7 @@ import {
     cmdHooksInstall,
     cmdHooksUninstall,
     cmdUnbond,
-} from '../src/commands/index.js';
+} from '#commands/index.js';
 
 const RESET = '\x1b[0m';
 

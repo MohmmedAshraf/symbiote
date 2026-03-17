@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SessionTracker } from '../../src/events/session.js';
-import { createEvent } from '../../src/events/types.js';
+import { SessionTracker } from '#events/session.js';
+import { createEvent } from '#events/types.js';
 
 describe('SessionTracker', () => {
     let tracker: SessionTracker;

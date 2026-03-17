@@ -2,7 +2,20 @@
     "extends": "../../tsconfig.json",
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "."
+        "rootDir": ".",
+        "paths": {
+            "#storage/*": ["./src/storage/*"],
+            "#core/*": ["./src/core/*"],
+            "#cortex/*": ["./src/cortex/*"],
+            "#dna/*": ["./src/dna/*"],
+            "#brain/*": ["./src/brain/*"],
+            "#events/*": ["./src/events/*"],
+            "#mcp/*": ["./src/mcp/*"],
+            "#utils/*": ["./src/utils/*"],
+            "#commands/*": ["./src/commands/*"],
+            "#hooks/*": ["./src/hooks/*"],
+            "#init/*": ["./src/init/*"]
+        }
     },
     "include": ["src/**/*", "bin/**/*"],
     "exclude": ["node_modules", "dist", "test"]

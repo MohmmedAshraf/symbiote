@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import http from 'node:http';
-import { fireHookEvent } from '../../src/hooks/types.js';
-import type { SymbioteEvent } from '../../src/events/types.js';
+import { fireHookEvent } from '#hooks/types.js';
+import type { SymbioteEvent } from '#events/types.js';
 
 describe('Hook IPC', () => {
     let server: http.Server;

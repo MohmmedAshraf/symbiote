@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDatabase } from '../storage/db.js';
+import { createDatabase } from '#storage/db.js';
 import {
     ensureBrainDir,
     ensureSymbioteHome,
@@ -8,9 +8,9 @@ import {
     getProjectPort,
     writePortFile,
     clearPortFile,
-} from '../utils/config.js';
-import { createMcpServer } from '../mcp/server.js';
-import { createServerContext } from '../mcp/context.js';
+} from '#utils/config.js';
+import { createMcpServer } from '#mcp/server.js';
+import { createServerContext } from '#mcp/context.js';
 import { handleHttpRequest } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

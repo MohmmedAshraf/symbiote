@@ -1,8 +1,21 @@
 {
     "name": "symbiote-cli",
     "version": "0.1.0",
-    "description": "AI-powered project brain — a living, queryable knowledge layer for your codebase",
+    "description": "A symbiont is an organism that lives in close association with another. Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA.",
     "type": "module",
+    "imports": {
+        "#storage/*": "./dist/src/storage/*",
+        "#core/*": "./dist/src/core/*",
+        "#cortex/*": "./dist/src/cortex/*",
+        "#dna/*": "./dist/src/dna/*",
+        "#brain/*": "./dist/src/brain/*",
+        "#events/*": "./dist/src/events/*",
+        "#mcp/*": "./dist/src/mcp/*",
+        "#utils/*": "./dist/src/utils/*",
+        "#commands/*": "./dist/src/commands/*",
+        "#hooks/*": "./dist/src/hooks/*",
+        "#init/*": "./dist/src/init/*"
+    },
     "bin": {
         "symbiote": "./dist/bin/symbiote.js"
     },
@@ -31,11 +44,14 @@
     },
     "dependencies": {
         "@clack/prompts": "^0.10.0",
+        "@duckdb/node-api": "1.5.0-r.1",
         "@huggingface/transformers": "^3.8.1",
         "@modelcontextprotocol/sdk": "^1.27.1",
         "chokidar": "^4.0.0",
-        "@duckdb/node-api": "1.5.0-r.1",
         "glob": "^11.0.0",
+        "graphology": "^0.25.4",
+        "graphology-communities-louvain": "^2.0.1",
+        "graphology-metrics": "^2.3.0",
         "picocolors": "^1.1.0",
         "tree-sitter": "^0.22.0",
         "tree-sitter-c": "^0.23.0",
@@ -48,14 +64,12 @@
         "tree-sitter-ruby": "^0.23.0",
         "tree-sitter-rust": "^0.23.0",
         "tree-sitter-typescript": "^0.23.0",
-        "graphology": "^0.25.4",
-        "graphology-communities-louvain": "^2.0.1",
-        "graphology-metrics": "^2.3.0",
         "zod": "^4.3.6"
     },
     "devDependencies": {
         "@types/node": "^22.0.0",
         "typescript": "^5.7.0",
+        "vite-tsconfig-paths": "^6.1.1",
         "vitest": "^3.0.0"
     },
     "keywords": [

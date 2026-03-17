@@ -1,12 +1,12 @@
 import fs from 'node:fs/promises';
-import { walkFiles, hashFileContent } from '../utils/files.js';
+import { walkFiles, hashFileContent } from '#utils/files.js';
 import { parseFile } from './parser.js';
 import { EmbeddingService } from './embeddings.js';
 import { GraphAlgorithms } from './algorithms.js';
-import { CortexEngine } from '../cortex/engine.js';
-import { CortexRepository } from '../cortex/repository.js';
-import type { Repository } from '../storage/repository.js';
-import type { SymbioteDB } from '../storage/db.js';
+import { CortexEngine } from '#cortex/engine.js';
+import { CortexRepository } from '#cortex/repository.js';
+import type { Repository } from '#storage/repository.js';
+import type { SymbioteDB } from '#storage/db.js';
 
 export interface ScanOptions {
     force?: boolean;

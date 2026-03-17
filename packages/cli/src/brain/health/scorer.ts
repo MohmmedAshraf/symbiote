@@ -7,8 +7,8 @@ const WEIGHT_COUPLING = 0.2;
 
 const PENALTY_PER_CONSTRAINT_VIOLATION = 20;
 const PENALTY_PER_CIRCULAR_DEP = 25;
-const PENALTY_PER_DEAD_CODE = 5;
-const PENALTY_PER_COUPLING_HOTSPOT = 10;
+const PENALTY_PER_DEAD_CODE = 2;
+const PENALTY_PER_COUPLING_HOTSPOT = 15;
 
 export function computeCategoryScore(issueCount: number, penaltyPerIssue: number): number {
     return Math.max(0, 100 - issueCount * penaltyPerIssue);

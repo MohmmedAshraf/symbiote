@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import type { Repository } from '../storage/repository.js';
+import type { Repository } from '#storage/repository.js';
 import { Graph } from './types.js';
 import type { GraphInstance } from './types.js';
 

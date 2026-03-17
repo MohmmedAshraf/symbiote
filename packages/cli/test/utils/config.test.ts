@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { ensureBrainDir, getBrainDbPath } from '../../src/utils/config.js';
+import { ensureBrainDir, getBrainDbPath } from '#utils/config.js';
 
 describe('ensureBrainDir', () => {
     const tmpDir = path.join(os.tmpdir(), `symbiote-test-${Date.now()}`);

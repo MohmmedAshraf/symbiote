@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { DnaStorage } from '../../src/dna/storage.js';
-import type { DnaEntry, DnaIndex } from '../../src/dna/types.js';
+import { DnaStorage } from '#dna/storage.js';
+import type { DnaEntry, DnaIndex } from '#dna/types.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../fixtures/dna');
 

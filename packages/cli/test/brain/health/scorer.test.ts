@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeHealthScore, computeCategoryScore } from '../../../src/brain/health/scorer.js';
+import { computeHealthScore, computeCategoryScore } from '#brain/health/scorer.js';
 
 describe('computeCategoryScore', () => {
     it('returns 100 when there are zero issues', () => {
@@ -70,5 +70,18 @@ describe('computeHealthScore', () => {
         });
         expect(score.score).toBeGreaterThan(0);
         expect(score.score).toBeLessThan(100);
+    });
+
+    it('applies -2 per dead code item and -15 per coupling hotspot', () => {
+        const result = computeHealthScore({
+            constraintViolations: 0,
+            circularDeps: 1,
+            deadCode: 30,
+            couplingHotspots: 4,
+        });
+        expect(result.categories.deadCode.score).toBe(40);
+        expect(result.categories.coupling.score).toBe(40);
+        expect(result.categories.circularDeps.score).toBe(75);
+        expect(result.score).toBe(71);
     });
 });

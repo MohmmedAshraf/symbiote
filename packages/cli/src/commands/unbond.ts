@@ -3,7 +3,7 @@ import pc from 'picocolors';
 
 export async function cmdUnbond(targetId?: string): Promise<void> {
     const { detectInstalledAgents, isBonded, disconnectWithHooks } =
-        await import('../init/agent-connector.js');
+        await import('#init/agent-connector.js');
 
     p.intro(pc.bold('Symbiote') + pc.dim(' — Detaching'));
 

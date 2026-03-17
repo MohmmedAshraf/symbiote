@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { HealthHistory } from '../../../src/brain/health/history.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { HealthHistory } from '#brain/health/history.js';
 
 describe('HealthHistory', () => {
     let db: SymbioteDB;

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Graph from 'graphology';
-import { ImpactAnalyzer } from '../../src/core/impact.js';
-import type { ImpactEntry } from '../../src/core/impact.js';
+import { ImpactAnalyzer } from '#core/impact.js';
+import type { ImpactEntry } from '#core/impact.js';
 
 function buildTestGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });

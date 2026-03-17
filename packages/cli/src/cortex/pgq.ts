@@ -1,4 +1,4 @@
-import type { SymbioteDB } from '../storage/db.js';
+import type { SymbioteDB } from '#storage/db.js';
 import { refreshSymbolsTable } from './schema.js';
 
 const PROPERTY_GRAPH_DDL = `

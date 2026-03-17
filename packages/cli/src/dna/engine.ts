@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { DnaStorage } from './storage.js';
 import { type EmbeddingModel, cosineSimilarity } from './embeddings.js';
-import { slugify } from '../utils/strings.js';
+import { slugify } from '#utils/strings.js';
 import type { DnaCategory, DnaEntry, DnaFrontmatter, DnaSource } from './types.js';
 
 const SIMILARITY_THRESHOLD = 0.85;

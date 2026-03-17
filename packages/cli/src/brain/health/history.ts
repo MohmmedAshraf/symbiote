@@ -1,4 +1,4 @@
-import type { SymbioteDB } from '../../storage/db.js';
+import type { SymbioteDB } from '#storage/db.js';
 import type { HealthSnapshot } from './types.js';
 
 interface SnapshotRow extends Record<string, unknown> {

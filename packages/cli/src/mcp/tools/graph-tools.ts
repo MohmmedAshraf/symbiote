@@ -1,7 +1,7 @@
-import type { SymbioteDB } from '../../storage/db.js';
-import type { CortexRepository } from '../../cortex/repository.js';
-import type { ToolResponse } from '../../cortex/types.js';
-import { executePgqQuery } from '../../cortex/pgq-queries.js';
+import type { SymbioteDB } from '#storage/db.js';
+import type { CortexRepository } from '#cortex/repository.js';
+import type { ToolResponse } from '#cortex/types.js';
+import { executePgqQuery } from '#cortex/pgq-queries.js';
 import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface GraphToolContext {

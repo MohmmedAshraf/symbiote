@@ -1,17 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { createDatabase, SymbioteDB } from '../../../src/storage/db.js';
-import { createCortexSchema, refreshSymbolsTable } from '../../../src/cortex/schema.js';
-import { CortexRepository } from '../../../src/cortex/repository.js';
-import { installPgq, createPropertyGraph, isPgqAvailable } from '../../../src/cortex/pgq.js';
-import {
-    handleQueryGraphV2,
-    handleGetContextForSymbol,
-} from '../../../src/mcp/tools/graph-tools.js';
-import { handleRenameSymbol } from '../../../src/mcp/tools/rename-tool.js';
-import type { RenameChange } from '../../../src/mcp/tools/rename-tool.js';
-import type { SymbolContext } from '../../../src/mcp/tools/graph-tools.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { installPgq, createPropertyGraph, isPgqAvailable } from '#cortex/pgq.js';
+import { handleQueryGraphV2, handleGetContextForSymbol } from '#mcp/tools/graph-tools.js';
+import { handleRenameSymbol } from '#mcp/tools/rename-tool.js';
+import type { RenameChange } from '#mcp/tools/rename-tool.js';
+import type { SymbolContext } from '#mcp/tools/graph-tools.js';
 
 const __dirname = resolve(fileURLToPath(import.meta.url), '..');
 const FIXTURES = resolve(__dirname, '../../fixtures/cortex/simple');

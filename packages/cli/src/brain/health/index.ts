@@ -1,5 +1,5 @@
-import type { Repository } from '../../storage/repository.js';
-import type { SymbioteDB } from '../../storage/db.js';
+import type { Repository } from '#storage/repository.js';
+import type { SymbioteDB } from '#storage/db.js';
 import type { IntentStore } from '../intent.js';
 import type { HealthReport, HealthSnapshot } from './types.js';
 import { CycleDetector } from './cycle-detector.js';

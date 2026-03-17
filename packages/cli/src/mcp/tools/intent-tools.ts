@@ -1,5 +1,5 @@
 import type { ServerContext } from '../context.js';
-import type { IntentEntry } from '../../brain/intent.js';
+import type { IntentEntry } from '#brain/intent.js';
 
 const MAX_ID_LENGTH = 200;
 

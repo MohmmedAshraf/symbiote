@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { resolve } from 'path';
-import { createDatabase, SymbioteDB } from '../../src/storage/db.js';
-import { createCortexSchema } from '../../src/cortex/schema.js';
-import { CortexRepository } from '../../src/cortex/repository.js';
-import { runStage0 } from '../../src/cortex/stage-0-structure.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { runStage0 } from '#cortex/stage-0-structure.js';
 
 const FIXTURES = resolve(__dirname, '../fixtures/cortex/simple');
 

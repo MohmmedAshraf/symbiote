@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
-import { createServerContext, type ServerContext } from '../../src/mcp/context.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { createServerContext, type ServerContext } from '#mcp/context.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
     handleProjectHealthResource,
-} from '../../src/mcp/resources.js';
+} from '#mcp/resources.js';
 
 describe('MCP Resources', () => {
     let db: SymbioteDB;

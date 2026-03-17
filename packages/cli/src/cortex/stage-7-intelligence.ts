@@ -8,7 +8,7 @@ import {
 } from './patterns.js';
 import type { Finding, TemporalSnapshot } from './topology-types.js';
 import type { StageResult, StageError } from './types.js';
-import type { DnaEntry } from '../dna/types.js';
+import type { DnaEntry } from '#dna/types.js';
 
 interface NodePattern {
     nodeId: string;

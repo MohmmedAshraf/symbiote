@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMarkdownRules } from '../../../src/init/parsers/markdown-rules.js';
+import { parseMarkdownRules } from '#init/parsers/markdown-rules.js';
 
 const SAMPLE_CLAUDE_MD = `
 ## Architecture

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Graph from 'graphology';
-import { GitImpactAnalyzer } from '../../src/core/git-impact.js';
+import { GitImpactAnalyzer } from '#core/git-impact.js';
 
 function buildGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });

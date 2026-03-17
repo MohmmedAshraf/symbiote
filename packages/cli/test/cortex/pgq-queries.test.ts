@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, SymbioteDB } from '../../src/storage/db.js';
-import { createCortexSchema, refreshSymbolsTable } from '../../src/cortex/schema.js';
-import { CortexRepository } from '../../src/cortex/repository.js';
-import { installPgq, createPropertyGraph } from '../../src/cortex/pgq.js';
-import { executePgqQuery, validatePgqQuery } from '../../src/cortex/pgq-queries.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { installPgq, createPropertyGraph } from '#cortex/pgq.js';
+import { executePgqQuery, validatePgqQuery } from '#cortex/pgq-queries.js';
 
 describe('PGQ Query Builder', () => {
     let db: SymbioteDB;

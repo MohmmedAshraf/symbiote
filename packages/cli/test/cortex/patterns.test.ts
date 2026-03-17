@@ -7,7 +7,7 @@ import {
     detectComplexityHotspots,
     detectFeatureEnvy,
     detectShotgunSurgery,
-} from '../../src/cortex/patterns.js';
+} from '#cortex/patterns.js';
 
 describe('Pattern Detector', () => {
     describe('detectGodClasses', () => {

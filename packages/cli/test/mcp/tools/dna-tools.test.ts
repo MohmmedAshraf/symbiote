@@ -2,12 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createDatabase, type SymbioteDB } from '../../../src/storage/db.js';
-import { createServerContext, type ServerContext } from '../../../src/mcp/context.js';
-import {
-    handleGetDeveloperDna,
-    handleRecordInstruction,
-} from '../../../src/mcp/tools/dna-tools.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
+import { createServerContext, type ServerContext } from '#mcp/context.js';
+import { handleGetDeveloperDna, handleRecordInstruction } from '#mcp/tools/dna-tools.js';
 
 describe('DNA Tools', () => {
     let db: SymbioteDB;

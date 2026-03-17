@@ -1,31 +1,59 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { Repository } from '../storage/repository.js';
-import { Scanner } from '../core/scanner.js';
-import { getBrainDbPath } from '../utils/config.js';
+import { ensureBrainDir, getBrainDbPath } from '#utils/config.js';
 import { createDatabaseWithRetry } from './shared.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { CortexEngine } from '#cortex/engine.js';
+import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
 
 export async function cmdScan(flags: Record<string, string | boolean>): Promise<void> {
     const projectRoot = process.cwd();
+    ensureBrainDir(projectRoot);
     const dbPath = getBrainDbPath(projectRoot);
     const db = await createDatabaseWithRetry(dbPath);
-    const repo = new Repository(db);
-    const scanner = new Scanner(repo, db);
+
+    await createCortexSchema(db);
+
+    const cortexRepo = new CortexRepository(db);
+    const engine = new CortexEngine(cortexRepo);
 
     const s = p.spinner();
-    s.start('Scanning codebase...');
-    const result = await scanner.scan(projectRoot, {
+    s.start('Scanning codebase (cortex pipeline)...');
+    const result = await engine.run({
+        rootDir: projectRoot,
         force: flags.force === true,
-        embeddings: flags.embeddings !== false,
     });
+
+    await refreshSymbolsTable(db);
     await db.close();
 
-    const embeddingsInfo =
-        result.embeddingsGenerated > 0 ? ` · Embeddings: ${result.embeddingsGenerated}` : '';
+    const stageNames = [
+        'Structure',
+        'Symbols',
+        'Resolution',
+        'Call Graph',
+        'Type Inference',
+        'Flow Analysis',
+        'Topology',
+        'Intelligence',
+    ];
+    const completedStages = result.stages
+        .map((st, i) =>
+            st.filesProcessed > 0 || st.nodesCreated > 0 || st.edgesCreated > 0
+                ? stageNames[i]
+                : null,
+        )
+        .filter(Boolean);
+
     s.stop(
-        `Scanned: ${result.filesScanned}` +
+        `Depth ${result.maxDepth + 1}/8` +
             pc.dim(
-                ` · Skipped: ${result.filesSkipped} · Nodes: ${result.nodesCreated} · Edges: ${result.edgesCreated}${embeddingsInfo}`,
+                ` · ${result.totalFiles} files · ${result.totalNodes} nodes · ${result.totalEdges} edges` +
+                    ` · ${Math.round(result.totalDurationMs / 1000)}s`,
             ),
     );
+
+    if (completedStages.length > 0) {
+        p.log.info(pc.dim(`Stages: ${completedStages.join(' → ')}`));
+    }
 }

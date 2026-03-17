@@ -1,6 +1,6 @@
 import type { ProjectAnalysis } from './parsers/types.js';
 import type { ClassifiedRule } from './parsers/types.js';
-import type { ScanResult } from '../core/scanner.js';
+import type { ScanResult } from '#core/scanner.js';
 
 const AUTO_DETECTED_SOURCES = new Set(['package.json', 'tsconfig', 'eslint', 'prettier']);
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { EmbeddingService } from '../../src/core/embeddings.js';
-import { createDatabase, type SymbioteDB } from '../../src/storage/db.js';
+import { EmbeddingService } from '#core/embeddings.js';
+import { createDatabase, type SymbioteDB } from '#storage/db.js';
 
 describe('EmbeddingService', () => {
     let service: EmbeddingService;

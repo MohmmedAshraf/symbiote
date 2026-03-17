@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cosineSimilarity, EmbeddingModel } from '../../src/dna/embeddings.js';
+import { cosineSimilarity, EmbeddingModel } from '#dna/embeddings.js';
 
 describe('cosineSimilarity', () => {
     it('returns 1.0 for identical vectors', () => {

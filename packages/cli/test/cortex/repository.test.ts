@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDatabase, SymbioteDB } from '../../src/storage/db.js';
-import { createCortexSchema } from '../../src/cortex/schema.js';
-import { CortexRepository } from '../../src/cortex/repository.js';
+import { createDatabase, SymbioteDB } from '#storage/db.js';
+import { createCortexSchema } from '#cortex/schema.js';
+import { CortexRepository } from '#cortex/repository.js';
 import type {
     FunctionNode,
     ClassNode,
@@ -16,7 +16,7 @@ import type {
     ImplementsEdge,
     ExtendsEdge,
     ImportsEdge,
-} from '../../src/cortex/types.js';
+} from '#cortex/types.js';
 
 describe('CortexRepository', () => {
     let db: SymbioteDB;
