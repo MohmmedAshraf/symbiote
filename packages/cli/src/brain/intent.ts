@@ -1,5 +1,7 @@
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { parseYamlBlock } from '../dna/types.js';
 
 export type IntentType = 'decision' | 'constraint';
 export type IntentStatus = 'active' | 'proposed' | 'rejected' | 'superseded';
@@ -31,15 +33,18 @@ export class IntentStore {
         this.intentDir = path.join(brainDir, 'intent');
     }
 
-    listEntries(type: IntentType, options?: ListIntentOptions): IntentEntry[] {
+    async listEntries(type: IntentType, options?: ListIntentOptions): Promise<IntentEntry[]> {
         const dir = this.typeDir(type);
         if (!fs.existsSync(dir)) return [];
 
-        const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+        const allFiles = await fsp.readdir(dir);
+        const files = allFiles.filter((f) => f.endsWith('.md'));
         const entries: IntentEntry[] = [];
 
-        for (const file of files) {
-            const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const reads = files.map((file) => fsp.readFile(path.join(dir, file), 'utf-8'));
+        const contents = await Promise.all(reads);
+
+        for (const raw of contents) {
             const parsed = parseIntentFrontmatter(raw);
             if (!parsed) continue;
 
@@ -52,15 +57,18 @@ export class IntentStore {
         return entries;
     }
 
-    readEntry(id: string): IntentEntry | null {
+    async readEntry(id: string): Promise<IntentEntry | null> {
         for (const type of ['decision', 'constraint'] as IntentType[]) {
             const dir = this.typeDir(type);
             if (!fs.existsSync(dir)) continue;
 
-            const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+            const allFiles = await fsp.readdir(dir);
+            const files = allFiles.filter((f) => f.endsWith('.md'));
 
-            for (const file of files) {
-                const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
+            const reads = files.map((file) => fsp.readFile(path.join(dir, file), 'utf-8'));
+            const contents = await Promise.all(reads);
+
+            for (const raw of contents) {
                 const parsed = parseIntentFrontmatter(raw);
                 if (parsed && parsed.frontmatter.id === id) return parsed;
             }
@@ -97,7 +105,7 @@ export function parseIntentFrontmatter(raw: string): IntentEntry | null {
     const block = raw.slice(3, endIndex).trim();
     const content = raw.slice(endIndex + 3).trim();
 
-    const fields = parseSimpleYaml(block);
+    const fields = parseYamlBlock(block);
     if (!fields || !fields.id || !fields.type) return null;
 
     return {
@@ -141,23 +149,4 @@ function stripQuotes(s: string): string {
         return s.slice(1, -1);
     }
     return s;
-}
-
-function parseSimpleYaml(block: string): Record<string, string> | null {
-    const result: Record<string, string> = {};
-    const lines = block.split('\n');
-
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        const colonIndex = trimmed.indexOf(':');
-        if (colonIndex === -1) continue;
-
-        const key = trimmed.slice(0, colonIndex).trim();
-        const value = trimmed.slice(colonIndex + 1).trim();
-        result[key] = stripQuotes(value);
-    }
-
-    return Object.keys(result).length > 0 ? result : null;
 }

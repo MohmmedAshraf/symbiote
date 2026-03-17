@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { homedir } from 'node:os';
 
@@ -191,8 +192,7 @@ export function ensureClaudeHooks(): { success: boolean; message: string } {
 }
 
 function getHooksSourceDir(): string {
-    const fileUrl = import.meta.url;
-    const filePath = fileUrl.startsWith('file://') ? fileUrl.slice(7) : fileUrl;
+    const filePath = fileURLToPath(import.meta.url);
     return path.resolve(path.dirname(filePath), '../../../hooks');
 }
 

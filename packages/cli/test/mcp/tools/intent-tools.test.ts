@@ -58,23 +58,23 @@ describe('Intent Tools', () => {
     });
 
     describe('handleGetConstraints', () => {
-        it('returns empty array when no constraints exist', () => {
-            const result = handleGetConstraints(ctx, {});
+        it('returns empty array when no constraints exist', async () => {
+            const result = await handleGetConstraints(ctx, {});
             expect(result.constraints).toEqual([]);
         });
 
-        it('returns constraints after one is proposed', () => {
+        it('returns constraints after one is proposed', async () => {
             handleProposeConstraint(ctx, {
                 id: 'constraint-test',
                 content: 'Never use inline styles',
                 scope: 'global',
             });
 
-            const result = handleGetConstraints(ctx, {});
+            const result = await handleGetConstraints(ctx, {});
             expect(result.constraints.length).toBe(1);
         });
 
-        it('filters constraints by scope', () => {
+        it('filters constraints by scope', async () => {
             handleProposeConstraint(ctx, {
                 id: 'constraint-global',
                 content: 'Global rule',
@@ -86,7 +86,7 @@ describe('Intent Tools', () => {
                 scope: 'src/api/',
             });
 
-            const global = handleGetConstraints(ctx, {
+            const global = await handleGetConstraints(ctx, {
                 scope: 'global',
             });
             expect(global.constraints.length).toBe(1);
@@ -94,14 +94,14 @@ describe('Intent Tools', () => {
     });
 
     describe('handleGetDecisions', () => {
-        it('returns empty array when no decisions exist', () => {
-            const result = handleGetDecisions(ctx, {});
+        it('returns empty array when no decisions exist', async () => {
+            const result = await handleGetDecisions(ctx, {});
             expect(result.decisions).toEqual([]);
         });
     });
 
     describe('handleProposeDecision', () => {
-        it('creates a proposed decision file', () => {
+        it('creates a proposed decision file', async () => {
             const result = handleProposeDecision(ctx, {
                 id: 'decision-use-rsc',
                 content: 'Use React Server Components for data fetching in Next.js.',
@@ -112,13 +112,13 @@ describe('Intent Tools', () => {
             expect(result.entry.frontmatter.status).toBe('proposed');
             expect(result.entry.frontmatter.author).toBe('ai');
 
-            const readBack = ctx.intent.readEntry('decision-use-rsc');
+            const readBack = await ctx.intent.readEntry('decision-use-rsc');
             expect(readBack).toBeDefined();
         });
     });
 
     describe('handleProposeConstraint', () => {
-        it('creates a proposed constraint file', () => {
+        it('creates a proposed constraint file', async () => {
             const result = handleProposeConstraint(ctx, {
                 id: 'constraint-no-any',
                 content: "Never use the 'any' type in TypeScript.",
@@ -129,7 +129,7 @@ describe('Intent Tools', () => {
             expect(result.entry.frontmatter.status).toBe('proposed');
             expect(result.entry.frontmatter.type).toBe('constraint');
 
-            const readBack = ctx.intent.readEntry('constraint-no-any');
+            const readBack = await ctx.intent.readEntry('constraint-no-any');
             expect(readBack).toBeDefined();
         });
     });

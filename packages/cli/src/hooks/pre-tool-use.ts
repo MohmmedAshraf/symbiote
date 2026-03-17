@@ -1,11 +1,6 @@
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import type { PreToolUsePayload, HookResponse } from './types.js';
-
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-
-type GraphInstance = InstanceType<typeof Graph>;
+import type { GraphInstance } from '../core/types.js';
 
 export interface ConstraintRef {
     scope: string;
@@ -84,6 +79,7 @@ export class PreToolUseHandler {
 
     private collectDependencies(symbols: string[]): string[] {
         const deps = new Set<string>();
+        const symbolSet = new Set(symbols);
 
         for (const symbol of symbols) {
             this.graph.forEachOutEdge(
@@ -94,7 +90,7 @@ export class PreToolUseHandler {
                     _source: string,
                     target: string,
                 ) => {
-                    if (attrs.type !== 'contains' && !symbols.includes(target)) {
+                    if (attrs.type !== 'contains' && !symbolSet.has(target)) {
                         deps.add(target);
                     }
                 },
@@ -106,12 +102,13 @@ export class PreToolUseHandler {
 
     private collectDependents(symbols: string[]): string[] {
         const dependents = new Set<string>();
+        const symbolSet = new Set(symbols);
 
         for (const symbol of symbols) {
             this.graph.forEachInEdge(
                 symbol,
                 (_edge: string, attrs: Record<string, unknown>, source: string) => {
-                    if (attrs.type !== 'contains' && !symbols.includes(source)) {
+                    if (attrs.type !== 'contains' && !symbolSet.has(source)) {
                         dependents.add(source);
                     }
                 },
@@ -143,6 +140,7 @@ export class PreToolUseHandler {
             lines.push('');
             lines.push('Symbols in this file:');
             for (const sym of symbols) {
+                if (!this.graph.hasNode(sym)) continue;
                 const attrs = this.graph.getNodeAttributes(sym);
                 lines.push(
                     `  - ${attrs.name} (${attrs.type}, lines ${attrs.lineStart}-${attrs.lineEnd})`,
@@ -154,6 +152,7 @@ export class PreToolUseHandler {
             lines.push('');
             lines.push('Dependencies:');
             for (const dep of dependencies) {
+                if (!this.graph.hasNode(dep)) continue;
                 const attrs = this.graph.getNodeAttributes(dep);
                 lines.push(`  - ${attrs.name} (${attrs.filePath})`);
             }
@@ -163,6 +162,7 @@ export class PreToolUseHandler {
             lines.push('');
             lines.push('Dependents:');
             for (const dep of dependents) {
+                if (!this.graph.hasNode(dep)) continue;
                 const attrs = this.graph.getNodeAttributes(dep);
                 lines.push(`  - ${attrs.name} (${attrs.filePath})`);
             }

@@ -120,7 +120,9 @@ export class DnaStorage {
 
     private writeIndex(index: DnaIndex): void {
         const indexPath = path.join(this.dnaDir, 'index.json');
-        fs.writeFileSync(indexPath, JSON.stringify(index, null, 4) + '\n');
+        const tmpPath = indexPath + '.tmp';
+        fs.writeFileSync(tmpPath, JSON.stringify(index, null, 4) + '\n');
+        fs.renameSync(tmpPath, indexPath);
     }
 
     private idToFileName(id: string, category: DnaCategory): string {

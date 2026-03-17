@@ -1,8 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import path from 'node:path';
 import type { ServerContext } from './context.js';
 import type { EventBus } from '../events/bus.js';
 import type { SymbioteEvent } from '../events/types.js';
 import { EVENT_TYPES } from '../events/types.js';
+import type {
+    ConstraintViolation,
+    CircularDep,
+    DeadCodeEntry,
+    CouplingHotspot,
+} from '../brain/health/types.js';
 
 const MAX_BODY_SIZE = 1024 * 1024; // 1MB
 
@@ -41,7 +48,7 @@ export async function handleApiRequest(
 
     if (pathname.startsWith('/api/dna/') && req.method === 'PATCH') {
         const entryId = decodeURIComponent(pathname.slice('/api/dna/'.length));
-        return handleUpdateDna(ctx, entryId, req, res);
+        return await handleUpdateDna(ctx, entryId, req, res);
     }
 
     return false;
@@ -81,18 +88,14 @@ async function handleGetNodeContext(
 
     const dependencies = await ctx.graph.getDependencies(nodeId);
     const dependents = await ctx.graph.getDependents(nodeId);
-    const constraints = ctx.intent
-        .listEntries('constraint')
-        .filter(
-            (c) =>
-                c.frontmatter.scope === 'global' || node.filePath.startsWith(c.frontmatter.scope),
-        );
-    const decisions = ctx.intent
-        .listEntries('decision')
-        .filter(
-            (d) =>
-                d.frontmatter.scope === 'global' || node.filePath.startsWith(d.frontmatter.scope),
-        );
+    const allConstraints = await ctx.intent.listEntries('constraint');
+    const constraints = allConstraints.filter(
+        (c) => c.frontmatter.scope === 'global' || node.filePath.startsWith(c.frontmatter.scope),
+    );
+    const allDecisions = await ctx.intent.listEntries('decision');
+    const decisions = allDecisions.filter(
+        (d) => d.frontmatter.scope === 'global' || node.filePath.startsWith(d.frontmatter.scope),
+    );
 
     return json(res, {
         node,
@@ -106,17 +109,25 @@ async function handleGetNodeContext(
 async function handleGetHealthApi(ctx: ServerContext, res: ServerResponse): Promise<boolean> {
     const report = await ctx.health.analyze();
 
+    type HealthIssueItem = ConstraintViolation | CircularDep | DeadCodeEntry | CouplingHotspot;
+
     const toIssues = (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        items: any[],
+        items: HealthIssueItem[],
         category: string,
         severity: 'error' | 'warning' | 'info',
     ) =>
         items.map((item) => ({
             severity,
-            message: item.message ?? item.chain?.join(' → ') ?? item.name ?? String(item),
-            filePath: item.filePath ?? item.file ?? '',
-            line: item.line ?? item.lineStart,
+            message:
+                ('constraintDescription' in item ? item.constraintDescription : null) ??
+                ('chain' in item ? item.chain.join(' \u2192 ') : null) ??
+                ('node' in item ? item.node.name : null) ??
+                String(item),
+            filePath:
+                ('filePath' in item ? item.filePath : null) ??
+                ('node' in item ? item.node.filePath : '') ??
+                '',
+            line: 'lineStart' in item ? item.lineStart : undefined,
             category,
         }));
 
@@ -167,49 +178,55 @@ function handleUpdateDna(
     entryId: string,
     req: IncomingMessage,
     res: ServerResponse,
-): boolean {
-    let body = '';
-    req.on('data', (chunk) => {
-        body += chunk;
-        if (body.length > MAX_BODY_SIZE) {
-            res.writeHead(413);
-            res.end('Payload too large');
-            req.destroy();
-        }
-    });
-    req.on('end', () => {
-        try {
-            const data = JSON.parse(body);
-
-            if (data.status === 'approved') {
-                const entry = ctx.dnaEngine.approveEntry(entryId);
-                if (!entry) {
-                    json(res, { error: 'Entry not found' }, 404);
-                    return;
-                }
-                json(res, entry);
-            } else if (data.status === 'rejected') {
-                const entry = ctx.dnaEngine.rejectEntry(entryId);
-                if (!entry) {
-                    json(res, { error: 'Entry not found' }, 404);
-                    return;
-                }
-                json(res, entry);
-            } else if (data.content) {
-                const entry = ctx.dnaEngine.editEntry(entryId, data.content);
-                if (!entry) {
-                    json(res, { error: 'Entry not found' }, 404);
-                    return;
-                }
-                json(res, entry);
-            } else {
-                json(res, { error: 'No valid update fields' }, 400);
+): Promise<boolean> {
+    return new Promise((resolve) => {
+        let body = '';
+        let destroyed = false;
+        req.on('data', (chunk) => {
+            body += chunk;
+            if (body.length > MAX_BODY_SIZE) {
+                destroyed = true;
+                res.writeHead(413);
+                res.end('Payload too large');
+                req.destroy();
+                resolve(true);
             }
-        } catch {
-            json(res, { error: 'Invalid JSON' }, 400);
-        }
+        });
+        req.on('end', () => {
+            if (destroyed) return;
+            try {
+                const data = JSON.parse(body) as Record<string, unknown>;
+
+                if (data.status === 'approved') {
+                    const entry = ctx.dnaEngine.approveEntry(entryId);
+                    if (!entry) {
+                        json(res, { error: 'Entry not found' }, 404);
+                    } else {
+                        json(res, entry);
+                    }
+                } else if (data.status === 'rejected') {
+                    const entry = ctx.dnaEngine.rejectEntry(entryId);
+                    if (!entry) {
+                        json(res, { error: 'Entry not found' }, 404);
+                    } else {
+                        json(res, entry);
+                    }
+                } else if (typeof data.content === 'string') {
+                    const entry = ctx.dnaEngine.editEntry(entryId, data.content);
+                    if (!entry) {
+                        json(res, { error: 'Entry not found' }, 404);
+                    } else {
+                        json(res, entry);
+                    }
+                } else {
+                    json(res, { error: 'No valid update fields' }, 400);
+                }
+            } catch {
+                json(res, { error: 'Invalid JSON' }, 400);
+            }
+            resolve(true);
+        });
     });
-    return true;
 }
 
 export async function handleHookContext(
@@ -229,11 +246,10 @@ export async function handleHookContext(
     }
 
     try {
-        const path = await import('node:path');
-        const absolutePath = path.default.isAbsolute(filePath)
+        const absolutePath = path.isAbsolute(filePath)
             ? filePath
-            : path.default.join(projectRoot, filePath);
-        const relativePath = path.default.relative(projectRoot, absolutePath);
+            : path.join(projectRoot, filePath);
+        const relativePath = path.relative(projectRoot, absolutePath);
 
         const fileNodeId = `file:${absolutePath}`;
 
@@ -243,20 +259,21 @@ export async function handleHookContext(
             return;
         }
 
-        const symbols: string[] = [];
+        const symbolsList: string[] = [];
         ctx.graphology.forEachOutEdge(
             fileNodeId,
             (_e: string, attrs: Record<string, unknown>, _s: string, target: string) => {
-                if (attrs.type === 'contains') symbols.push(target);
+                if (attrs.type === 'contains') symbolsList.push(target);
             },
         );
+        const symbols = new Set(symbolsList);
 
         const dependencies = new Set<string>();
         for (const sym of symbols) {
             ctx.graphology.forEachOutEdge(
                 sym,
                 (_e: string, attrs: Record<string, unknown>, _s: string, target: string) => {
-                    if (attrs.type !== 'contains' && !symbols.includes(target)) {
+                    if (attrs.type !== 'contains' && !symbols.has(target)) {
                         dependencies.add(target);
                     }
                 },
@@ -268,15 +285,17 @@ export async function handleHookContext(
             ctx.graphology.forEachInEdge(
                 sym,
                 (_e: string, attrs: Record<string, unknown>, source: string) => {
-                    if (attrs.type !== 'contains' && !symbols.includes(source)) {
+                    if (attrs.type !== 'contains' && !symbols.has(source)) {
                         dependents.add(source);
                     }
                 },
             );
         }
 
-        const constraints = ctx.intent
-            .listEntries('constraint', { status: 'active' })
+        const activeConstraints = await ctx.intent.listEntries('constraint', {
+            status: 'active',
+        });
+        const constraints = activeConstraints
             .filter(
                 (c) => c.frontmatter.scope === '*' || relativePath.includes(c.frontmatter.scope),
             )
@@ -297,9 +316,10 @@ export async function handleHookContext(
         const lines: string[] = [];
         lines.push(`File context for ${relativePath}:`);
 
-        if (symbols.length > 0) {
+        if (symbols.size > 0) {
             lines.push('', 'Symbols:');
             for (const sym of symbols) {
+                if (!ctx.graphology.hasNode(sym)) continue;
                 const attrs = ctx.graphology.getNodeAttributes(sym);
                 lines.push(
                     `  - ${attrs.name} (${attrs.type}, lines ${attrs.lineStart}-${attrs.lineEnd})`,
@@ -310,6 +330,7 @@ export async function handleHookContext(
         if (dependencies.size > 0) {
             lines.push('', 'Dependencies:');
             for (const dep of dependencies) {
+                if (!ctx.graphology.hasNode(dep)) continue;
                 const attrs = ctx.graphology.getNodeAttributes(dep);
                 lines.push(`  - ${attrs.name} (${attrs.filePath})`);
             }
@@ -318,6 +339,7 @@ export async function handleHookContext(
         if (dependents.size > 0) {
             lines.push('', 'Dependents (will be affected by changes):');
             for (const dep of dependents) {
+                if (!ctx.graphology.hasNode(dep)) continue;
                 const attrs = ctx.graphology.getNodeAttributes(dep);
                 lines.push(`  - ${attrs.name} (${attrs.filePath})`);
             }
@@ -349,31 +371,38 @@ export function handleInternalEvent(
     bus: EventBus,
     req: IncomingMessage,
     res: ServerResponse,
-): void {
-    let body = '';
-    req.on('data', (chunk) => {
-        body += chunk;
-        if (body.length > MAX_BODY_SIZE) {
-            res.writeHead(413);
-            res.end('Payload too large');
-            req.destroy();
-        }
-    });
-    req.on('end', () => {
-        try {
-            const event = JSON.parse(body) as SymbioteEvent;
-            if (!EVENT_TYPES.includes(event.type as (typeof EVENT_TYPES)[number])) {
+): Promise<void> {
+    return new Promise((resolve) => {
+        let body = '';
+        let destroyed = false;
+        req.on('data', (chunk) => {
+            body += chunk;
+            if (body.length > MAX_BODY_SIZE) {
+                destroyed = true;
+                res.writeHead(413);
+                res.end('Payload too large');
+                req.destroy();
+                resolve();
+            }
+        });
+        req.on('end', () => {
+            if (destroyed) return;
+            try {
+                const event = JSON.parse(body) as SymbioteEvent;
+                if (!EVENT_TYPES.includes(event.type as (typeof EVENT_TYPES)[number])) {
+                    res.writeHead(400);
+                    res.end();
+                } else {
+                    bus.emit(event);
+                    res.writeHead(200);
+                    res.end();
+                }
+            } catch {
                 res.writeHead(400);
                 res.end();
-                return;
             }
-            bus.emit(event);
-            res.writeHead(200);
-            res.end();
-        } catch {
-            res.writeHead(400);
-            res.end();
-        }
+            resolve();
+        });
     });
 }
 

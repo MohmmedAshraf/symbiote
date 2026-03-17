@@ -33,7 +33,7 @@ const scanResult: ScanResult = {
 };
 
 describe('SmartInit integration', () => {
-    it('produces complete overview with all sections', () => {
+    it('produces complete overview with all sections', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -42,7 +42,7 @@ describe('SmartInit integration', () => {
                 brainDir,
                 scanResult,
             });
-            init.run();
+            await init.run();
 
             const overview = readFileSync(join(brainDir, 'intent', 'overview.md'), 'utf-8');
 
@@ -59,7 +59,7 @@ describe('SmartInit integration', () => {
         }
     });
 
-    it('creates intent entries from CLAUDE.md', () => {
+    it('creates intent entries from CLAUDE.md', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -68,13 +68,13 @@ describe('SmartInit integration', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             expect(result.intentEntriesCreated).toBeGreaterThan(0);
 
             const store = new IntentStore(brainDir);
-            const constraints = store.listEntries('constraint');
-            const decisions = store.listEntries('decision');
+            const constraints = await store.listEntries('constraint');
+            const decisions = await store.listEntries('decision');
             const total = constraints.length + decisions.length;
 
             expect(total).toBe(result.intentEntriesCreated);
@@ -83,7 +83,7 @@ describe('SmartInit integration', () => {
         }
     });
 
-    it('creates DNA entries', () => {
+    it('creates DNA entries', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -92,7 +92,7 @@ describe('SmartInit integration', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             expect(result.dnaEntriesImported).toBeGreaterThan(0);
 
@@ -106,7 +106,7 @@ describe('SmartInit integration', () => {
         }
     });
 
-    it('is idempotent — running twice does not duplicate entries', () => {
+    it('is idempotent — running twice does not duplicate entries', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const options = {
@@ -116,8 +116,8 @@ describe('SmartInit integration', () => {
                 scanResult,
             };
 
-            const first = new SmartInit(options).run();
-            const second = new SmartInit(options).run();
+            const first = await new SmartInit(options).run();
+            const second = await new SmartInit(options).run();
 
             expect(second.dnaEntriesImported).toBe(0);
             expect(second.intentEntriesCreated).toBe(0);
@@ -132,7 +132,7 @@ describe('SmartInit integration', () => {
         }
     });
 
-    it('detects all expected tech stack entries', () => {
+    it('detects all expected tech stack entries', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -141,7 +141,7 @@ describe('SmartInit integration', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             const names = result.techStack.map((t) => t.name);
             expect(names).toContain('Next.js');

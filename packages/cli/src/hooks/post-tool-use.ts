@@ -17,7 +17,10 @@ export class PostToolUseHandler {
     async handle(payload: PostToolUsePayload): Promise<HookResponse> {
         try {
             if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
-                const filePath = payload.tool_input.file_path as string | undefined;
+                const filePath =
+                    typeof payload.tool_input.file_path === 'string'
+                        ? payload.tool_input.file_path
+                        : undefined;
                 if (filePath) {
                     const relativePath = path.relative(this.config.projectRoot, filePath);
                     await this.config.onReindexFile(relativePath);
@@ -25,7 +28,10 @@ export class PostToolUseHandler {
             }
 
             if (payload.tool_name === 'Bash') {
-                const command = payload.tool_input.command as string | undefined;
+                const command =
+                    typeof payload.tool_input.command === 'string'
+                        ? payload.tool_input.command
+                        : undefined;
                 if (command && /git\s+commit/.test(command)) {
                     await this.config.onFullRescan();
                 }

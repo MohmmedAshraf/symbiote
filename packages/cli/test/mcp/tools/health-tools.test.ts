@@ -79,10 +79,12 @@ describe('Health Tools', () => {
         expect(Array.isArray(result.deadCode)).toBe(true);
     });
 
-    it('saves a snapshot on each call', async () => {
+    it('does not save snapshots as a side effect', async () => {
+        const before = await ctx.health.getHistory(10);
+        const countBefore = before.length;
         await handleGetHealth(ctx);
         await handleGetHealth(ctx);
-        const history = await ctx.health.getHistory(10);
-        expect(history.length).toBe(2);
+        const after = await ctx.health.getHistory(10);
+        expect(after.length).toBe(countBefore);
     });
 });

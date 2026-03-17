@@ -1,13 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createRequire } from 'node:module';
 import { ImpactAnalyzer } from './impact.js';
+import { computeRiskLevel } from './types.js';
 import type { ImpactEntry } from './impact.js';
-
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-
-type GraphInstance = InstanceType<typeof Graph>;
+import type { GraphInstance, RiskLevel } from './types.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -21,7 +17,7 @@ export interface GitImpactResult {
     changedFiles: string[];
     affectedNodes: ImpactEntry[];
     affectedFiles: AffectedFile[];
-    riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+    riskLevel: RiskLevel;
     summary: string;
 }
 
@@ -103,14 +99,7 @@ export class GitImpactAnalyzer {
         const maxConf =
             allAffected.length > 0 ? Math.max(...allAffected.map((e) => e.confidence)) : 0;
 
-        let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
-        if (maxConf > 0.7) {
-            riskLevel = 'HIGH';
-        } else if (maxConf > 0.4) {
-            riskLevel = 'MEDIUM';
-        } else {
-            riskLevel = 'LOW';
-        }
+        const riskLevel = computeRiskLevel(maxConf);
 
         const summary =
             allAffected.length === 0

@@ -14,37 +14,37 @@ describe('IntentStore', () => {
             store = new IntentStore(FIXTURES);
         });
 
-        it('lists all decisions', () => {
-            const decisions = store.listEntries('decision');
+        it('lists all decisions', async () => {
+            const decisions = await store.listEntries('decision');
             expect(decisions.length).toBeGreaterThanOrEqual(1);
             expect(decisions[0].frontmatter.type).toBe('decision');
         });
 
-        it('lists all constraints', () => {
-            const constraints = store.listEntries('constraint');
+        it('lists all constraints', async () => {
+            const constraints = await store.listEntries('constraint');
             expect(constraints.length).toBeGreaterThanOrEqual(1);
             expect(constraints[0].frontmatter.type).toBe('constraint');
         });
 
-        it('reads a specific entry by id', () => {
-            const entry = store.readEntry('constraint-no-raw-sql');
+        it('reads a specific entry by id', async () => {
+            const entry = await store.readEntry('constraint-no-raw-sql');
             expect(entry).toBeDefined();
             expect(entry!.frontmatter.id).toBe('constraint-no-raw-sql');
             expect(entry!.content).toContain('Drizzle ORM');
         });
 
-        it('returns null for unknown id', () => {
-            const entry = store.readEntry('nonexistent');
+        it('returns null for unknown id', async () => {
+            const entry = await store.readEntry('nonexistent');
             expect(entry).toBeNull();
         });
 
-        it('filters by scope', () => {
-            const global = store.listEntries('constraint', {
+        it('filters by scope', async () => {
+            const global = await store.listEntries('constraint', {
                 scope: 'global',
             });
             expect(global.length).toBeGreaterThanOrEqual(1);
 
-            const scoped = store.listEntries('constraint', {
+            const scoped = await store.listEntries('constraint', {
                 scope: 'src/service.ts',
             });
             expect(scoped.length).toBe(0);
@@ -70,7 +70,7 @@ describe('IntentStore', () => {
             fs.rmSync(tmpDir, { recursive: true, force: true });
         });
 
-        it('writes a decision entry', () => {
+        it('writes a decision entry', async () => {
             const entry: IntentEntry = {
                 frontmatter: {
                     id: 'decision-test',
@@ -85,13 +85,13 @@ describe('IntentStore', () => {
 
             store.writeEntry(entry);
 
-            const read = store.readEntry('decision-test');
+            const read = await store.readEntry('decision-test');
             expect(read).toBeDefined();
             expect(read!.frontmatter.status).toBe('proposed');
             expect(read!.content).toContain('React Server Components');
         });
 
-        it('writes a constraint entry', () => {
+        it('writes a constraint entry', async () => {
             const entry: IntentEntry = {
                 frontmatter: {
                     id: 'constraint-test',
@@ -106,12 +106,12 @@ describe('IntentStore', () => {
 
             store.writeEntry(entry);
 
-            const read = store.readEntry('constraint-test');
+            const read = await store.readEntry('constraint-test');
             expect(read).toBeDefined();
             expect(read!.frontmatter.scope).toBe('src/api/');
         });
 
-        it('overwrites an existing entry', () => {
+        it('overwrites an existing entry', async () => {
             const entry: IntentEntry = {
                 frontmatter: {
                     id: 'decision-overwrite',
@@ -130,7 +130,7 @@ describe('IntentStore', () => {
                 content: 'Updated content.',
             });
 
-            const read = store.readEntry('decision-overwrite');
+            const read = await store.readEntry('decision-overwrite');
             expect(read!.content).toBe('Updated content.');
         });
     });

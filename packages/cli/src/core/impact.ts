@@ -1,9 +1,5 @@
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-
-type GraphInstance = InstanceType<typeof Graph>;
+import type { GraphInstance, RiskLevel } from './types.js';
+import { computeRiskLevel } from './types.js';
 
 const EDGE_CONFIDENCE: Record<string, number> = {
     calls: 0.9,
@@ -23,7 +19,7 @@ export interface ImpactEntry {
 export interface ImpactSummary {
     totalAffected: number;
     criticalPaths: number;
-    riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+    riskLevel: RiskLevel;
 }
 
 export interface ImpactResult {
@@ -38,6 +34,13 @@ export class ImpactAnalyzer {
         const depths: Record<number, ImpactEntry[]> = {};
         const bestConfidence = new Map<string, number>();
 
+        if (!this.graph.hasNode(nodeId)) {
+            return {
+                depths: { 0: [{ node: nodeId, depth: 0, path: [nodeId], confidence: 1.0 }] },
+                summary: { totalAffected: 0, criticalPaths: 0, riskLevel: 'LOW' },
+            };
+        }
+
         depths[0] = [{ node: nodeId, depth: 0, path: [nodeId], confidence: 1.0 }];
         bestConfidence.set(nodeId, 1.0);
 
@@ -47,6 +50,7 @@ export class ImpactAnalyzer {
             const nextLevel: ImpactEntry[] = [];
 
             for (const entry of currentFrontier) {
+                if (!this.graph.hasNode(entry.node)) continue;
                 const inEdges = this.graph.inEdges(entry.node);
 
                 for (const edgeKey of inEdges) {
@@ -80,21 +84,12 @@ export class ImpactAnalyzer {
         const criticalPaths = affected.filter((e) => e.confidence > 0.7).length;
         const maxConf = affected.length > 0 ? Math.max(...affected.map((e) => e.confidence)) : 0;
 
-        let riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
-        if (maxConf > 0.7) {
-            riskLevel = 'HIGH';
-        } else if (maxConf > 0.4) {
-            riskLevel = 'MEDIUM';
-        } else {
-            riskLevel = 'LOW';
-        }
-
         return {
             depths,
             summary: {
                 totalAffected: affected.length,
                 criticalPaths,
-                riskLevel,
+                riskLevel: computeRiskLevel(maxConf),
             },
         };
     }

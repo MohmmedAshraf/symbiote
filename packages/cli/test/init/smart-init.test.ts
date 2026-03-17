@@ -31,7 +31,7 @@ const scanResult: ScanResult = {
 };
 
 describe('SmartInit', () => {
-    it('runs all steps and returns a summary', () => {
+    it('runs all steps and returns a summary', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -40,7 +40,7 @@ describe('SmartInit', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             expect(result.rulesImported).toBeGreaterThan(0);
             expect(result.techStack.length).toBeGreaterThan(0);
@@ -51,7 +51,7 @@ describe('SmartInit', () => {
         }
     });
 
-    it('writes overview.md to brain directory', () => {
+    it('writes overview.md to brain directory', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -60,7 +60,7 @@ describe('SmartInit', () => {
                 brainDir,
                 scanResult,
             });
-            init.run();
+            await init.run();
 
             const overviewPath = join(brainDir, 'intent', 'overview.md');
             expect(existsSync(overviewPath)).toBe(true);
@@ -73,7 +73,7 @@ describe('SmartInit', () => {
         }
     });
 
-    it('creates constraint intent entries', () => {
+    it('creates constraint intent entries', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -82,7 +82,7 @@ describe('SmartInit', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             expect(result.intentEntriesCreated).toBeGreaterThan(0);
 
@@ -93,7 +93,7 @@ describe('SmartInit', () => {
         }
     });
 
-    it('imports DNA entries', () => {
+    it('imports DNA entries', async () => {
         const { symbioteHome, brainDir, cleanup } = makeTmpDirs();
         try {
             const init = new SmartInit({
@@ -102,7 +102,7 @@ describe('SmartInit', () => {
                 brainDir,
                 scanResult,
             });
-            const result = init.run();
+            const result = await init.run();
 
             expect(result.dnaEntriesImported).toBeGreaterThan(0);
         } finally {

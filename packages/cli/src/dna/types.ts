@@ -106,7 +106,7 @@ function stripQuotes(s: string): string {
     return s;
 }
 
-function parseYamlBlock(block: string): Record<string, unknown> | null {
+export function parseYamlBlock(block: string): Record<string, unknown> | null {
     const result: Record<string, unknown> = {};
     const lines = block.split('\n');
     let currentArrayKey: string | null = null;

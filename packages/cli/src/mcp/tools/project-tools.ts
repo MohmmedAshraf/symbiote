@@ -13,10 +13,10 @@ export interface ProjectOverviewOutput {
 
 export async function handleGetProjectOverview(ctx: ServerContext): Promise<ProjectOverviewOutput> {
     const overview = await ctx.graph.getOverview();
-    const constraints = ctx.intent.listEntries('constraint', {
+    const constraints = await ctx.intent.listEntries('constraint', {
         status: 'active',
     });
-    const decisions = ctx.intent.listEntries('decision', {
+    const decisions = await ctx.intent.listEntries('decision', {
         status: 'active',
     });
 
@@ -49,19 +49,15 @@ export async function handleGetContextForFile(
 ): Promise<FileContextOutput> {
     const fileCtx = await ctx.graph.getFileContext(input.filePath);
 
-    const constraints = ctx.intent
-        .listEntries('constraint')
-        .filter(
-            (c) =>
-                c.frontmatter.scope === 'global' || input.filePath.startsWith(c.frontmatter.scope),
-        );
+    const allConstraints = await ctx.intent.listEntries('constraint');
+    const constraints = allConstraints.filter(
+        (c) => c.frontmatter.scope === 'global' || input.filePath.startsWith(c.frontmatter.scope),
+    );
 
-    const decisions = ctx.intent
-        .listEntries('decision')
-        .filter(
-            (d) =>
-                d.frontmatter.scope === 'global' || input.filePath.startsWith(d.frontmatter.scope),
-        );
+    const allDecisions = await ctx.intent.listEntries('decision');
+    const decisions = allDecisions.filter(
+        (d) => d.frontmatter.scope === 'global' || input.filePath.startsWith(d.frontmatter.scope),
+    );
 
     return {
         filePath: input.filePath,

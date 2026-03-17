@@ -1,9 +1,17 @@
 import type { ServerContext } from '../context.js';
 import type { IntentEntry } from '../../brain/intent.js';
 
+const MAX_ID_LENGTH = 200;
+
 function validateId(id: string): void {
+    if (id.length > MAX_ID_LENGTH) {
+        throw new Error(`Invalid id: must not exceed ${MAX_ID_LENGTH} characters`);
+    }
     if (id.includes('/') || id.includes('\\') || id.includes('..')) {
         throw new Error('Invalid id: must not contain path separators or ".."');
+    }
+    if (id.includes('\x00') || /[\x00-\x1f]/.test(id)) {
+        throw new Error('Invalid id: must not contain null bytes or control characters');
     }
 }
 
@@ -15,11 +23,11 @@ export interface GetConstraintsOutput {
     constraints: IntentEntry[];
 }
 
-export function handleGetConstraints(
+export async function handleGetConstraints(
     ctx: ServerContext,
     input: GetConstraintsInput,
-): GetConstraintsOutput {
-    const constraints = ctx.intent.listEntries('constraint');
+): Promise<GetConstraintsOutput> {
+    const constraints = await ctx.intent.listEntries('constraint');
 
     if (input.scope) {
         return {
@@ -40,11 +48,11 @@ export interface GetDecisionsOutput {
     decisions: IntentEntry[];
 }
 
-export function handleGetDecisions(
+export async function handleGetDecisions(
     ctx: ServerContext,
     input: GetDecisionsInput,
-): GetDecisionsOutput {
-    const decisions = ctx.intent.listEntries('decision');
+): Promise<GetDecisionsOutput> {
+    const decisions = await ctx.intent.listEntries('decision');
 
     if (input.scope) {
         return {

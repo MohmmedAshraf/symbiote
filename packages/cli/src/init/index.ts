@@ -5,6 +5,7 @@ import { analyzeProject } from './project-analyzer.js';
 import { bootstrapDna } from './dna-bootstrap.js';
 import { generateSmartOverview } from './overview-generator.js';
 import { IntentStore } from '../brain/intent.js';
+import { slugify } from '../utils/strings.js';
 import type { IntentEntry, IntentType } from '../brain/intent.js';
 import type { ClassifiedRule, TechStackEntry, ArchitectureSignal } from './parsers/types.js';
 import type { ScanResult } from '../core/scanner.js';
@@ -49,10 +50,10 @@ export class SmartInit {
         this.scanResult = options.scanResult ?? DEFAULT_SCAN_RESULT;
     }
 
-    run(): SmartInitResult {
+    async run(): Promise<SmartInitResult> {
         const rules = importRules(this.projectRoot);
         const analysis = analyzeProject(this.projectRoot);
-        const intentCount = this.writeIntentEntries(rules);
+        const intentCount = await this.writeIntentEntries(rules);
         const dnaResult = bootstrapDna(this.symbioteHome, rules);
         const projectName = path.basename(this.projectRoot);
         const overviewContent = generateSmartOverview(
@@ -75,7 +76,7 @@ export class SmartInit {
         };
     }
 
-    private writeIntentEntries(rules: ClassifiedRule[]): number {
+    private async writeIntentEntries(rules: ClassifiedRule[]): Promise<number> {
         const intentRules = rules.filter((r) => r.target === 'intent');
         if (intentRules.length === 0) return 0;
 
@@ -86,7 +87,7 @@ export class SmartInit {
             const type: IntentType = rule.classification === 'decision' ? 'decision' : 'constraint';
             const id = `${type}-${slugify(rule.text)}`;
 
-            const existing = store.readEntry(id);
+            const existing = await store.readEntry(id);
             if (existing) continue;
 
             const entry: IntentEntry = {
@@ -113,15 +114,4 @@ export class SmartInit {
         fs.mkdirSync(overviewDir, { recursive: true });
         fs.writeFileSync(path.join(overviewDir, 'overview.md'), content);
     }
-}
-
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 50)
-        .replace(/-$/, '');
 }

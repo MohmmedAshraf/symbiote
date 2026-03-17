@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
@@ -23,11 +24,26 @@ import {
     handleProjectHealthResource,
 } from './resources.js';
 
+const require = createRequire(import.meta.url);
+const { version } = require('../../package.json') as { version: string };
+
+function textResult(data: unknown): { type: 'text'; text: string } {
+    return { type: 'text', text: JSON.stringify(data, null, 2) };
+}
+
 export function createMcpServer(ctx: ServerContext): { server: McpServer } {
     const server = new McpServer({
         name: 'symbiote',
-        version: '0.1.0',
+        version,
     });
+
+    let cachedImpact: ImpactAnalyzer | null = null;
+    function getImpactAnalyzer(): ImpactAnalyzer {
+        if (!cachedImpact) {
+            cachedImpact = new ImpactAnalyzer(ctx.graphology);
+        }
+        return cachedImpact;
+    }
 
     server.tool(
         'get_developer_dna',
@@ -43,12 +59,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('Description of the current task for relevance filtering'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleGetDeveloperDna(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(handleGetDeveloperDna(ctx, input))],
         }),
     );
 
@@ -57,12 +68,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         "Returns the project's structure, stats, and health summary.",
         {},
         async () => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(await handleGetProjectOverview(ctx), null, 2),
-                },
-            ],
+            content: [textResult(await handleGetProjectOverview(ctx))],
         }),
     );
 
@@ -73,12 +79,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             filePath: z.string().describe('The file path to get context for'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(await handleGetContextForFile(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(await handleGetContextForFile(ctx, input))],
         }),
     );
 
@@ -104,12 +105,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('Max results for hubs query (default: 20)'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(await handleQueryGraph(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(await handleQueryGraph(ctx, input))],
         }),
     );
 
@@ -121,12 +117,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             limit: z.number().optional().default(10).describe('Maximum number of results'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(await handleSemanticSearch(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(await handleSemanticSearch(ctx, input))],
         }),
     );
 
@@ -137,12 +128,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             scope: z.string().optional().describe('File path or module to scope constraints to'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleGetConstraints(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(await handleGetConstraints(ctx, input))],
         }),
     );
 
@@ -153,12 +139,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             scope: z.string().optional().describe('File path or module to scope decisions to'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleGetDecisions(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(await handleGetDecisions(ctx, input))],
         }),
     );
 
@@ -167,12 +148,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         "Returns the project's health report: dead code, circular deps, orphans, violations.",
         {},
         async () => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(await handleGetHealth(ctx), null, 2),
-                },
-            ],
+            content: [textResult(await handleGetHealth(ctx))],
         }),
     );
 
@@ -185,12 +161,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             scope: z.string().default('global').describe("Scope: 'global' or a file/module path"),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleProposeDecision(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(handleProposeDecision(ctx, input))],
         }),
     );
 
@@ -203,12 +174,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             scope: z.string().default('global').describe("Scope: 'global' or a file/module path"),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleProposeConstraint(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(handleProposeConstraint(ctx, input))],
         }),
     );
 
@@ -224,12 +190,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('True if the developer explicitly stated a preference'),
         },
         async (input) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: JSON.stringify(handleRecordInstruction(ctx, input), null, 2),
-                },
-            ],
+            content: [textResult(handleRecordInstruction(ctx, input))],
         }),
     );
 
@@ -247,16 +208,11 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe('Maximum traversal depth (default: 3)'),
         },
         async (input) => {
-            const impact = new ImpactAnalyzer(ctx.graphology);
-            const result = handleGetImpact({ graph: ctx.graphology, impact }, input);
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: JSON.stringify(result, null, 2),
-                    },
-                ],
-            };
+            const result = handleGetImpact(
+                { graph: ctx.graphology, impact: getImpactAnalyzer() },
+                input,
+            );
+            return { content: [textResult(result)] };
         },
     );
 
@@ -265,16 +221,11 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         'Analyze uncommitted git changes: maps modified files to affected modules with risk assessment.',
         {},
         async () => {
-            const impact = new ImpactAnalyzer(ctx.graphology);
-            const result = await handleDetectChanges({ graph: ctx.graphology, impact }, {});
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: JSON.stringify(result, null, 2),
-                    },
-                ],
-            };
+            const result = await handleDetectChanges(
+                { graph: ctx.graphology, impact: getImpactAnalyzer() },
+                {},
+            );
+            return { content: [textResult(result)] };
         },
     );
 

@@ -1,13 +1,8 @@
-import { createRequire } from 'node:module';
 import { ImpactAnalyzer } from '../../core/impact.js';
 import { GitImpactAnalyzer } from '../../core/git-impact.js';
 import type { ImpactResult } from '../../core/impact.js';
 import type { GitImpactResult } from '../../core/git-impact.js';
-
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-
-type GraphInstance = InstanceType<typeof Graph>;
+import type { GraphInstance } from '../../core/types.js';
 
 export interface ImpactToolContext {
     graph: GraphInstance;
