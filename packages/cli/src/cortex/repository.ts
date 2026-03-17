@@ -13,6 +13,12 @@ import type {
     ExtendsEdge,
     ImplementsEdge,
     ContainsEdge,
+    FlowsToEdge,
+    ReadsEdge,
+    WritesEdge,
+    ReturnsEdge,
+    TypeConstraint,
+    GenericInstantiation,
     SymbolTableEntry,
 } from './types.js';
 
@@ -148,6 +154,64 @@ interface ContainsEdgeRow extends Record<string, unknown> {
     confidence: number;
     stage: number;
     reason: string | null;
+}
+
+interface FlowsToEdgeRow extends Record<string, unknown> {
+    source_id: string;
+    target_id: string;
+    parameter_index: number | null;
+    transform: string | null;
+    taint_label: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+interface ReadsEdgeRow extends Record<string, unknown> {
+    source_id: string;
+    target_id: string;
+    line: number | null;
+    field: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+interface WritesEdgeRow extends Record<string, unknown> {
+    source_id: string;
+    target_id: string;
+    line: number | null;
+    field: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+interface ReturnsEdgeRow extends Record<string, unknown> {
+    source_id: string;
+    target_id: string;
+    line: number | null;
+    return_type: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+interface TypeConstraintRow extends Record<string, unknown> {
+    symbol_id: string;
+    type_name: string;
+    source: string;
+    confidence: number;
+    file_path: string;
+    line: number;
+}
+
+interface GenericInstantiationRow extends Record<string, unknown> {
+    symbol_id: string;
+    generic_name: string;
+    type_arguments: string[];
+    file_path: string;
+    line: number;
 }
 
 interface IdRow extends Record<string, unknown> {
@@ -694,6 +758,224 @@ export class CortexRepository {
         return rows.map(this.mapImplementsEdgeRow);
     }
 
+    async insertTypeConstraints(constraints: TypeConstraint[]): Promise<void> {
+        if (constraints.length === 0) return;
+        await this.batchInsert(
+            constraints,
+            6,
+            (c, offset) => ({
+                placeholder: `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
+                params: [c.symbolId, c.typeName, c.source, c.confidence, c.filePath, c.line],
+            }),
+            `INSERT OR IGNORE INTO type_constraints (symbol_id, type_name, source, confidence, file_path, line) VALUES`,
+        );
+    }
+
+    async getTypeConstraints(symbolId: string): Promise<TypeConstraint[]> {
+        const rows = await this.db.all<TypeConstraintRow>(
+            'SELECT * FROM type_constraints WHERE symbol_id = $1',
+            symbolId,
+        );
+        return rows.map(this.mapTypeConstraintRow);
+    }
+
+    async getTypeConstraintsByType(typeName: string): Promise<TypeConstraint[]> {
+        const rows = await this.db.all<TypeConstraintRow>(
+            'SELECT * FROM type_constraints WHERE type_name = $1',
+            typeName,
+        );
+        return rows.map(this.mapTypeConstraintRow);
+    }
+
+    async deleteTypeConstraintsForFile(filePath: string): Promise<void> {
+        await this.db.run('DELETE FROM type_constraints WHERE file_path = $1', filePath);
+    }
+
+    async insertGenericInstantiations(insts: GenericInstantiation[]): Promise<void> {
+        if (insts.length === 0) return;
+        await this.db.exec('BEGIN TRANSACTION');
+        try {
+            for (const inst of insts) {
+                const listLiteral = `[${inst.typeArguments.map((a) => `'${a.replace(/'/g, "''")}'`).join(', ')}]`;
+                await this.db.run(
+                    `INSERT INTO generic_instantiations (symbol_id, generic_name, type_arguments, file_path, line)
+                     VALUES ($1, $2, ${listLiteral}::VARCHAR[], $3, $4)`,
+                    inst.symbolId,
+                    inst.genericName,
+                    inst.filePath,
+                    inst.line,
+                );
+            }
+            await this.db.exec('COMMIT');
+        } catch (err) {
+            await this.db.exec('ROLLBACK');
+            throw err;
+        }
+    }
+
+    async getGenericInstantiations(symbolId: string): Promise<GenericInstantiation[]> {
+        const rows = await this.db.all<GenericInstantiationRow>(
+            'SELECT * FROM generic_instantiations WHERE symbol_id = $1',
+            symbolId,
+        );
+        return rows.map(this.mapGenericInstantiationRow);
+    }
+
+    async deleteGenericInstantiationsForFile(filePath: string): Promise<void> {
+        await this.db.run('DELETE FROM generic_instantiations WHERE file_path = $1', filePath);
+    }
+
+    async getFlowsFrom(sourceId: string): Promise<FlowsToEdge[]> {
+        const rows = await this.db.all<FlowsToEdgeRow>(
+            'SELECT * FROM edges_flows_to WHERE source_id = $1',
+            sourceId,
+        );
+        return rows.map(this.mapFlowsToEdgeRow);
+    }
+
+    async getFlowsTo(targetId: string): Promise<FlowsToEdge[]> {
+        const rows = await this.db.all<FlowsToEdgeRow>(
+            'SELECT * FROM edges_flows_to WHERE target_id = $1',
+            targetId,
+        );
+        return rows.map(this.mapFlowsToEdgeRow);
+    }
+
+    async getReadsFrom(sourceId: string): Promise<ReadsEdge[]> {
+        const rows = await this.db.all<ReadsEdgeRow>(
+            'SELECT * FROM edges_reads WHERE source_id = $1',
+            sourceId,
+        );
+        return rows.map(this.mapReadsEdgeRow);
+    }
+
+    async getReadsOf(targetId: string): Promise<ReadsEdge[]> {
+        const rows = await this.db.all<ReadsEdgeRow>(
+            'SELECT * FROM edges_reads WHERE target_id = $1',
+            targetId,
+        );
+        return rows.map(this.mapReadsEdgeRow);
+    }
+
+    async getWritesFrom(sourceId: string): Promise<WritesEdge[]> {
+        const rows = await this.db.all<WritesEdgeRow>(
+            'SELECT * FROM edges_writes WHERE source_id = $1',
+            sourceId,
+        );
+        return rows.map(this.mapWritesEdgeRow);
+    }
+
+    async getWritesTo(targetId: string): Promise<WritesEdge[]> {
+        const rows = await this.db.all<WritesEdgeRow>(
+            'SELECT * FROM edges_writes WHERE target_id = $1',
+            targetId,
+        );
+        return rows.map(this.mapWritesEdgeRow);
+    }
+
+    async getReturnsFrom(sourceId: string): Promise<ReturnsEdge[]> {
+        const rows = await this.db.all<ReturnsEdgeRow>(
+            'SELECT * FROM edges_returns WHERE source_id = $1',
+            sourceId,
+        );
+        return rows.map(this.mapReturnsEdgeRow);
+    }
+
+    async getReturnsTo(targetId: string): Promise<ReturnsEdge[]> {
+        const rows = await this.db.all<ReturnsEdgeRow>(
+            'SELECT * FROM edges_returns WHERE target_id = $1',
+            targetId,
+        );
+        return rows.map(this.mapReturnsEdgeRow);
+    }
+
+    async getImplementorsOf(interfaceId: string): Promise<ImplementsEdge[]> {
+        const rows = await this.db.all<ImplementsEdgeRow>(
+            'SELECT * FROM edges_implements WHERE target_id = $1',
+            interfaceId,
+        );
+        return rows.map(this.mapImplementsEdgeRow);
+    }
+
+    async updateCallEdgeConfidence(
+        sourceId: string,
+        targetId: string,
+        confidence: number,
+        reason: string,
+    ): Promise<void> {
+        await this.db.run(
+            'UPDATE edges_calls SET confidence = $3, reason = $4 WHERE source_id = $1 AND target_id = $2',
+            sourceId,
+            targetId,
+            confidence,
+            reason,
+        );
+    }
+
+    async updateEntryPointScore(
+        functionId: string,
+        score: number,
+        isEntryPoint: boolean,
+    ): Promise<void> {
+        await this.db.run(
+            'UPDATE nodes_function SET entry_point_score = $2, is_entry_point = $3 WHERE id = $1',
+            functionId,
+            score,
+            isEntryPoint,
+        );
+    }
+
+    async updateVariableType(variableId: string, inferredType: string): Promise<void> {
+        await this.db.run(
+            'UPDATE nodes_variable SET inferred_type = $2 WHERE id = $1',
+            variableId,
+            inferredType,
+        );
+    }
+
+    async deleteFlowEdgesForFile(filePath: string): Promise<void> {
+        const nodeIds = await this.getNodeIdsForFile(filePath);
+        if (nodeIds.length === 0) return;
+        const placeholders = nodeIds.map((_, i) => `$${i + 1}`).join(', ');
+        const flowTables = ['edges_flows_to', 'edges_reads', 'edges_writes', 'edges_returns'];
+        for (const table of flowTables) {
+            await this.db.run(
+                `DELETE FROM ${table} WHERE source_id IN (${placeholders})`,
+                ...nodeIds,
+            );
+        }
+    }
+
+    async deleteStageEdges(stage: number, filePath?: string): Promise<void> {
+        const edgeTables = [
+            'edges_calls',
+            'edges_imports',
+            'edges_extends',
+            'edges_implements',
+            'edges_contains',
+            'edges_flows_to',
+            'edges_reads',
+            'edges_writes',
+            'edges_returns',
+        ];
+        if (filePath) {
+            const nodeIds = await this.getNodeIdsForFile(filePath);
+            if (nodeIds.length === 0) return;
+            const placeholders = nodeIds.map((_, i) => `$${i + 2}`).join(', ');
+            for (const table of edgeTables) {
+                await this.db.run(
+                    `DELETE FROM ${table} WHERE stage = $1 AND source_id IN (${placeholders})`,
+                    stage,
+                    ...nodeIds,
+                );
+            }
+        } else {
+            for (const table of edgeTables) {
+                await this.db.run(`DELETE FROM ${table} WHERE stage = $1`, stage);
+            }
+        }
+    }
+
     async getModuleNode(id: string): Promise<ModuleNode | null> {
         const rows = await this.db.all<ModuleNodeRow>(
             'SELECT * FROM nodes_module WHERE id = $1',
@@ -781,6 +1063,12 @@ export class CortexRepository {
         extends: number;
         implements: number;
         contains: number;
+        flowsTo: number;
+        reads: number;
+        writes: number;
+        returns: number;
+        typeConstraints: number;
+        genericInstantiations: number;
     }> {
         const rows = await this.db.all<Record<string, number | bigint>>(
             `SELECT
@@ -796,7 +1084,13 @@ export class CortexRepository {
                 (SELECT COUNT(*) FROM edges_imports) as imports,
                 (SELECT COUNT(*) FROM edges_extends) as extends_count,
                 (SELECT COUNT(*) FROM edges_implements) as implements_count,
-                (SELECT COUNT(*) FROM edges_contains) as contains`,
+                (SELECT COUNT(*) FROM edges_contains) as contains,
+                (SELECT COUNT(*) FROM edges_flows_to) as flows_to,
+                (SELECT COUNT(*) FROM edges_reads) as reads,
+                (SELECT COUNT(*) FROM edges_writes) as writes,
+                (SELECT COUNT(*) FROM edges_returns) as returns,
+                (SELECT COUNT(*) FROM type_constraints) as type_constraints,
+                (SELECT COUNT(*) FROM generic_instantiations) as generic_instantiations`,
         );
         const row = rows[0];
         return {
@@ -813,6 +1107,12 @@ export class CortexRepository {
             extends: Number(row.extends_count),
             implements: Number(row.implements_count),
             contains: Number(row.contains),
+            flowsTo: Number(row.flows_to),
+            reads: Number(row.reads),
+            writes: Number(row.writes),
+            returns: Number(row.returns),
+            typeConstraints: Number(row.type_constraints),
+            genericInstantiations: Number(row.generic_instantiations),
         };
     }
 
@@ -1057,6 +1357,80 @@ export class CortexRepository {
             confidence: row.confidence,
             stage: row.stage,
             reason: row.reason,
+        };
+    }
+
+    private mapFlowsToEdgeRow(row: FlowsToEdgeRow): FlowsToEdge {
+        return {
+            sourceId: row.source_id,
+            targetId: row.target_id,
+            parameterIndex: row.parameter_index,
+            transform: row.transform as FlowsToEdge['transform'],
+            taintLabel: row.taint_label,
+            confidence: row.confidence,
+            stage: row.stage,
+            reason: row.reason,
+        };
+    }
+
+    private mapReadsEdgeRow(row: ReadsEdgeRow): ReadsEdge {
+        return {
+            sourceId: row.source_id,
+            targetId: row.target_id,
+            line: row.line,
+            field: row.field,
+            confidence: row.confidence,
+            stage: row.stage,
+            reason: row.reason,
+        };
+    }
+
+    private mapWritesEdgeRow(row: WritesEdgeRow): WritesEdge {
+        return {
+            sourceId: row.source_id,
+            targetId: row.target_id,
+            line: row.line,
+            field: row.field,
+            confidence: row.confidence,
+            stage: row.stage,
+            reason: row.reason,
+        };
+    }
+
+    private mapReturnsEdgeRow(row: ReturnsEdgeRow): ReturnsEdge {
+        return {
+            sourceId: row.source_id,
+            targetId: row.target_id,
+            line: row.line,
+            returnType: row.return_type,
+            confidence: row.confidence,
+            stage: row.stage,
+            reason: row.reason,
+        };
+    }
+
+    private mapTypeConstraintRow(row: TypeConstraintRow): TypeConstraint {
+        return {
+            symbolId: row.symbol_id,
+            typeName: row.type_name,
+            source: row.source as TypeConstraint['source'],
+            confidence: row.confidence,
+            filePath: row.file_path,
+            line: row.line,
+        };
+    }
+
+    private mapGenericInstantiationRow(row: GenericInstantiationRow): GenericInstantiation {
+        const rawArgs = row.type_arguments;
+        const typeArguments = Array.isArray(rawArgs)
+            ? rawArgs
+            : Array.from((rawArgs as { items: string[] }).items);
+        return {
+            symbolId: row.symbol_id,
+            genericName: row.generic_name,
+            typeArguments,
+            filePath: row.file_path,
+            line: row.line,
         };
     }
 }

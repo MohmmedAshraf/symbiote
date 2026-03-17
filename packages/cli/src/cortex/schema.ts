@@ -28,6 +28,8 @@ export const CORTEX_TABLES = {
         'cortex_temporal_snapshots',
         'cortex_flows',
         'cortex_meta',
+        'type_constraints',
+        'generic_instantiations',
     ],
 } as const;
 
@@ -268,14 +270,41 @@ CREATE INDEX IF NOT EXISTS idx_contains_target ON edges_contains(target_id);
 CREATE INDEX IF NOT EXISTS idx_flows_to_source ON edges_flows_to(source_id);
 CREATE INDEX IF NOT EXISTS idx_flows_to_target ON edges_flows_to(target_id);
 CREATE INDEX IF NOT EXISTS idx_reads_source ON edges_reads(source_id);
+CREATE INDEX IF NOT EXISTS idx_reads_target ON edges_reads(target_id);
 CREATE INDEX IF NOT EXISTS idx_writes_source ON edges_writes(source_id);
+CREATE INDEX IF NOT EXISTS idx_writes_target ON edges_writes(target_id);
 CREATE INDEX IF NOT EXISTS idx_returns_source ON edges_returns(source_id);
+CREATE INDEX IF NOT EXISTS idx_returns_target ON edges_returns(target_id);
 CREATE INDEX IF NOT EXISTS idx_fn_file ON nodes_function(file_path);
 CREATE INDEX IF NOT EXISTS idx_class_file ON nodes_class(file_path);
 CREATE INDEX IF NOT EXISTS idx_method_file ON nodes_method(file_path);
 CREATE INDEX IF NOT EXISTS idx_iface_file ON nodes_interface(file_path);
 CREATE INDEX IF NOT EXISTS idx_type_file ON nodes_type(file_path);
 CREATE INDEX IF NOT EXISTS idx_var_file ON nodes_variable(file_path);
+`;
+
+const STAGE4_TABLES_DDL = `
+CREATE TABLE IF NOT EXISTS type_constraints (
+    symbol_id VARCHAR NOT NULL,
+    type_name VARCHAR NOT NULL,
+    source VARCHAR NOT NULL,
+    confidence FLOAT DEFAULT 0.85,
+    file_path VARCHAR NOT NULL,
+    line INTEGER,
+    UNIQUE(symbol_id, type_name, source)
+);
+
+CREATE TABLE IF NOT EXISTS generic_instantiations (
+    symbol_id VARCHAR NOT NULL,
+    generic_name VARCHAR NOT NULL,
+    type_arguments VARCHAR[],
+    file_path VARCHAR NOT NULL,
+    line INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_constraints_symbol ON type_constraints(symbol_id);
+CREATE INDEX IF NOT EXISTS idx_constraints_type ON type_constraints(type_name);
+CREATE INDEX IF NOT EXISTS idx_generic_symbol ON generic_instantiations(symbol_id);
 `;
 
 const SYMBOLS_VIEW_DDL = `
@@ -298,5 +327,6 @@ export async function createCortexSchema(db: SymbioteDB): Promise<void> {
     await db.exec(EDGE_TABLES_DDL);
     await db.exec(AUXILIARY_TABLES_DDL);
     await db.exec(INDEXES_DDL);
+    await db.exec(STAGE4_TABLES_DDL);
     await db.exec(SYMBOLS_VIEW_DDL);
 }

@@ -51,6 +51,22 @@ describe('Cortex Schema', () => {
         expect(rows.length).toBe(1);
     });
 
+    it('creates type_constraints table', async () => {
+        await createCortexSchema(db);
+        const rows = await db.all<{ name: string }>(
+            `SELECT table_name as name FROM information_schema.tables WHERE table_name = 'type_constraints'`,
+        );
+        expect(rows.length, 'type_constraints table should exist').toBe(1);
+    });
+
+    it('creates generic_instantiations table', async () => {
+        await createCortexSchema(db);
+        const rows = await db.all<{ name: string }>(
+            `SELECT table_name as name FROM information_schema.tables WHERE table_name = 'generic_instantiations'`,
+        );
+        expect(rows.length, 'generic_instantiations table should exist').toBe(1);
+    });
+
     it('is idempotent', async () => {
         await createCortexSchema(db);
         await createCortexSchema(db);
