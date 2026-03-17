@@ -20,7 +20,7 @@ export class GraphAlgorithms {
         const nodes = await this.repo.getAllNodes();
         const edges = await this.repo.getAllEdges();
 
-        const graph = new Graph({ multi: false, type: 'directed' });
+        const graph = new Graph({ multi: true, type: 'directed' });
 
         for (const node of nodes) {
             graph.addNode(node.id, {
@@ -34,11 +34,7 @@ export class GraphAlgorithms {
         }
 
         for (const edge of edges) {
-            if (
-                graph.hasNode(edge.sourceId) &&
-                graph.hasNode(edge.targetId) &&
-                !graph.hasEdge(edge.sourceId, edge.targetId)
-            ) {
+            if (graph.hasNode(edge.sourceId) && graph.hasNode(edge.targetId)) {
                 graph.addEdge(edge.sourceId, edge.targetId, {
                     type: edge.type,
                 });
@@ -48,20 +44,20 @@ export class GraphAlgorithms {
         return graph;
     }
 
-    async runLouvain(): Promise<Record<string, number>> {
-        const graph = await this.loadGraph();
+    async runLouvain(preloaded?: GraphInstance): Promise<Record<string, number>> {
+        const graph = preloaded ?? (await this.loadGraph());
         if (graph.order === 0) return {};
         return this.computeLouvain(graph);
     }
 
-    async runPageRank(): Promise<Record<string, number>> {
-        const graph = await this.loadGraph();
+    async runPageRank(preloaded?: GraphInstance): Promise<Record<string, number>> {
+        const graph = preloaded ?? (await this.loadGraph());
         if (graph.order === 0) return {};
         return centrality.pagerank(graph);
     }
 
-    async runBetweennessCentrality(): Promise<Record<string, number>> {
-        const graph = await this.loadGraph();
+    async runBetweennessCentrality(preloaded?: GraphInstance): Promise<Record<string, number>> {
+        const graph = preloaded ?? (await this.loadGraph());
         if (graph.order === 0) return {};
         return centrality.betweenness(graph);
     }

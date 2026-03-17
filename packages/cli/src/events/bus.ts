@@ -23,8 +23,8 @@ export class EventBus {
             for (const handler of [...typed]) {
                 try {
                     handler(event);
-                } catch {
-                    /* */
+                } catch (err) {
+                    console.error('[symbiote] EventBus handler error:', err);
                 }
             }
         }
@@ -33,8 +33,8 @@ export class EventBus {
             for (const handler of [...wildcard]) {
                 try {
                     handler(event);
-                } catch {
-                    /* */
+                } catch (err) {
+                    console.error('[symbiote] EventBus handler error:', err);
                 }
             }
         }

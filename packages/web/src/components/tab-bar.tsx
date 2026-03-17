@@ -34,6 +34,7 @@ export function TabBar() {
                                 : 'text-text-muted hover:bg-surface-1 hover:text-text-secondary'
                         }`}
                         title={label}
+                        aria-current={active ? 'page' : undefined}
                     >
                         <Icon className="size-5" />
                     </Link>

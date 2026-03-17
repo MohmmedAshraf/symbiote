@@ -70,9 +70,11 @@ export class CycleDetector {
             inStack.add(nodeId);
 
             const neighbors = adjacency.get(nodeId) ?? [];
+            nodePath.push(nodeId);
             for (const neighbor of neighbors) {
-                await dfs(neighbor, [...nodePath, nodeId]);
+                await dfs(neighbor, nodePath);
             }
+            nodePath.pop();
 
             inStack.delete(nodeId);
         };

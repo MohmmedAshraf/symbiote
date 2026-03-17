@@ -137,8 +137,11 @@ export async function handleSemanticSearch(
                 })),
             };
         }
-    } catch {
-        // Fall through to text search
+    } catch (err) {
+        console.warn(
+            '[symbiote] Semantic search failed, falling back to text:',
+            err instanceof Error ? err.message : String(err),
+        );
     }
 
     const textResults = await ctx.search.textSearch(input.query, limit);

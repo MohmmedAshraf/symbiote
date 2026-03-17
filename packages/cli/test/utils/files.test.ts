@@ -33,10 +33,10 @@ describe('hashFileContent', () => {
         expect(hash1).toBe(hash2);
     });
 
-    it('returns a 16-character hex string', () => {
+    it('returns a 32-character hex string', () => {
         const filePath = path.join(FIXTURES, 'simple-project/index.js');
         const hash = hashFileContent(filePath);
-        expect(hash).toMatch(/^[a-f0-9]{16}$/);
+        expect(hash).toMatch(/^[a-f0-9]{32}$/);
     });
 
     it('returns different hashes for different files', () => {

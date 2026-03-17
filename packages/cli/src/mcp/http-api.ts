@@ -367,6 +367,8 @@ export async function handleHookContext(
     }
 }
 
+const EVENT_TIMEOUT_MS = 10_000;
+
 export function handleInternalEvent(
     bus: EventBus,
     req: IncomingMessage,
@@ -375,17 +377,35 @@ export function handleInternalEvent(
     return new Promise((resolve) => {
         let body = '';
         let destroyed = false;
+
+        const timeout = setTimeout(() => {
+            if (destroyed) return;
+            destroyed = true;
+            res.writeHead(408);
+            res.end('Request timeout');
+            req.destroy();
+            resolve();
+        }, EVENT_TIMEOUT_MS);
+
         req.on('data', (chunk) => {
             body += chunk;
             if (body.length > MAX_BODY_SIZE) {
                 destroyed = true;
+                clearTimeout(timeout);
                 res.writeHead(413);
                 res.end('Payload too large');
                 req.destroy();
                 resolve();
             }
         });
+        req.on('error', () => {
+            if (destroyed) return;
+            destroyed = true;
+            clearTimeout(timeout);
+            resolve();
+        });
         req.on('end', () => {
+            clearTimeout(timeout);
             if (destroyed) return;
             try {
                 const event = JSON.parse(body) as SymbioteEvent;
@@ -420,13 +440,25 @@ export function handleSseConnection(
 
     res.write('data: {"type":"connected"}\n\n');
 
+    let closed = false;
+
+    const cleanup = (): void => {
+        if (closed) return;
+        closed = true;
+        bus.off('*', handler);
+    };
+
     const handler = (event: SymbioteEvent): void => {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (closed) return;
+        try {
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+        } catch {
+            cleanup();
+        }
     };
 
     bus.on('*', handler);
 
-    res.on('close', () => {
-        bus.off('*', handler);
-    });
+    res.on('close', cleanup);
+    res.on('error', cleanup);
 }

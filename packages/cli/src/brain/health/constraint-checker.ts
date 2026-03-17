@@ -108,6 +108,8 @@ export class ConstraintChecker {
             return [...allFilePaths];
         }
 
-        return [...allFilePaths].filter((fp) => fp.includes(scope));
+        return [...allFilePaths].filter(
+            (fp) => fp === scope || fp.startsWith(scope + '/') || fp.includes('/' + scope + '/'),
+        );
     }
 }

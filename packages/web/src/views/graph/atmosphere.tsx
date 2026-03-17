@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -61,6 +61,12 @@ export function Atmosphere({ count = 1000, spread = 500 }: AtmosphereProps) {
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         return geo;
     }, [positions]);
+
+    useEffect(() => {
+        return () => {
+            geometry.dispose();
+        };
+    }, [geometry]);
 
     return (
         <points ref={pointsRef} geometry={geometry}>

@@ -15,6 +15,15 @@ function validateId(id: string): void {
     }
 }
 
+function validateScope(scope: string): void {
+    if (scope.length > MAX_ID_LENGTH) {
+        throw new Error(`Invalid scope: must not exceed ${MAX_ID_LENGTH} characters`);
+    }
+    if (scope.includes('..') || scope.includes('\x00') || /[\x00-\x1f]/.test(scope)) {
+        throw new Error('Invalid scope: must not contain ".." or control characters');
+    }
+}
+
 export interface GetConstraintsInput {
     scope?: string;
 }
@@ -80,6 +89,7 @@ export function handleProposeDecision(
     input: ProposeDecisionInput,
 ): ProposeEntryOutput {
     validateId(input.id);
+    validateScope(input.scope);
 
     const entry: IntentEntry = {
         frontmatter: {
@@ -108,6 +118,7 @@ export function handleProposeConstraint(
     input: ProposeConstraintInput,
 ): ProposeEntryOutput {
     validateId(input.id);
+    validateScope(input.scope);
 
     const entry: IntentEntry = {
         frontmatter: {

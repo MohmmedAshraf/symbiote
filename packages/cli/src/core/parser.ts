@@ -426,9 +426,8 @@ function extractImportBindings(
 }
 
 function guessNodePrefix(name: string): string {
-    if (!name) return 'fn';
-    if (name === 'default') return 'fn';
-    if (name[0] === name[0].toUpperCase() && !name.includes('_')) return 'function';
+    if (!name || name === 'default') return 'fn';
+    if (name[0] === name[0].toUpperCase() && !name.includes('_')) return 'class';
     return 'fn';
 }
 

@@ -202,42 +202,41 @@ export class DnaEngine {
     static classifyCategory(instruction: string): DnaCategory {
         const lower = instruction.toLowerCase();
 
-        const antiPatternSignals = [
-            'never',
-            "don't",
-            'dont',
-            'do not',
-            'avoid',
-            'no ',
-            'stop ',
-            'forbid',
+        const antiPatternRegexes = [
+            /\bnever\b/,
+            /\bdon'?t\b/,
+            /\bdo not\b/,
+            /\bavoid\b/,
+            /\bno\s/,
+            /\bstop\s/,
+            /\bforbid/,
         ];
-        if (antiPatternSignals.some((s) => lower.includes(s))) {
+        if (antiPatternRegexes.some((r) => r.test(lower))) {
             return 'anti-patterns';
         }
 
-        const decisionSignals = [
-            'chose',
-            'decided',
-            'reason',
-            'because',
-            'rationale',
-            'why we',
-            'the reason',
+        const decisionRegexes = [
+            /\bchose\b/,
+            /\bdecided\b/,
+            /\breason\b/,
+            /\bbecause\b/,
+            /\brationale\b/,
+            /\bwhy we\b/,
+            /\bthe reason\b/,
         ];
-        if (decisionSignals.some((s) => lower.includes(s))) {
+        if (decisionRegexes.some((r) => r.test(lower))) {
             return 'decisions';
         }
 
-        const preferenceSignals = [
-            'prefer',
-            'instead of',
-            'over ',
-            'rather than',
-            'switch to',
-            'migrate to',
+        const preferenceRegexes = [
+            /\bprefer\b/,
+            /\binstead of\b/,
+            /\bover\s/,
+            /\brather than\b/,
+            /\bswitch to\b/,
+            /\bmigrate to\b/,
         ];
-        if (preferenceSignals.some((s) => lower.includes(s))) {
+        if (preferenceRegexes.some((r) => r.test(lower))) {
             return 'preferences';
         }
 

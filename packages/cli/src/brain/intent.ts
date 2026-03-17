@@ -108,12 +108,23 @@ export function parseIntentFrontmatter(raw: string): IntentEntry | null {
     const fields = parseYamlBlock(block);
     if (!fields || !fields.id || !fields.type) return null;
 
+    const validTypes: IntentType[] = ['decision', 'constraint'];
+    const validStatuses: IntentStatus[] = ['active', 'proposed', 'rejected', 'superseded'];
+
+    const type = String(fields.type);
+    if (!validTypes.includes(type as IntentType)) return null;
+
+    const rawStatus = String(fields.status ?? 'active');
+    const status = validStatuses.includes(rawStatus as IntentStatus)
+        ? (rawStatus as IntentStatus)
+        : 'active';
+
     return {
         frontmatter: {
             id: String(fields.id),
-            type: fields.type as IntentType,
+            type: type as IntentType,
             scope: String(fields.scope ?? 'global'),
-            status: (fields.status as IntentStatus) ?? 'active',
+            status,
             author: String(fields.author ?? 'unknown'),
             createdAt: stripQuotes(
                 String(fields.createdAt ?? new Date().toISOString().split('T')[0]),

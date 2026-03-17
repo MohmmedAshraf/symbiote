@@ -129,7 +129,9 @@ function writeJsonMcpConfig(agent: AgentInfo): {
     };
     config.mcpServers = mcpServers;
 
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 4) + '\n');
+    const tmpPath = configPath + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 4) + '\n');
+    fs.renameSync(tmpPath, configPath);
 
     return {
         success: true,
@@ -273,7 +275,9 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
         }
 
         settings.hooks = hooks;
-        fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 4) + '\n');
+        const tmpSettings = CLAUDE_SETTINGS_PATH + '.tmp';
+        fs.writeFileSync(tmpSettings, JSON.stringify(settings, null, 4) + '\n');
+        fs.renameSync(tmpSettings, CLAUDE_SETTINGS_PATH);
 
         return { success: true, message: 'Hooks installed' };
     } catch (err) {

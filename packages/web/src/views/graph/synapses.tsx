@@ -99,6 +99,8 @@ export function Synapses({
     useEffect(() => {
         return () => {
             for (const tube of tubes) tube.geometry.dispose();
+            for (const mat of materialsRef.current) mat?.dispose();
+            materialsRef.current = [];
         };
     }, [tubes]);
 

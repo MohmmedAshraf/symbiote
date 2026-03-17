@@ -77,13 +77,13 @@ export function getProjectPort(projectRoot: string): number {
     const envPort = process.env.SYMBIOTE_PORT;
     if (envPort) {
         const parsed = parseInt(envPort, 10);
-        if (!isNaN(parsed)) return parsed;
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 65535) return parsed;
     }
 
     const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
     if (fs.existsSync(portFile)) {
         const stored = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10);
-        if (!isNaN(stored)) return stored;
+        if (!isNaN(stored) && stored > 0 && stored <= 65535) return stored;
     }
 
     return portFromPath(projectRoot);

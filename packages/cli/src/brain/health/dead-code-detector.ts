@@ -19,9 +19,13 @@ export class DeadCodeDetector {
 
         const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
         const referencedIds = new Set<string>();
+        const importedFiles = new Set<string>();
 
         for (const edge of allEdges) {
             referencedIds.add(edge.targetId);
+            if (edge.type === 'imports' && edge.targetId.startsWith('file:')) {
+                importedFiles.add(edge.targetId.slice(5));
+            }
         }
 
         const dead: DeadCodeEntry[] = [];
@@ -33,6 +37,7 @@ export class DeadCodeDetector {
 
             if (referencedIds.has(node.id)) continue;
             if (this.isEntryPointFile(node.filePath)) continue;
+            if (importedFiles.has(node.filePath)) continue;
 
             dead.push({ node, reason: 'No dependents found' });
         }

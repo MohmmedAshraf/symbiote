@@ -27,7 +27,12 @@ export async function walkFiles(
     const ignoreSet = new Set(ignoreDirs);
 
     async function walk(dir: string): Promise<void> {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
+        let entries;
+        try {
+            entries = await fs.readdir(dir, { withFileTypes: true });
+        } catch {
+            return;
+        }
 
         for (const entry of entries) {
             if (ignoreSet.has(entry.name)) continue;
@@ -49,5 +54,5 @@ export async function walkFiles(
 
 export function hashFileContent(filePath: string, content?: string): string {
     const source = content ?? readFileSync(filePath, 'utf-8');
-    return crypto.createHash('sha256').update(source).digest('hex').slice(0, 16);
+    return crypto.createHash('sha256').update(source).digest('hex').slice(0, 32);
 }
