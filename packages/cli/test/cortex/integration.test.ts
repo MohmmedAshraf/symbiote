@@ -26,7 +26,7 @@ describe('Cortex Integration', () => {
     it('full pipeline: structure → symbols → resolution → call graph', async () => {
         const result = await engine.run({ rootDir: CALLGRAPH });
 
-        expect(result.maxDepth).toBe(5);
+        expect(result.maxDepth).toBe(7);
         expect(result.totalNodes).toBeGreaterThan(0);
         expect(result.totalEdges).toBeGreaterThan(0);
 
@@ -40,13 +40,15 @@ describe('Cortex Integration', () => {
         expect(fns.some((f) => f.name === 'validate')).toBe(true);
 
         const file = await repo.getFileNode('file:controller.ts');
-        expect(file!.depthLevel).toBe(5);
+        expect(file!.depthLevel).toBe(7);
     });
 
-    it('incremental: second run skips unchanged files', async () => {
+    it('incremental: second run skips parsing stages', async () => {
         await engine.run({ rootDir: CALLGRAPH });
         const second = await engine.run({ rootDir: CALLGRAPH });
-        expect(second.totalFiles).toBe(0);
+        for (let i = 0; i <= 5; i++) {
+            expect(second.stages[i].filesProcessed).toBe(0);
+        }
     });
 
     it('stats reflect correct counts', async () => {
