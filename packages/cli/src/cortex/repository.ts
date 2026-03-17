@@ -21,6 +21,7 @@ import type {
     GenericInstantiation,
     SymbolTableEntry,
 } from './types.js';
+import type { ExecutionFlow, TemporalSnapshot } from './topology-types.js';
 
 const CHUNK_SIZE = 500;
 
@@ -221,6 +222,23 @@ interface CortexFlowRow extends Record<string, unknown> {
     node_ids: string[];
     has_async: boolean;
     has_error_path: boolean;
+}
+
+interface TemporalSnapshotRow extends Record<string, unknown> {
+    commit_hash: string;
+    timestamp: string;
+    node_counts: string;
+    edge_counts: string;
+    community_hash: string;
+    top_pagerank: string;
+    hotspot_rankings: string;
+}
+
+interface NodeMetricsUpdate {
+    nodeId: string;
+    community: number;
+    pageRank: number;
+    betweenness: number;
 }
 
 interface IdRow extends Record<string, unknown> {
@@ -1529,6 +1547,188 @@ export class CortexRepository {
         };
     }
 
+    // --- Single-item insert/get methods for topology tests ---
+
+    async insertFunction(node: FunctionNode): Promise<void> {
+        await this.insertFunctionNodes([node]);
+    }
+
+    async getFunction(id: string): Promise<FunctionNode | null> {
+        const rows = await this.db.all<FunctionNodeRow>(
+            'SELECT * FROM nodes_function WHERE id = $1',
+            id,
+        );
+        if (rows.length === 0) return null;
+        return this.mapFunctionNodeRow(rows[0]);
+    }
+
+    async insertClass(node: ClassNode): Promise<void> {
+        await this.insertClassNodes([node]);
+    }
+
+    async getClass(id: string): Promise<ClassNode | null> {
+        const rows = await this.db.all<ClassNodeRow>('SELECT * FROM nodes_class WHERE id = $1', id);
+        if (rows.length === 0) return null;
+        return this.mapClassNodeRow(rows[0]);
+    }
+
+    async insertMethod(node: MethodNode): Promise<void> {
+        await this.insertMethodNodes([node]);
+    }
+
+    async getMethod(id: string): Promise<MethodNode | null> {
+        const rows = await this.db.all<MethodNodeRow>(
+            'SELECT * FROM nodes_method WHERE id = $1',
+            id,
+        );
+        if (rows.length === 0) return null;
+        return this.mapMethodNodeRow(rows[0]);
+    }
+
+    async insertFileNode(node: {
+        id: string;
+        path: string;
+        extension: string;
+        language: string;
+        depthLevel: number;
+    }): Promise<void> {
+        await this.upsertFileNode({
+            id: node.id,
+            path: node.path,
+            hash: null,
+            language: node.language,
+            depthLevel: node.depthLevel,
+            lastIndexed: null,
+        });
+    }
+
+    // --- Topology write-back methods ---
+
+    async updateNodeMetrics(
+        nodeId: string,
+        metrics: { community: number; pageRank: number; betweenness: number },
+    ): Promise<void> {
+        const table = this.nodeTableForId(nodeId);
+        if (!table) return;
+        await this.db.run(
+            `UPDATE ${table} SET community = $1, page_rank = $2, betweenness = $3 WHERE id = $4`,
+            metrics.community,
+            metrics.pageRank,
+            metrics.betweenness,
+            nodeId,
+        );
+    }
+
+    async updateNodeMetricsBatch(updates: NodeMetricsUpdate[]): Promise<void> {
+        for (const update of updates) {
+            await this.updateNodeMetrics(update.nodeId, update);
+        }
+    }
+
+    // --- Generic meta CRUD ---
+
+    async getMeta(key: string): Promise<string | null> {
+        const rows = await this.db.all<MetaRow>('SELECT * FROM cortex_meta WHERE key = $1', key);
+        if (rows.length === 0) return null;
+        return rows[0].value;
+    }
+
+    async setMeta(key: string, value: string): Promise<void> {
+        await this.db.run(
+            'INSERT OR REPLACE INTO cortex_meta (key, value) VALUES ($1, $2)',
+            key,
+            value,
+        );
+    }
+
+    // --- Topology queries ---
+
+    async getMaxDepthLevel(): Promise<number> {
+        const rows = await this.db.all<Record<string, unknown>>(
+            'SELECT MAX(depth_level) as max_depth FROM nodes_file',
+        );
+        if (rows.length === 0) return 0;
+        return Number(rows[0].max_depth) || 0;
+    }
+
+    async getAllFunctions(): Promise<FunctionNode[]> {
+        const rows = await this.db.all<FunctionNodeRow>('SELECT * FROM nodes_function');
+        return rows.map((r) => this.mapFunctionNodeRow(r));
+    }
+
+    async getAllClasses(): Promise<ClassNode[]> {
+        const rows = await this.db.all<ClassNodeRow>('SELECT * FROM nodes_class');
+        return rows.map((r) => this.mapClassNodeRow(r));
+    }
+
+    async getAllMethods(): Promise<MethodNode[]> {
+        const rows = await this.db.all<MethodNodeRow>('SELECT * FROM nodes_method');
+        return rows.map((r) => this.mapMethodNodeRow(r));
+    }
+
+    // --- Single-item flow CRUD ---
+
+    async insertFlow(flow: ExecutionFlow): Promise<void> {
+        await this.insertFlows([flow]);
+    }
+
+    async getFlow(id: string): Promise<ExecutionFlow | null> {
+        const rows = await this.db.all<CortexFlowRow>(
+            'SELECT * FROM cortex_flows WHERE id = $1',
+            id,
+        );
+        if (rows.length === 0) return null;
+        return this.mapCortexFlowRow(rows[0]) as ExecutionFlow;
+    }
+
+    async getAllFlows(): Promise<ExecutionFlow[]> {
+        const rows = await this.db.all<CortexFlowRow>('SELECT * FROM cortex_flows');
+        return rows.map((r) => this.mapCortexFlowRow(r) as ExecutionFlow);
+    }
+
+    async deleteAllFlows(): Promise<void> {
+        await this.db.run('DELETE FROM cortex_flows');
+    }
+
+    // --- Temporal snapshot CRUD ---
+
+    async insertTemporalSnapshot(snapshot: TemporalSnapshot): Promise<void> {
+        await this.db.run(
+            `INSERT INTO cortex_temporal_snapshots
+             (commit_hash, timestamp, node_counts, edge_counts, community_hash, top_pagerank, hotspot_rankings)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            snapshot.commitHash,
+            snapshot.timestamp.toISOString(),
+            JSON.stringify(snapshot.nodeCounts),
+            JSON.stringify(snapshot.edgeCounts),
+            snapshot.communityHash,
+            JSON.stringify(snapshot.topPagerank),
+            JSON.stringify(snapshot.hotspotRankings),
+        );
+    }
+
+    async getTemporalSnapshots(limit: number): Promise<TemporalSnapshot[]> {
+        const rows = await this.db.all<TemporalSnapshotRow>(
+            'SELECT * FROM cortex_temporal_snapshots ORDER BY timestamp DESC LIMIT $1',
+            limit,
+        );
+        return rows.map((r) => this.mapSnapshotRow(r));
+    }
+
+    // --- Private helpers ---
+
+    private nodeTableForId(nodeId: string): string | null {
+        if (nodeId.startsWith('fn:')) return 'nodes_function';
+        if (nodeId.startsWith('class:')) return 'nodes_class';
+        if (nodeId.startsWith('method:')) return 'nodes_method';
+        if (nodeId.startsWith('iface:')) return 'nodes_interface';
+        if (nodeId.startsWith('type:')) return 'nodes_type';
+        if (nodeId.startsWith('var:')) return 'nodes_variable';
+        if (nodeId.startsWith('file:')) return 'nodes_file';
+        if (nodeId.startsWith('module:')) return 'nodes_module';
+        return null;
+    }
+
     private mapCortexFlowRow(row: CortexFlowRow): {
         id: string;
         name: string;
@@ -1548,6 +1748,30 @@ export class CortexRepository {
             nodeIds,
             hasAsync: row.has_async,
             hasErrorPath: row.has_error_path,
+        };
+    }
+
+    private mapSnapshotRow(row: TemporalSnapshotRow): TemporalSnapshot {
+        return {
+            commitHash: row.commit_hash,
+            timestamp: new Date(row.timestamp),
+            nodeCounts:
+                typeof row.node_counts === 'string'
+                    ? JSON.parse(row.node_counts)
+                    : (row.node_counts as Record<string, number>),
+            edgeCounts:
+                typeof row.edge_counts === 'string'
+                    ? JSON.parse(row.edge_counts)
+                    : (row.edge_counts as Record<string, number>),
+            communityHash: row.community_hash,
+            topPagerank:
+                typeof row.top_pagerank === 'string'
+                    ? JSON.parse(row.top_pagerank)
+                    : (row.top_pagerank as Array<{ nodeId: string; score: number }>),
+            hotspotRankings:
+                typeof row.hotspot_rankings === 'string'
+                    ? JSON.parse(row.hotspot_rankings)
+                    : (row.hotspot_rankings as Array<{ nodeId: string; score: number }>),
         };
     }
 }
