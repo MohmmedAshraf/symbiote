@@ -806,14 +806,22 @@ export class CortexRepository {
 
     async insertTypeConstraints(constraints: TypeConstraint[]): Promise<void> {
         if (constraints.length === 0) return;
+        const seen = new Set<string>();
+        const deduped = constraints.filter((c) => {
+            const key = `${c.symbolId}\0${c.typeName}\0${c.source}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        if (deduped.length === 0) return;
         await this.batchInsert(
-            constraints,
+            deduped,
             6,
             (c, offset) => ({
                 placeholder: `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
                 params: [c.symbolId, c.typeName, c.source, c.confidence, c.filePath, c.line],
             }),
-            `INSERT INTO type_constraints (symbol_id, type_name, source, confidence, file_path, line) VALUES`,
+            `INSERT OR IGNORE INTO type_constraints (symbol_id, type_name, source, confidence, file_path, line) VALUES`,
         );
     }
 
