@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { LayoutEdge } from '@/lib/types';
@@ -22,6 +22,7 @@ interface ImpulseState {
 
 const MAX_ACTIVE_RATIO = 0.3;
 const OFFSCREEN = new THREE.Vector3(99999, 99999, 99999);
+const frameObject3D = new THREE.Object3D();
 
 export function Impulses({
     edges,
@@ -52,13 +53,20 @@ export function Impulses({
         [],
     );
 
+    useEffect(() => {
+        return () => {
+            geometry.dispose();
+            material.dispose();
+        };
+    }, [geometry, material]);
+
     useFrame((_, delta) => {
         const mesh = meshRef.current;
         if (!mesh || edges.length === 0) return;
 
         const maxActive = Math.floor(edges.length * MAX_ACTIVE_RATIO);
         let activeCount = 0;
-        const dummy = new THREE.Object3D();
+        const dummy = frameObject3D;
         const tempColor = new THREE.Color();
 
         for (let i = 0; i < states.length; i++) {

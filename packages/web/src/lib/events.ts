@@ -20,12 +20,16 @@ interface UseSymbioteEventsReturn {
 }
 
 const IDLE_TIMEOUT_MS = 30_000;
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_MAX_MS = 30_000;
 
 export function useSymbioteEvents(): UseSymbioteEventsReturn {
     const [lastEvent, setLastEvent] = useState<SymbioteEvent | null>(null);
     const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
     const [eventCount, setEventCount] = useState(0);
     const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const backoffMs = useRef(BACKOFF_BASE_MS);
 
     const resetIdleTimer = useCallback(() => {
         if (idleTimer.current) clearTimeout(idleTimer.current);
@@ -36,31 +40,51 @@ export function useSymbioteEvents(): UseSymbioteEventsReturn {
     }, []);
 
     useEffect(() => {
-        const source = new EventSource('/events');
+        let source: EventSource | null = null;
+        let disposed = false;
 
-        source.onopen = () => {
-            resetIdleTimer();
-        };
+        function connect() {
+            if (disposed) return;
 
-        source.onmessage = (e) => {
-            try {
-                const event: SymbioteEvent = JSON.parse(e.data);
-                if (event.type === 'connected') return;
-                setLastEvent(event);
-                setEventCount((c) => c + 1);
+            source = new EventSource('/events');
+
+            source.onopen = () => {
+                backoffMs.current = BACKOFF_BASE_MS;
                 resetIdleTimer();
-            } catch {
-                /* */
-            }
-        };
+            };
 
-        source.onerror = () => {
-            setConnectionState('disconnected');
-        };
+            source.onmessage = (e) => {
+                try {
+                    const event: SymbioteEvent = JSON.parse(e.data);
+                    if (event.type === 'connected') return;
+                    setLastEvent(event);
+                    setEventCount((c) => c + 1);
+                    resetIdleTimer();
+                } catch {
+                    /* */
+                }
+            };
+
+            source.onerror = () => {
+                setConnectionState('disconnected');
+                source?.close();
+                source = null;
+
+                if (disposed) return;
+
+                const delay = backoffMs.current;
+                backoffMs.current = Math.min(delay * 2, BACKOFF_MAX_MS);
+                reconnectTimer.current = setTimeout(connect, delay);
+            };
+        }
+
+        connect();
 
         return () => {
-            source.close();
+            disposed = true;
+            source?.close();
             if (idleTimer.current) clearTimeout(idleTimer.current);
+            if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
         };
     }, [resetIdleTimer]);
 

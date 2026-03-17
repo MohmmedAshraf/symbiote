@@ -26,44 +26,48 @@ export function DnaView() {
     }, [fetchEntries]);
 
     async function handleApprove(id: string) {
-        await api.dna.update(id, { status: 'approved' });
-        fetchEntries();
+        try {
+            await api.dna.update(id, { status: 'approved' });
+            fetchEntries();
+        } catch (e) {
+            console.error('Failed to approve DNA entry:', e);
+            setError(e instanceof Error ? e.message : 'Failed to approve entry');
+        }
     }
 
     async function handleReject(id: string) {
-        await api.dna.update(id, { status: 'rejected' });
-        fetchEntries();
+        try {
+            await api.dna.update(id, { status: 'rejected' });
+            fetchEntries();
+        } catch (e) {
+            console.error('Failed to reject DNA entry:', e);
+            setError(e instanceof Error ? e.message : 'Failed to reject entry');
+        }
     }
 
     async function handleUpdate(id: string, content: string) {
-        await api.dna.update(id, { content });
-        fetchEntries();
+        try {
+            await api.dna.update(id, { content });
+            fetchEntries();
+        } catch (e) {
+            console.error('Failed to update DNA entry:', e);
+            setError(e instanceof Error ? e.message : 'Failed to update entry');
+        }
     }
 
-    const filtered =
-        filter === 'all'
-            ? entries
-            : entries.filter((e) => e.status === filter);
+    const filtered = filter === 'all' ? entries : entries.filter((e) => e.status === filter);
 
     const counts = {
         all: entries.length,
-        suggested: entries.filter(
-            (e) => e.status === 'suggested'
-        ).length,
-        approved: entries.filter(
-            (e) => e.status === 'approved'
-        ).length,
-        rejected: entries.filter(
-            (e) => e.status === 'rejected'
-        ).length,
+        suggested: entries.filter((e) => e.status === 'suggested').length,
+        approved: entries.filter((e) => e.status === 'approved').length,
+        rejected: entries.filter((e) => e.status === 'rejected').length,
     };
 
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
-                <div className="text-sm text-text-muted">
-                    Loading DNA...
-                </div>
+                <div className="text-sm text-text-muted">Loading DNA...</div>
             </div>
         );
     }
@@ -71,9 +75,7 @@ export function DnaView() {
     if (error) {
         return (
             <div className="flex h-full items-center justify-center">
-                <div className="text-sm text-danger">
-                    Failed to load DNA: {error}
-                </div>
+                <div className="text-sm text-danger">Failed to load DNA: {error}</div>
             </div>
         );
     }
@@ -81,23 +83,13 @@ export function DnaView() {
     return (
         <div className="h-full overflow-y-auto">
             <div className="mx-auto max-w-2xl px-6 py-8">
-                <h1 className="text-lg font-semibold text-text-primary">
-                    DNA Lab
-                </h1>
+                <h1 className="text-lg font-semibold text-text-primary">DNA Lab</h1>
                 <p className="mt-1 text-sm text-text-secondary">
-                    Your coding identity — learned from
-                    corrections and instructions.
+                    Your coding identity — learned from corrections and instructions.
                 </p>
 
                 <div className="mt-6 flex gap-1 rounded-lg bg-surface-1 p-1">
-                    {(
-                        [
-                            'all',
-                            'suggested',
-                            'approved',
-                            'rejected',
-                        ] as const
-                    ).map((f) => (
+                    {(['all', 'suggested', 'approved', 'rejected'] as const).map((f) => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
@@ -107,9 +99,7 @@ export function DnaView() {
                                     : 'text-text-muted hover:text-text-secondary'
                             }`}
                         >
-                            {f.charAt(0).toUpperCase() +
-                                f.slice(1)}{' '}
-                            ({counts[f]})
+                            {f.charAt(0).toUpperCase() + f.slice(1)} ({counts[f]})
                         </button>
                     ))}
                 </div>
@@ -118,11 +108,7 @@ export function DnaView() {
                     {filtered.length === 0 ? (
                         <EmptyState
                             icon={<DnaPlaceholderIcon />}
-                            title={
-                                filter === 'all'
-                                    ? 'No DNA entries yet'
-                                    : `No ${filter} entries`
-                            }
+                            title={filter === 'all' ? 'No DNA entries yet' : `No ${filter} entries`}
                             description={
                                 filter === 'all'
                                     ? 'Start coding with an AI tool connected to Symbiote. Your style preferences will appear here.'

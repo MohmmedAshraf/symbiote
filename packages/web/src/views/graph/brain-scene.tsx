@@ -49,6 +49,13 @@ function BrainTubes() {
         return new THREE.Mesh(geo, mat);
     }, []);
 
+    useEffect(() => {
+        return () => {
+            colliderSphere.geometry.dispose();
+            (colliderSphere.material as THREE.MeshBasicMaterial).dispose();
+        };
+    }, [colliderSphere]);
+
     const { geometries, material } = useMemo(() => {
         const paths = brainCurvesData as number[][];
         const geos: THREE.BufferGeometry[] = [];
@@ -142,6 +149,13 @@ function BrainTubes() {
         return { geometries: geos, material: mat };
     }, []);
 
+    useEffect(() => {
+        return () => {
+            for (const geo of geometries) geo.dispose();
+            material.dispose();
+        };
+    }, [geometries, material]);
+
     useFrame(({ clock }) => {
         if (materialRef.current) {
             materialRef.current.uniforms.time.value = clock.getElapsedTime();
@@ -225,6 +239,12 @@ function CodeNodes({
     const mapped = useMemo(() => mapNodesToBrain(data.nodes), [data.nodes]);
 
     const geometry = useMemo(() => new THREE.SphereGeometry(0.001, 8, 8), []);
+
+    useEffect(() => {
+        return () => {
+            geometry.dispose();
+        };
+    }, [geometry]);
 
     useEffect(() => {
         const mesh = meshRef.current;
@@ -362,12 +382,6 @@ const SceneContent = forwardRef<
             camera.position.set(0, 0.01, DEFAULT_CAM_Z);
         },
     }));
-
-    useFrame(({ pointer }) => {
-        camera.position.x += (pointer.x * 0.015 - camera.position.x) * 0.03;
-        camera.position.y += (-pointer.y * 0.015 + 0.01 - camera.position.y) * 0.03;
-        camera.lookAt(0, 0, 0);
-    });
 
     return (
         <>

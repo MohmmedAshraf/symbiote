@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import type { LayoutEdge } from '@/lib/types';
 import { getClusterColor } from './brain-layout';
@@ -57,6 +57,15 @@ function buildTaperedTube(curve: THREE.CatmullRomCurve3, maxRadius: number): THR
     return geo;
 }
 
+interface TubeData {
+    geometry: THREE.BufferGeometry;
+    color: string;
+    baseOpacity: number;
+    sourceId: string;
+    targetId: string;
+    key: string;
+}
+
 export function Synapses({
     edges,
     curves,
@@ -64,39 +73,69 @@ export function Synapses({
     selectedId,
     connectedIds,
 }: SynapsesProps) {
+    const materialsRef = useRef<THREE.MeshBasicMaterial[]>([]);
+
     const tubes = useMemo(() => {
-        return edges.map((edge, i) => {
+        return edges.map((edge, i): TubeData => {
             const curve = curves[i];
             const isCall = edge.type === 'calls';
             const radius = isCall ? 0.25 : 0.12;
             const baseOpacity = isCall ? 0.45 : 0.25;
-
-            const dimmed =
-                selectedId !== null &&
-                !connectedIds.has(edge.sourceId) &&
-                !connectedIds.has(edge.targetId) &&
-                edge.sourceId !== selectedId &&
-                edge.targetId !== selectedId;
-
-            const opacity = dimmed ? baseOpacity * 0.1 : baseOpacity;
-
             const sourceCluster = nodeClusterMap.get(edge.sourceId) ?? 0;
             const color = getClusterColor(sourceCluster);
-
             const geometry = buildTaperedTube(curve, radius);
 
-            return { geometry, color, opacity, key: `${edge.sourceId}-${edge.targetId}-${i}` };
+            return {
+                geometry,
+                color,
+                baseOpacity,
+                sourceId: edge.sourceId,
+                targetId: edge.targetId,
+                key: `${edge.sourceId}-${edge.targetId}-${i}`,
+            };
         });
-    }, [edges, curves, nodeClusterMap, selectedId, connectedIds]);
+    }, [edges, curves, nodeClusterMap]);
+
+    useEffect(() => {
+        return () => {
+            for (const tube of tubes) tube.geometry.dispose();
+        };
+    }, [tubes]);
+
+    const opacities = useMemo(() => {
+        return tubes.map((tube) => {
+            const dimmed =
+                selectedId !== null &&
+                !connectedIds.has(tube.sourceId) &&
+                !connectedIds.has(tube.targetId) &&
+                tube.sourceId !== selectedId &&
+                tube.targetId !== selectedId;
+            return dimmed ? tube.baseOpacity * 0.1 : tube.baseOpacity;
+        });
+    }, [tubes, selectedId, connectedIds]);
+
+    useEffect(() => {
+        const mats = materialsRef.current;
+        for (let i = 0; i < mats.length; i++) {
+            if (mats[i]) {
+                mats[i].opacity = opacities[i];
+            }
+        }
+    }, [opacities]);
+
+    const setMaterialRef = (index: number) => (el: THREE.MeshBasicMaterial | null) => {
+        if (el) materialsRef.current[index] = el;
+    };
 
     return (
         <group>
-            {tubes.map((tube) => (
+            {tubes.map((tube, i) => (
                 <mesh key={tube.key} geometry={tube.geometry}>
                     <meshBasicMaterial
+                        ref={setMaterialRef(i)}
                         color={tube.color}
                         transparent
-                        opacity={tube.opacity}
+                        opacity={opacities[i]}
                         depthWrite={false}
                         side={THREE.DoubleSide}
                     />

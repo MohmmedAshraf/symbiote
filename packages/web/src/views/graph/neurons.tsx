@@ -13,6 +13,7 @@ interface NeuronsProps {
 }
 
 const MAX_CLUSTERS = 20;
+const frameObject3D = new THREE.Object3D();
 
 export function Neurons({
     nodes,
@@ -35,6 +36,12 @@ export function Neurons({
     const phases = useMemo(() => nodes.map(() => Math.random() * Math.PI * 2), [nodes]);
 
     const geometry = useMemo(() => new THREE.SphereGeometry(1, 12, 12), []);
+
+    useEffect(() => {
+        return () => {
+            geometry.dispose();
+        };
+    }, [geometry]);
 
     useEffect(() => {
         const mesh = meshRef.current;
@@ -64,7 +71,7 @@ export function Neurons({
         if (!mesh) return;
 
         const time = clock.getElapsedTime();
-        const dummy = new THREE.Object3D();
+        const dummy = frameObject3D;
 
         for (let i = 0; i < nodes.length; i++) {
             const n = nodes[i];
