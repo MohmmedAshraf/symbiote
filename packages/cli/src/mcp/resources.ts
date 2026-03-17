@@ -1,6 +1,5 @@
 import type { ServerContext } from './context.js';
 import { handleGetProjectOverview } from './tools/project-tools.js';
-import { handleGetHealth } from './tools/health-tools.js';
 
 export function handleDnaResource(ctx: ServerContext): string {
     const entries = ctx.dnaEngine.getActiveEntries();

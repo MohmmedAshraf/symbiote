@@ -33,17 +33,9 @@ export interface ArchitectureSignal {
     confidence: number;
 }
 
-export interface ConventionSignal {
-    type: 'naming' | 'export' | 'component' | 'file-structure';
-    pattern: string;
-    examples: string[];
-    frequency: number;
-}
-
 export interface ProjectAnalysis {
     techStack: TechStackEntry[];
     architecture: ArchitectureSignal[];
-    conventions: ConventionSignal[];
     entryPoints: string[];
     description?: string;
 }

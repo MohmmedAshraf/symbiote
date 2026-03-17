@@ -106,7 +106,6 @@ export function analyzeProject(projectRoot: string): ProjectAnalysis {
     return {
         techStack,
         architecture,
-        conventions: [],
         entryPoints,
         ...(description && { description }),
     };

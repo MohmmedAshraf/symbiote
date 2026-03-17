@@ -59,7 +59,6 @@ describe('Hook integration', () => {
                     content: 'Service layer must not import from API layer',
                 },
             ],
-            dnaEntries: [],
         });
 
         const readPayload: PreToolUsePayload = {
@@ -110,7 +109,6 @@ describe('Hook integration', () => {
             graph,
             projectRoot: '/project',
             constraints: [],
-            dnaEntries: [],
         });
 
         const payload: PreToolUsePayload = {

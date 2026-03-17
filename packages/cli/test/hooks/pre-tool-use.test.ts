@@ -50,7 +50,6 @@ describe('PreToolUseHandler', () => {
             graph,
             projectRoot: '/project',
             constraints: [],
-            dnaEntries: [],
         });
     });
 
@@ -105,7 +104,6 @@ describe('PreToolUseHandler', () => {
                 graph,
                 projectRoot: '/project',
                 constraints: [{ scope: 'src/auth', content: 'Must validate JWT tokens' }],
-                dnaEntries: [],
             });
 
             const payload: PreToolUsePayload = {

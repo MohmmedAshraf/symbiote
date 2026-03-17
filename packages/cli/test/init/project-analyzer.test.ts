@@ -60,7 +60,6 @@ describe('analyzeProject', () => {
         const result = analyzeProject(emptyDir);
         expect(result.techStack).toEqual([]);
         expect(result.architecture).toEqual([]);
-        expect(result.conventions).toEqual([]);
         expect(result.entryPoints).toEqual([]);
         expect(result.description).toBeUndefined();
     });

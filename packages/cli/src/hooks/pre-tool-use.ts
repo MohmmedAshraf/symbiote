@@ -12,16 +12,10 @@ export interface ConstraintRef {
     content: string;
 }
 
-export interface DnaRef {
-    id: string;
-    content: string;
-}
-
 export interface PreToolUseConfig {
     graph: GraphInstance;
     projectRoot: string;
     constraints: ConstraintRef[];
-    dnaEntries: DnaRef[];
 }
 
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write']);
@@ -78,7 +72,7 @@ export class PreToolUseHandler {
 
         this.graph.forEachOutEdge(
             fileNodeId,
-            (edge: string, attrs: Record<string, unknown>, _source: string, target: string) => {
+            (_edge: string, attrs: Record<string, unknown>, _source: string, target: string) => {
                 if (attrs.type === 'contains') {
                     symbols.push(target);
                 }
