@@ -190,6 +190,19 @@ export class CortexRepository {
         return this.mapFileNodeRow(rows[0]);
     }
 
+    async getFilesByMaxDepth(maxDepth: number): Promise<FileNode[]> {
+        const rows = await this.db.all<FileNodeRow>(
+            'SELECT * FROM nodes_file WHERE depth_level < $1',
+            maxDepth,
+        );
+        return rows.map((r) => this.mapFileNodeRow(r));
+    }
+
+    async getAllFileNodes(): Promise<FileNode[]> {
+        const rows = await this.db.all<FileNodeRow>('SELECT * FROM nodes_file');
+        return rows.map((r) => this.mapFileNodeRow(r));
+    }
+
     async isFileChanged(id: string, hash: string): Promise<boolean> {
         const node = await this.getFileNode(id);
         if (!node) return true;
@@ -815,9 +828,7 @@ export class CortexRepository {
         }));
     }
 
-    async getSymbolById(
-        id: string,
-    ): Promise<{
+    async getSymbolById(id: string): Promise<{
         id: string;
         name: string;
         filePath: string;
