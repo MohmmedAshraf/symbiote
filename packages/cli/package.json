@@ -6,8 +6,22 @@
     "bin": {
         "symbiote": "./dist/bin/symbiote.js"
     },
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/src/index.js",
+    "types": "./dist/src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/src/index.d.ts",
+            "import": "./dist/src/index.js"
+        }
+    },
+    "files": [
+        "dist/",
+        "README.md",
+        "LICENSE"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
     "scripts": {
         "build": "tsc",
         "dev": "tsc --watch",
@@ -47,9 +61,26 @@
     "keywords": [
         "ai",
         "mcp",
+        "mcp-server",
+        "ai-coding",
+        "claude",
+        "cursor",
+        "copilot",
+        "windsurf",
+        "code-context",
         "code-intelligence",
+        "tree-sitter",
         "knowledge-graph",
         "developer-tools"
     ],
-    "license": "MIT"
+    "author": {
+        "name": "Mohamed Ashraf",
+        "email": "cupo.ashraf@gmail.com"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MohmmedAshraf/synapse.git"
+    },
+    "homepage": "https://github.com/MohmmedAshraf/synapse"
 }
