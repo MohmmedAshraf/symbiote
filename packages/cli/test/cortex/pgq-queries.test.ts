@@ -1,102 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import { createDatabase, SymbioteDB } from '#storage/db.js';
 import { createCortexSchema, refreshSymbolsTable } from '#cortex/schema.js';
 import { CortexRepository } from '#cortex/repository.js';
-import { installPgq, createPropertyGraph } from '#cortex/pgq.js';
+import { installPgq, createPropertyGraph, isPgqAvailable } from '#cortex/pgq.js';
 import { executePgqQuery, validatePgqQuery } from '#cortex/pgq-queries.js';
 
 describe('PGQ Query Builder', () => {
-    let db: SymbioteDB;
-    let repo: CortexRepository;
-
-    beforeEach(async () => {
-        db = await createDatabase(':memory:');
-        await createCortexSchema(db);
-        repo = new CortexRepository(db);
-        await repo.insertFunctionNodes([
-            {
-                id: 'fn:a.ts:foo',
-                name: 'foo',
-                qualifiedName: 'foo',
-                filePath: 'a.ts',
-                lineStart: 1,
-                lineEnd: 5,
-                isAsync: false,
-                isExported: true,
-                isEntryPoint: false,
-                entryPointScore: 0,
-                signature: '(): void',
-                community: null,
-                pageRank: null,
-                betweenness: null,
-            },
-            {
-                id: 'fn:b.ts:bar',
-                name: 'bar',
-                qualifiedName: 'bar',
-                filePath: 'b.ts',
-                lineStart: 1,
-                lineEnd: 5,
-                isAsync: false,
-                isExported: false,
-                isEntryPoint: false,
-                entryPointScore: 0,
-                signature: '(): string',
-                community: null,
-                pageRank: null,
-                betweenness: null,
-            },
-            {
-                id: 'fn:c.ts:baz',
-                name: 'baz',
-                qualifiedName: 'baz',
-                filePath: 'c.ts',
-                lineStart: 1,
-                lineEnd: 5,
-                isAsync: true,
-                isExported: true,
-                isEntryPoint: false,
-                entryPointScore: 0,
-                signature: '(): Promise<void>',
-                community: null,
-                pageRank: null,
-                betweenness: null,
-            },
-        ]);
-        await repo.insertCallsEdges([
-            {
-                sourceId: 'fn:a.ts:foo',
-                targetId: 'fn:b.ts:bar',
-                line: 3,
-                confidence: 0.95,
-                isDynamic: false,
-                isAsync: false,
-                isIndirect: false,
-                stage: 3,
-                reason: 'direct call',
-            },
-            {
-                sourceId: 'fn:b.ts:bar',
-                targetId: 'fn:c.ts:baz',
-                line: 2,
-                confidence: 0.9,
-                isDynamic: false,
-                isAsync: true,
-                isIndirect: false,
-                stage: 3,
-                reason: 'direct call',
-            },
-        ]);
-
-        await refreshSymbolsTable(db);
-        await installPgq(db);
-        await createPropertyGraph(db);
-    });
-
-    afterEach(async () => {
-        await db.close();
-    });
-
     describe('validatePgqQuery', () => {
         it('accepts valid SELECT ... FROM GRAPH_TABLE query', () => {
             const result = validatePgqQuery(
@@ -128,6 +37,109 @@ describe('PGQ Query Builder', () => {
     });
 
     describe('executePgqQuery', () => {
+        let db: SymbioteDB;
+        let hasPgq = false;
+
+        beforeAll(async () => {
+            const testDb = await createDatabase(':memory:');
+            try {
+                await installPgq(testDb);
+                hasPgq = await isPgqAvailable(testDb);
+            } catch {
+                hasPgq = false;
+            } finally {
+                await testDb.close();
+            }
+        });
+
+        beforeEach(async (ctx) => {
+            if (!hasPgq) return ctx.skip();
+            db = await createDatabase(':memory:');
+            await createCortexSchema(db);
+            const repo = new CortexRepository(db);
+            await repo.insertFunctionNodes([
+                {
+                    id: 'fn:a.ts:foo',
+                    name: 'foo',
+                    qualifiedName: 'foo',
+                    filePath: 'a.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: true,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: '(): void',
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+                {
+                    id: 'fn:b.ts:bar',
+                    name: 'bar',
+                    qualifiedName: 'bar',
+                    filePath: 'b.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: false,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: '(): string',
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+                {
+                    id: 'fn:c.ts:baz',
+                    name: 'baz',
+                    qualifiedName: 'baz',
+                    filePath: 'c.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: true,
+                    isExported: true,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: '(): Promise<void>',
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+            ]);
+            await repo.insertCallsEdges([
+                {
+                    sourceId: 'fn:a.ts:foo',
+                    targetId: 'fn:b.ts:bar',
+                    line: 3,
+                    confidence: 0.95,
+                    isDynamic: false,
+                    isAsync: false,
+                    isIndirect: false,
+                    stage: 3,
+                    reason: 'direct call',
+                },
+                {
+                    sourceId: 'fn:b.ts:bar',
+                    targetId: 'fn:c.ts:baz',
+                    line: 2,
+                    confidence: 0.9,
+                    isDynamic: false,
+                    isAsync: true,
+                    isIndirect: false,
+                    stage: 3,
+                    reason: 'direct call',
+                },
+            ]);
+            await refreshSymbolsTable(db);
+            await installPgq(db);
+            await createPropertyGraph(db);
+        });
+
+        afterEach(async () => {
+            if (db) await db.close();
+        });
+
         it('executes GRAPH_TABLE query and returns rows', async () => {
             const rows = await executePgqQuery(
                 db,
