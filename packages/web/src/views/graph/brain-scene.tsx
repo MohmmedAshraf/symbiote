@@ -211,12 +211,15 @@ interface CodeNodesProps {
 
 function CodeNodes({
     data,
-    selectedId,
+    selectedId: _selectedId,
     onNodeClick,
     onNodeHover,
     getActiveEffects,
 }: CodeNodesProps) {
     const meshRef = useRef<THREE.InstancedMesh>(null);
+    const dummyRef = useRef(new THREE.Object3D());
+    const colorRef = useRef(new THREE.Color());
+    const lerpColorRef = useRef(new THREE.Color());
     const { camera, raycaster, pointer } = useThree();
 
     const mapped = useMemo(() => mapNodesToBrain(data.nodes), [data.nodes]);
@@ -252,8 +255,8 @@ function CodeNodes({
         const activeEffects = getActiveEffects();
         if (activeEffects.size === 0) return;
 
-        const dummy = new THREE.Object3D();
-        const color = new THREE.Color();
+        const dummy = dummyRef.current;
+        const color = colorRef.current;
         let needsUpdate = false;
 
         for (let i = 0; i < mapped.length; i++) {
@@ -270,7 +273,9 @@ function CodeNodes({
 
                 const glowColor = effect.type === 'pulse' ? '#ffffff' : '#7b5fff';
                 const baseColor = m.node.type === 'file' ? '#4a90d9' : '#c084fc';
-                color.set(baseColor).lerp(new THREE.Color(glowColor), effect.intensity * 0.7);
+                color
+                    .set(baseColor)
+                    .lerp(lerpColorRef.current.set(glowColor), effect.intensity * 0.7);
                 mesh.setColorAt(i, color);
             }
         }
@@ -333,62 +338,6 @@ function CodeNodes({
                 blending={THREE.AdditiveBlending}
             />
         </instancedMesh>
-    );
-}
-
-function Particles({ count = 1200, spread = 0.2 }: { count?: number; spread?: number }) {
-    const pointsRef = useRef<THREE.Points>(null);
-
-    const positions = useMemo(() => {
-        const pos = new Float32Array(count * 3);
-        for (let i = 0; i < count; i++) {
-            const i3 = i * 3;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const r = 0.01 + Math.random() * spread;
-            pos[i3] = r * Math.sin(phi) * Math.cos(theta);
-            pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            pos[i3 + 2] = r * Math.cos(phi);
-        }
-        return pos;
-    }, [count, spread]);
-
-    useFrame(({ clock }) => {
-        const pts = pointsRef.current;
-        if (!pts) return;
-        pts.rotation.y = clock.getElapsedTime() * 0.015;
-        pts.rotation.x = Math.sin(clock.getElapsedTime() * 0.01) * 0.05;
-    });
-
-    const particleMaterial = useMemo(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 32;
-        const ctx = canvas.getContext('2d')!;
-        const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-        gradient.addColorStop(0, 'rgba(180, 140, 255, 1)');
-        gradient.addColorStop(0.3, 'rgba(140, 100, 200, 0.6)');
-        gradient.addColorStop(1, 'rgba(100, 60, 160, 0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 32, 32);
-        const texture = new THREE.CanvasTexture(canvas);
-        return new THREE.PointsMaterial({
-            size: 0.0015,
-            map: texture,
-            transparent: true,
-            opacity: 0.7,
-            sizeAttenuation: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
-    }, []);
-
-    return (
-        <points ref={pointsRef} material={particleMaterial}>
-            <bufferGeometry>
-                <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-            </bufferGeometry>
-        </points>
     );
 }
 

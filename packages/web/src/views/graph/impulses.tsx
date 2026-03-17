@@ -27,7 +27,7 @@ export function Impulses({
     edges,
     curves,
     nodeClusterMap,
-    selectedId,
+    selectedId: _selectedId,
     triggeredEdgeIndices,
 }: ImpulsesProps) {
     const meshRef = useRef<THREE.InstancedMesh>(null);
