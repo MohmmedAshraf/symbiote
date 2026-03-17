@@ -3,6 +3,8 @@ import { runStage0 } from './stage-0-structure.js';
 import { runStage1 } from './stage-1-symbols.js';
 import { runStage2 } from './stage-2-resolution.js';
 import { runStage3 } from './stage-3-callgraph.js';
+import { runStage4 } from './stage-4-types.js';
+import { runStage5 } from './stage-5-flow.js';
 import type { PipelineOptions, PipelineResult, StageResult } from './types.js';
 
 type StageFn = (
@@ -11,7 +13,7 @@ type StageFn = (
     options?: { force?: boolean; targetFiles?: string[] },
 ) => Promise<StageResult>;
 
-const STAGES: StageFn[] = [runStage0, runStage1, runStage2, runStage3];
+const STAGES: StageFn[] = [runStage0, runStage1, runStage2, runStage3, runStage4, runStage5];
 
 export class CortexEngine {
     constructor(private repo: CortexRepository) {}

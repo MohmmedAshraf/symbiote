@@ -5,4 +5,6 @@ export { runStage0 } from './stage-0-structure.js';
 export { runStage1 } from './stage-1-symbols.js';
 export { runStage2 } from './stage-2-resolution.js';
 export { runStage3 } from './stage-3-callgraph.js';
+export { runStage4 } from './stage-4-types.js';
+export { runStage5 } from './stage-5-flow.js';
 export type * from './types.js';
