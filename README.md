@@ -2,10 +2,14 @@
 
 <img src="art/cover.png" alt="Symbiote" width="100%" />
 
+# Symbiote
+
 **Your AI forgets. Symbiote remembers.**
 
 Bonds with your AI coding tools, giving them a brain that understands your project
 and a DNA that carries your style. One command. Every session. Zero cold start.
+
+_A symbiont is an organism that lives in close association with another. Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA._
 
 [![npm](https://img.shields.io/npm/v/symbiote-cli?style=flat-square&color=7b5fff)](https://www.npmjs.com/package/symbiote-cli)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
@@ -21,6 +25,20 @@ and a DNA that carries your style. One command. Every session. Zero cold start.
 Every AI coding session starts from scratch. The AI doesn't know your architecture, ignores your conventions, and repeats the same mistakes you corrected yesterday. Static rule files are manual and fragile. Every new conversation is a cold start.
 
 **Your corrections vanish. Your preferences reset. Your AI has amnesia.**
+
+## Why Not Just CLAUDE.md?
+
+CLAUDE.md is great for explicit instructions — but it's static text you maintain by hand. Symbiote is a living knowledge graph that updates itself every time your codebase changes.
+
+|                           | CLAUDE.md                         | Symbiote                                         |
+| ------------------------- | --------------------------------- | ------------------------------------------------ |
+| **Project structure**     | You write and maintain it         | Auto-scanned, always current                     |
+| **Dependencies & impact** | Not possible                      | Full graph — "what breaks if I change this?"     |
+| **File connections**      | You document them manually        | Every import, call, and edge mapped              |
+| **Coding style**          | You write rules once              | Learns from corrections, carries across projects |
+| **Stays current**         | Only if you remember to update it | Re-indexes on every change                       |
+
+They're complementary. Use CLAUDE.md for explicit instructions your AI should always follow. Use Symbiote for the deep project understanding no static file can provide.
 
 ## How Symbiote Fixes This
 
