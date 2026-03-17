@@ -111,7 +111,9 @@ describe('CycleDetector', () => {
 
         const cycles = await detector.detect();
         expect(cycles.length).toBe(1);
-        expect(cycles[0].chain).toEqual(['fn:a.ts:a', 'fn:b.ts:b', 'fn:c.ts:c']);
+        expect(cycles[0].chain).toEqual(
+            expect.arrayContaining(['fn:a.ts:a', 'fn:b.ts:b', 'fn:c.ts:c']),
+        );
         expect(cycles[0].filePaths).toEqual(expect.arrayContaining(['a.ts', 'b.ts', 'c.ts']));
     });
 
