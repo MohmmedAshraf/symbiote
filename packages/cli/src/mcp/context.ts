@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module';
 import type { SymbioteDB } from '../storage/db.js';
 import { Repository } from '../storage/repository.js';
 import { GraphQuery } from '../core/graph.js';
@@ -10,12 +9,8 @@ import { DnaStorage } from '../dna/storage.js';
 import { DnaEngine } from '../dna/engine.js';
 import { EventBus } from '../events/bus.js';
 import { SessionTracker } from '../events/session.js';
+import type { GraphInstance } from '../core/types.js';
 import path from 'node:path';
-
-const require = createRequire(import.meta.url);
-const GraphConstructor = require('graphology');
-
-type GraphInstance = InstanceType<typeof GraphConstructor>;
 
 export interface ServerContextOptions {
     db: SymbioteDB;

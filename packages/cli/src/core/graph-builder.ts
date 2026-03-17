@@ -1,11 +1,7 @@
-import { createRequire } from 'node:module';
 import type { SymbioteDB } from '../storage/db.js';
 import { Repository } from '../storage/repository.js';
-
-const require = createRequire(import.meta.url);
-const Graph = require('graphology');
-
-type GraphInstance = InstanceType<typeof Graph>;
+import { Graph } from './types.js';
+import type { GraphInstance } from './types.js';
 
 export async function buildGraphFromDb(db: SymbioteDB): Promise<GraphInstance> {
     const repo = new Repository(db);

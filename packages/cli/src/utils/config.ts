@@ -105,20 +105,7 @@ export function clearPortFile(projectRoot: string): void {
 }
 
 export function getServerPort(): number {
-    const envPort = process.env.SYMBIOTE_PORT;
-    if (envPort) {
-        const parsed = parseInt(envPort, 10);
-        if (!isNaN(parsed)) return parsed;
-    }
-
-    const projectRoot = process.cwd();
-    const portFile = path.join(projectRoot, BRAIN_DIR, 'port');
-    if (fs.existsSync(portFile)) {
-        const stored = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10);
-        if (!isNaN(stored)) return stored;
-    }
-
-    return DEFAULT_PORT;
+    return getProjectPort(process.cwd());
 }
 
 function portFromPath(projectRoot: string): number {
