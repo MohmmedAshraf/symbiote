@@ -332,3 +332,17 @@ export interface SymbolTableEntry {
 }
 
 export type SymbolTable = Map<string, SymbolTableEntry>;
+
+// --- Stage 6-7: Topology + Intelligence ---
+
+export type { TopologyResults, ExecutionFlow, LayerAssignment } from './topology-types.js';
+export type {
+    FindingKind,
+    FindingSeverity,
+    Finding,
+    TemporalSnapshot,
+    AttentionWeight,
+    InvestigationContext,
+    ArchitectureOverview,
+    LayerKind,
+} from './topology-types.js';
