@@ -14,6 +14,8 @@ import type {
     WritesEdge,
     ReturnsEdge,
     ImplementsEdge,
+    ExtendsEdge,
+    ImportsEdge,
 } from '../../src/cortex/types.js';
 
 describe('CortexRepository', () => {
@@ -688,6 +690,146 @@ describe('CortexRepository', () => {
             expect(stats.flowsTo).toBe(1);
             expect(stats.typeConstraints).toBe(1);
             expect(stats.genericInstantiations).toBe(1);
+        });
+    });
+
+    describe('symbol queries', () => {
+        it('getSymbolByName finds function by name', async () => {
+            await repo.insertFunctionNodes([
+                {
+                    id: 'fn:a.ts:foo',
+                    name: 'foo',
+                    qualifiedName: 'foo',
+                    filePath: 'a.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: true,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: null,
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+            ]);
+            const symbols = await repo.getSymbolByName('foo');
+            expect(symbols).toHaveLength(1);
+            expect(symbols[0].id).toBe('fn:a.ts:foo');
+        });
+
+        it('getSymbolByName finds multiple symbols with same name', async () => {
+            await repo.insertFunctionNodes([
+                {
+                    id: 'fn:a.ts:process',
+                    name: 'process',
+                    qualifiedName: 'process',
+                    filePath: 'a.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: true,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: null,
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+                {
+                    id: 'fn:b.ts:process',
+                    name: 'process',
+                    qualifiedName: 'process',
+                    filePath: 'b.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: false,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: null,
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+            ]);
+            const symbols = await repo.getSymbolByName('process');
+            expect(symbols).toHaveLength(2);
+        });
+
+        it('getReferencesForSymbol finds callers and importers', async () => {
+            await repo.insertFunctionNodes([
+                {
+                    id: 'fn:a.ts:foo',
+                    name: 'foo',
+                    qualifiedName: 'foo',
+                    filePath: 'a.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: true,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: null,
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+                {
+                    id: 'fn:b.ts:bar',
+                    name: 'bar',
+                    qualifiedName: 'bar',
+                    filePath: 'b.ts',
+                    lineStart: 1,
+                    lineEnd: 5,
+                    isAsync: false,
+                    isExported: false,
+                    isEntryPoint: false,
+                    entryPointScore: 0,
+                    signature: null,
+                    community: null,
+                    pageRank: null,
+                    betweenness: null,
+                },
+            ]);
+            await repo.insertCallsEdges([
+                {
+                    sourceId: 'fn:b.ts:bar',
+                    targetId: 'fn:a.ts:foo',
+                    line: 3,
+                    confidence: 0.95,
+                    isDynamic: false,
+                    isAsync: false,
+                    isIndirect: false,
+                    stage: 3,
+                    reason: 'direct call',
+                },
+            ]);
+
+            const refs = await repo.getReferencesForSymbol('fn:a.ts:foo');
+            expect(refs.callers).toHaveLength(1);
+            expect(refs.callers[0].sourceId).toBe('fn:b.ts:bar');
+        });
+
+        it('getAllFileNodes returns all files', async () => {
+            await repo.upsertFileNode({
+                id: 'file:a.ts',
+                path: 'a.ts',
+                hash: 'abc',
+                language: 'typescript',
+                depthLevel: 3,
+                lastIndexed: null,
+            });
+            await repo.upsertFileNode({
+                id: 'file:b.ts',
+                path: 'b.ts',
+                hash: 'def',
+                language: 'typescript',
+                depthLevel: 5,
+                lastIndexed: null,
+            });
+            const files = await repo.getAllFileNodes();
+            expect(files).toHaveLength(2);
         });
     });
 });

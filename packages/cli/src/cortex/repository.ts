@@ -140,6 +140,15 @@ interface ImportsEdgeRow extends Record<string, unknown> {
     reason: string | null;
 }
 
+interface ExtendsEdgeRow extends Record<string, unknown> {
+    source_id: string;
+    target_id: string;
+    line: number | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
 interface ImplementsEdgeRow extends Record<string, unknown> {
     source_id: string;
     target_id: string;
@@ -924,6 +933,32 @@ export class CortexRepository {
         return rows.map(this.mapImplementsEdgeRow);
     }
 
+    async getReferencesForSymbol(symbolId: string): Promise<{
+        callers: CallsEdge[];
+        importers: ImportsEdge[];
+        extenders: ExtendsEdge[];
+        implementors: ImplementsEdge[];
+    }> {
+        const [callers, importers, extenders, implementors] = await Promise.all([
+            this.getCallsTo(symbolId),
+            this.getImportersOf(symbolId),
+            this.db.all<ExtendsEdgeRow>(
+                'SELECT * FROM edges_extends WHERE target_id = $1',
+                symbolId,
+            ),
+            this.db.all<ImplementsEdgeRow>(
+                'SELECT * FROM edges_implements WHERE target_id = $1',
+                symbolId,
+            ),
+        ]);
+        return {
+            callers,
+            importers,
+            extenders: extenders.map((r) => this.mapExtendsEdgeRow(r)),
+            implementors: implementors.map(this.mapImplementsEdgeRow),
+        };
+    }
+
     async updateCallEdgeConfidence(
         sourceId: string,
         targetId: string,
@@ -1446,6 +1481,17 @@ export class CortexRepository {
             kind: row.kind as ImportsEdge['kind'],
             originalName: row.original_name,
             alias: row.alias,
+            confidence: row.confidence,
+            stage: row.stage,
+            reason: row.reason,
+        };
+    }
+
+    private mapExtendsEdgeRow(row: ExtendsEdgeRow): ExtendsEdge {
+        return {
+            sourceId: row.source_id,
+            targetId: row.target_id,
+            line: row.line,
             confidence: row.confidence,
             stage: row.stage,
             reason: row.reason,
