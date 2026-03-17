@@ -11,6 +11,10 @@ export const EVENT_TYPES = [
     'constraint:violated',
     'impact:ripple',
     'connection:restored',
+    'topology:complete',
+    'intelligence:finding',
+    'intelligence:snapshot',
+    'attention:updated',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
