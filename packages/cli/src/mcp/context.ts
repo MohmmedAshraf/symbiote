@@ -10,17 +10,22 @@ import { DnaEngine } from '../dna/engine.js';
 import { EventBus } from '../events/bus.js';
 import { SessionTracker } from '../events/session.js';
 import type { GraphInstance } from '../core/types.js';
+import { CortexRepository } from '../cortex/repository.js';
+import { CortexEngine } from '../cortex/engine.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
     db: SymbioteDB;
     brainDir: string;
     symbioteHome: string;
+    rootDir: string;
 }
 
 export interface ServerContext {
     db: SymbioteDB;
     repo: Repository;
+    cortexRepo: CortexRepository;
+    cortexEngine: CortexEngine;
     graph: GraphQuery;
     graphology: GraphInstance;
     search: HybridSearch;
@@ -30,10 +35,13 @@ export interface ServerContext {
     dnaEngine: DnaEngine;
     eventBus: EventBus;
     sessionTracker: SessionTracker;
+    rootDir: string;
 }
 
 export async function createServerContext(options: ServerContextOptions): Promise<ServerContext> {
     const repo = new Repository(options.db);
+    const cortexRepo = new CortexRepository(options.db);
+    const cortexEngine = new CortexEngine(cortexRepo);
     const graph = new GraphQuery(repo);
     const graphology = await buildGraphFromDb(options.db);
     const search = new HybridSearch(options.db, repo);
@@ -53,6 +61,8 @@ export async function createServerContext(options: ServerContextOptions): Promis
     return {
         db: options.db,
         repo,
+        cortexRepo,
+        cortexEngine,
         graph,
         graphology,
         search,
@@ -62,5 +72,6 @@ export async function createServerContext(options: ServerContextOptions): Promis
         dnaEngine,
         eventBus,
         sessionTracker,
+        rootDir: options.rootDir,
     };
 }

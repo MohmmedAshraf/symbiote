@@ -30,6 +30,7 @@ export async function cmdMcp(): Promise<void> {
         db,
         brainDir,
         symbioteHome,
+        rootDir: projectRoot,
     });
     const { server } = createMcpServer(ctx);
 

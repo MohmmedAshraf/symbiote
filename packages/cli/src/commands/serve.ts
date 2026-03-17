@@ -48,6 +48,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
         db,
         brainDir,
         symbioteHome,
+        rootDir: projectRoot,
     });
     const { server } = createMcpServer(ctx);
 
