@@ -38,10 +38,10 @@ export interface DetectChangesInput {
     cwd?: string;
 }
 
-export function handleDetectChanges(
+export async function handleDetectChanges(
     ctx: ImpactToolContext,
     input: DetectChangesInput,
-): GitImpactResult {
+): Promise<GitImpactResult> {
     const gitImpact = new GitImpactAnalyzer(ctx.graph);
     return gitImpact.analyzeWorkingChanges(input.cwd);
 }

@@ -1,4 +1,5 @@
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { ImpactAnalyzer } from './impact.js';
 import type { ImpactEntry } from './impact.js';
@@ -7,6 +8,8 @@ const require = createRequire(import.meta.url);
 const Graph = require('graphology');
 
 type GraphInstance = InstanceType<typeof Graph>;
+
+const execFileAsync = promisify(execFile);
 
 export interface AffectedFile {
     filePath: string;
@@ -36,27 +39,26 @@ export class GitImpactAnalyzer {
             .filter((line) => line.length > 0);
     }
 
-    getWorkingChanges(cwd?: string): string[] {
+    async getWorkingChanges(cwd?: string): Promise<string[]> {
         const opts = cwd ? { cwd } : {};
-        const unstaged = execSync('git diff --name-only', {
-            encoding: 'utf-8',
-            ...opts,
-        });
-        const staged = execSync('git diff --name-only --cached', {
-            encoding: 'utf-8',
-            ...opts,
-        });
+        const [unstaged, staged] = await Promise.all([
+            execFileAsync('git', ['diff', '--name-only'], { encoding: 'utf-8', ...opts }),
+            execFileAsync('git', ['diff', '--name-only', '--cached'], {
+                encoding: 'utf-8',
+                ...opts,
+            }),
+        ]);
 
         const files = new Set<string>([
-            ...GitImpactAnalyzer.parseGitDiffOutput(unstaged),
-            ...GitImpactAnalyzer.parseGitDiffOutput(staged),
+            ...GitImpactAnalyzer.parseGitDiffOutput(unstaged.stdout),
+            ...GitImpactAnalyzer.parseGitDiffOutput(staged.stdout),
         ]);
 
         return [...files];
     }
 
-    analyzeWorkingChanges(cwd?: string): GitImpactResult {
-        const changedFiles = this.getWorkingChanges(cwd);
+    async analyzeWorkingChanges(cwd?: string): Promise<GitImpactResult> {
+        const changedFiles = await this.getWorkingChanges(cwd);
         return this.analyzeFiles(changedFiles);
     }
 

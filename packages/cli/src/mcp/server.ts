@@ -266,7 +266,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         {},
         async () => {
             const impact = new ImpactAnalyzer(ctx.graphology);
-            const result = handleDetectChanges({ graph: ctx.graphology, impact }, {});
+            const result = await handleDetectChanges({ graph: ctx.graphology, impact }, {});
             return {
                 content: [
                     {

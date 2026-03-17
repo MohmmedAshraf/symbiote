@@ -47,6 +47,8 @@ function serveStatic(webDistDir: string, pathname: string, res: ServerResponse):
     const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
     let filePath = path.join(webDistDir, safePath);
 
+    if (!filePath.startsWith(webDistDir)) return false;
+
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         filePath = path.join(webDistDir, 'index.html');
     }
@@ -88,7 +90,7 @@ function openBrowser(url: string): void {
             : process.platform === 'win32'
               ? 'start'
               : 'xdg-open';
-    import('node:child_process').then(({ exec }) => exec(`${cmd} ${url}`));
+    import('node:child_process').then(({ execFile }) => execFile(cmd, [url]));
 }
 
 function showLogo(): void {
@@ -571,7 +573,7 @@ async function cmdImpact(): Promise<void> {
     const gitImpact = new GitImpactAnalyzer(graph);
     let result;
     try {
-        result = gitImpact.analyzeWorkingChanges(projectRoot);
+        result = await gitImpact.analyzeWorkingChanges(projectRoot);
     } catch {
         s2.stop('No git changes detected');
         await db.close();
@@ -613,7 +615,7 @@ async function cmdImpact(): Promise<void> {
 async function handleHttpRequest(
     ctx: Awaited<ReturnType<typeof createServerContext>>,
     webDistDir: string,
-    port: number,
+    _port: number,
     url: URL,
     req: IncomingMessage,
     res: ServerResponse,

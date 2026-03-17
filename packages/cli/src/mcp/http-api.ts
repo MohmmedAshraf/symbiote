@@ -4,13 +4,15 @@ import type { EventBus } from '../events/bus.js';
 import type { SymbioteEvent } from '../events/types.js';
 import { EVENT_TYPES } from '../events/types.js';
 
+const MAX_BODY_SIZE = 1024 * 1024; // 1MB
+
 export async function handleApiRequest(
     ctx: ServerContext,
     pathname: string,
     req: IncomingMessage,
     res: ServerResponse,
 ): Promise<boolean> {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', `http://localhost:${req.socket.localPort}`);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -169,6 +171,11 @@ function handleUpdateDna(
     let body = '';
     req.on('data', (chunk) => {
         body += chunk;
+        if (body.length > MAX_BODY_SIZE) {
+            res.writeHead(413);
+            res.end('Payload too large');
+            req.destroy();
+        }
     });
     req.on('end', () => {
         try {
@@ -346,6 +353,11 @@ export function handleInternalEvent(
     let body = '';
     req.on('data', (chunk) => {
         body += chunk;
+        if (body.length > MAX_BODY_SIZE) {
+            res.writeHead(413);
+            res.end('Payload too large');
+            req.destroy();
+        }
     });
     req.on('end', () => {
         try {
@@ -367,14 +379,14 @@ export function handleInternalEvent(
 
 export function handleSseConnection(
     bus: EventBus,
-    _req: IncomingMessage,
+    req: IncomingMessage,
     res: ServerResponse,
 ): void {
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': `http://localhost:${req.socket.localPort}`,
     });
 
     res.write('data: {"type":"connected"}\n\n');

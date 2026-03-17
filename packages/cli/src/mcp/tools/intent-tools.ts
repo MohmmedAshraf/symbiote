@@ -1,6 +1,12 @@
 import type { ServerContext } from '../context.js';
 import type { IntentEntry } from '../../brain/intent.js';
 
+function validateId(id: string): void {
+    if (id.includes('/') || id.includes('\\') || id.includes('..')) {
+        throw new Error('Invalid id: must not contain path separators or ".."');
+    }
+}
+
 export interface GetConstraintsInput {
     scope?: string;
 }
@@ -17,7 +23,9 @@ export function handleGetConstraints(
 
     if (input.scope) {
         return {
-            constraints: constraints.filter((c) => c.frontmatter.scope === input.scope),
+            constraints: constraints.filter(
+                (c) => c.frontmatter.scope === 'global' || c.frontmatter.scope === input.scope,
+            ),
         };
     }
 
@@ -63,6 +71,8 @@ export function handleProposeDecision(
     ctx: ServerContext,
     input: ProposeDecisionInput,
 ): ProposeEntryOutput {
+    validateId(input.id);
+
     const entry: IntentEntry = {
         frontmatter: {
             id: input.id,
@@ -89,6 +99,8 @@ export function handleProposeConstraint(
     ctx: ServerContext,
     input: ProposeConstraintInput,
 ): ProposeEntryOutput {
+    validateId(input.id);
+
     const entry: IntentEntry = {
         frontmatter: {
             id: input.id,
