@@ -637,6 +637,15 @@ export class CortexRepository {
         return rows.map(this.mapVariableNodeRow);
     }
 
+    async deleteCallEdgesBySourceIds(sourceIds: string[]): Promise<void> {
+        if (sourceIds.length === 0) return;
+        const placeholders = sourceIds.map((_, i) => `$${i + 1}`).join(', ');
+        await this.db.run(
+            `DELETE FROM edges_calls WHERE source_id IN (${placeholders})`,
+            ...sourceIds,
+        );
+    }
+
     async getCallsFrom(sourceId: string): Promise<CallsEdge[]> {
         const rows = await this.db.all<CallsEdgeRow>(
             'SELECT * FROM edges_calls WHERE source_id = $1',
