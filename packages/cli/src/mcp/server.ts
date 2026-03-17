@@ -13,6 +13,7 @@ import { handleGetHealth } from './tools/health-tools.js';
 import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
 import { ImpactAnalyzer } from '../core/impact.js';
 import { registerTraceTools } from './tools/trace-tools.js';
+import { handleFindPatterns, handleGetArchitecture } from './tools/architecture-tools.js';
 import { CortexRepository } from '../cortex/repository.js';
 import {
     handleDnaResource,
@@ -214,6 +215,50 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     const cortexRepo = new CortexRepository(ctx.db);
     registerTraceTools(server, cortexRepo);
+
+    server.tool(
+        'find_patterns',
+        'Detect anti-patterns, architectural violations, and complexity hotspots within a scope',
+        {
+            scope: z.string().describe('Scope to search: file path, directory, or "all"'),
+            kinds: z
+                .array(
+                    z.enum([
+                        'god_class',
+                        'circular_dependency',
+                        'feature_envy',
+                        'shotgun_surgery',
+                        'layer_violation',
+                        'dependency_direction',
+                        'barrel_abuse',
+                        'complexity_hotspot',
+                        'style_deviation',
+                        'decision_contradiction',
+                        'predictive_impact',
+                    ]),
+                )
+                .optional()
+                .describe('Filter by specific finding kinds'),
+            severity: z
+                .enum(['info', 'warning', 'error'])
+                .optional()
+                .describe('Minimum severity to include'),
+        },
+        async (input) => {
+            const result = await handleFindPatterns(cortexRepo, input);
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'get_architecture',
+        'Get detected architectural layers, boundaries, dependency direction, and violation summary',
+        {},
+        async () => {
+            const result = await handleGetArchitecture(cortexRepo);
+            return { content: [textResult(result)] };
+        },
+    );
 
     return { server };
 }
