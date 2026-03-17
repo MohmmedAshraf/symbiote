@@ -6,9 +6,6 @@
 
 **Your AI forgets. Symbiote remembers.**
 
-Bonds with your AI coding tools, giving them a brain that understands your project
-and a DNA that carries your style. One command. Every session. Zero cold start.
-
 _A symbiont is an organism that lives in close association with another. Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA._
 
 [![npm](https://img.shields.io/npm/v/symbiote-cli?style=flat-square&color=7b5fff)](https://www.npmjs.com/package/symbiote-cli)

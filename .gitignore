@@ -24,7 +24,7 @@ packages/web/vite.config.d.ts
 # Turborepo
 .turbo/
 
-# Synapse data
+# Symbiote data
 *.db
 .brain/
 
@@ -45,6 +45,10 @@ Thumbs.db
 
 # Test
 coverage/
+
+# Copied files for npm pack (canonical versions at repo root)
+packages/cli/README.md
+packages/cli/LICENSE
 
 # Internal docs (specs, plans, design docs)
 docs/

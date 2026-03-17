@@ -20,7 +20,7 @@
         "LICENSE"
     ],
     "engines": {
-        "node": ">=18"
+        "node": ">=20"
     },
     "scripts": {
         "build": "tsc",
@@ -80,7 +80,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/MohmmedAshraf/synapse.git"
+        "url": "https://github.com/MohmmedAshraf/symbiote.git"
     },
-    "homepage": "https://github.com/MohmmedAshraf/synapse"
+    "homepage": "https://github.com/MohmmedAshraf/symbiote"
 }
