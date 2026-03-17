@@ -464,6 +464,15 @@ function getFunctionName(node: SyntaxNode): string | null {
     const nameNode = node.childForFieldName('name');
     if (nameNode && nameNode.type !== 'ERROR') return nameNode.text;
 
+    const declarator = node.childForFieldName('declarator');
+    if (declarator) {
+        if (declarator.type === 'function_declarator') {
+            const innerName = declarator.childForFieldName('declarator');
+            if (innerName) return innerName.text;
+        }
+        if (declarator.type === 'identifier') return declarator.text;
+    }
+
     const parent = node.parent;
     if (parent?.type === 'variable_declarator') {
         const name = parent.childForFieldName('name');
