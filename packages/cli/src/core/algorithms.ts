@@ -3,6 +3,11 @@ import type { Repository } from '../storage/repository.js';
 import { Graph } from './types.js';
 import type { GraphInstance } from './types.js';
 
+/**
+ * @deprecated Use packages/cli/src/cortex/stage-6-topology.ts instead.
+ * This module uses the legacy Repository. Will be removed in next major version.
+ */
+
 const req = createRequire(import.meta.url);
 const louvain = req('graphology-communities-louvain');
 const centrality = req('graphology-metrics/centrality');
@@ -13,6 +18,7 @@ export interface AlgorithmResults {
     betweenness: Record<string, number>;
 }
 
+/** @deprecated Use Stage6Topology from cortex/stage-6-topology.ts instead. */
 export class GraphAlgorithms {
     constructor(private repo: Repository) {}
 
