@@ -110,7 +110,7 @@ export interface ToolResponse<T> {
     data: T;
     depth: number;
     deepening: boolean;
-    staleSince?: string;
+    stale_since?: string;
 }
 
 export interface ModuleNode {
