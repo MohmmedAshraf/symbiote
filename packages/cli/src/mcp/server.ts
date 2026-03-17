@@ -2,19 +2,13 @@ import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { ServerContext } from './context.js';
-import { handleGetDeveloperDna, handleRecordInstruction } from './tools/dna-tools.js';
+import { handleGetDeveloperDna } from './tools/dna-tools.js';
 import {
     handleGetProjectOverview,
     handleGetContextForFile,
     handleQueryGraph,
     handleSemanticSearch,
 } from './tools/project-tools.js';
-import {
-    handleGetConstraints,
-    handleGetDecisions,
-    handleProposeDecision,
-    handleProposeConstraint,
-} from './tools/intent-tools.js';
 import { handleGetHealth } from './tools/health-tools.js';
 import { handleGetImpact, handleDetectChanges } from './tools/impact-tools.js';
 import { ImpactAnalyzer } from '../core/impact.js';
@@ -124,75 +118,11 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
     );
 
     server.tool(
-        'get_constraints',
-        'Returns active constraints, optionally scoped to a file or module.',
-        {
-            scope: z.string().optional().describe('File path or module to scope constraints to'),
-        },
-        async (input) => ({
-            content: [textResult(await handleGetConstraints(ctx, input))],
-        }),
-    );
-
-    server.tool(
-        'get_decisions',
-        'Returns architectural decisions, optionally scoped to a file or module.',
-        {
-            scope: z.string().optional().describe('File path or module to scope decisions to'),
-        },
-        async (input) => ({
-            content: [textResult(await handleGetDecisions(ctx, input))],
-        }),
-    );
-
-    server.tool(
         'get_health',
         "Returns the project's health report: dead code, circular deps, orphans, violations.",
         {},
         async () => ({
             content: [textResult(await handleGetHealth(ctx))],
-        }),
-    );
-
-    server.tool(
-        'propose_decision',
-        'Write back an architectural decision as a proposed entry.',
-        {
-            id: z.string().describe('Unique ID for the decision'),
-            content: z.string().describe('The decision description and rationale'),
-            scope: z.string().default('global').describe("Scope: 'global' or a file/module path"),
-        },
-        async (input) => ({
-            content: [textResult(handleProposeDecision(ctx, input))],
-        }),
-    );
-
-    server.tool(
-        'propose_constraint',
-        'Write back a constraint as a proposed entry.',
-        {
-            id: z.string().describe('Unique ID for the constraint'),
-            content: z.string().describe('The constraint rule description'),
-            scope: z.string().default('global').describe("Scope: 'global' or a file/module path"),
-        },
-        async (input) => ({
-            content: [textResult(handleProposeConstraint(ctx, input))],
-        }),
-    );
-
-    server.tool(
-        'record_instruction',
-        'Captures a developer correction or instruction for DNA processing.',
-        {
-            instruction: z.string().describe("The developer's instruction or correction"),
-            sessionId: z.string().describe('Current session identifier'),
-            isExplicit: z
-                .boolean()
-                .default(false)
-                .describe('True if the developer explicitly stated a preference'),
-        },
-        async (input) => ({
-            content: [textResult(handleRecordInstruction(ctx, input))],
         }),
     );
 
