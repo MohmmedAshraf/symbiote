@@ -1,4 +1,5 @@
 import { DuckDBInstance } from '@duckdb/node-api';
+import { createCortexSchema } from '../cortex/schema.js';
 
 const SCHEMA_VERSION = 1;
 
@@ -144,6 +145,8 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
         CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
         CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
     `);
+
+    await createCortexSchema(db);
 
     await db.exec('INSTALL fts; LOAD fts;');
 

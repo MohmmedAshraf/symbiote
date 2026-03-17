@@ -3,6 +3,8 @@ import { walkFiles, hashFileContent } from '../utils/files.js';
 import { parseFile } from './parser.js';
 import { EmbeddingService } from './embeddings.js';
 import { GraphAlgorithms } from './algorithms.js';
+import { CortexEngine } from '../cortex/engine.js';
+import { CortexRepository } from '../cortex/repository.js';
 import type { Repository } from '../storage/repository.js';
 import type { SymbioteDB } from '../storage/db.js';
 
@@ -92,6 +94,20 @@ export class Scanner {
                 await algorithms.runAll();
             } catch {
                 // Algorithm failures are non-fatal
+            }
+        }
+
+        if (this.db) {
+            try {
+                const cortexRepo = new CortexRepository(this.db);
+                const engine = new CortexEngine(cortexRepo);
+                await engine.run({
+                    rootDir,
+                    force: options.force,
+                    maxStage: 3,
+                });
+            } catch {
+                // Cortex pipeline failures are non-fatal
             }
         }
 
