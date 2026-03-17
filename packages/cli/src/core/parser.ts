@@ -40,8 +40,8 @@ interface TreeCursor {
     gotoParent(): boolean;
 }
 
-export function parseFile(filePath: string): ParseResult | null {
-    if (!fs.existsSync(filePath)) return null;
+export function parseFile(filePath: string, content?: string): ParseResult | null {
+    if (!content && !fs.existsSync(filePath)) return null;
 
     const language = detectLanguage(filePath);
     if (!language) return null;
@@ -49,7 +49,7 @@ export function parseFile(filePath: string): ParseResult | null {
     const grammar = getGrammar(language);
     if (!grammar) return null;
 
-    const source = fs.readFileSync(filePath, 'utf-8');
+    const source = content ?? fs.readFileSync(filePath, 'utf-8');
     const parser = new Parser();
     parser.setLanguage(grammar);
     const tree = parser.parse(source);
@@ -431,5 +431,19 @@ function guessNodePrefix(name: string): string {
 function resolveImportPath(fromFile: string, importPath: string): string {
     if (!importPath.startsWith('.')) return importPath;
     const dir = path.dirname(fromFile);
-    return path.resolve(dir, importPath);
+    const resolved = path.resolve(dir, importPath);
+
+    const extensions = ['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js'];
+
+    if (fs.existsSync(resolved)) return resolved;
+
+    for (const ext of extensions) {
+        const withExt = resolved + ext;
+        if (fs.existsSync(withExt)) return withExt;
+    }
+
+    const stripped = resolved.replace(/\.js$/, '.ts');
+    if (stripped !== resolved && fs.existsSync(stripped)) return stripped;
+
+    return resolved;
 }

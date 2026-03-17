@@ -36,10 +36,10 @@ export class ImpactAnalyzer {
 
     getBlastRadius(nodeId: string, maxDepth: number): ImpactResult {
         const depths: Record<number, ImpactEntry[]> = {};
-        const visited = new Set<string>();
+        const bestConfidence = new Map<string, number>();
 
         depths[0] = [{ node: nodeId, depth: 0, path: [nodeId], confidence: 1.0 }];
-        visited.add(nodeId);
+        bestConfidence.set(nodeId, 1.0);
 
         let currentFrontier: ImpactEntry[] = depths[0];
 
@@ -51,13 +51,14 @@ export class ImpactAnalyzer {
 
                 for (const edgeKey of inEdges) {
                     const source = this.graph.source(edgeKey);
-                    if (visited.has(source)) continue;
-
                     const edgeType = this.graph.getEdgeAttribute(edgeKey, 'type') as string;
                     const edgeConf = EDGE_CONFIDENCE[edgeType] ?? 0.5;
                     const compoundConf = entry.confidence * edgeConf;
 
-                    visited.add(source);
+                    const existing = bestConfidence.get(source) ?? 0;
+                    if (compoundConf <= existing) continue;
+
+                    bestConfidence.set(source, compoundConf);
                     nextLevel.push({
                         node: source,
                         depth,

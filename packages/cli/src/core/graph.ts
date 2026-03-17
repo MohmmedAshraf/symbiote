@@ -20,32 +20,38 @@ export class GraphQuery {
 
     async getDependencies(query: string): Promise<NodeRecord[]> {
         const nodeIds = await this.resolveNodeIds(query);
-        const nodes: NodeRecord[] = [];
         const seen = new Set<string>();
+        const targetIds: string[] = [];
         for (const id of nodeIds) {
             for (const e of await this.repo.getDependencies(id)) {
-                if (seen.has(e.targetId)) continue;
-                seen.add(e.targetId);
-                const node = await this.repo.getNodeById(e.targetId);
-                if (node) nodes.push(node);
+                if (!seen.has(e.targetId)) {
+                    seen.add(e.targetId);
+                    targetIds.push(e.targetId);
+                }
             }
         }
-        return nodes;
+        const nodeMap = await this.repo.getNodesByIds(targetIds);
+        return targetIds
+            .map((id) => nodeMap.get(id))
+            .filter((n): n is NodeRecord => n !== undefined);
     }
 
     async getDependents(query: string): Promise<NodeRecord[]> {
         const nodeIds = await this.resolveNodeIds(query);
-        const nodes: NodeRecord[] = [];
         const seen = new Set<string>();
+        const sourceIds: string[] = [];
         for (const id of nodeIds) {
             for (const e of await this.repo.getDependents(id)) {
-                if (seen.has(e.sourceId)) continue;
-                seen.add(e.sourceId);
-                const node = await this.repo.getNodeById(e.sourceId);
-                if (node) nodes.push(node);
+                if (!seen.has(e.sourceId)) {
+                    seen.add(e.sourceId);
+                    sourceIds.push(e.sourceId);
+                }
             }
         }
-        return nodes;
+        const nodeMap = await this.repo.getNodesByIds(sourceIds);
+        return sourceIds
+            .map((id) => nodeMap.get(id))
+            .filter((n): n is NodeRecord => n !== undefined);
     }
 
     private async resolveNodeIds(query: string): Promise<string[]> {
@@ -74,18 +80,32 @@ export class GraphQuery {
 
     async getFileContext(filePath: string): Promise<FileContext> {
         const nodes = await this.repo.getNodesByFile(filePath);
-        const dependencies: FileContext['dependencies'] = [];
-        const dependents: FileContext['dependents'] = [];
+        const nodeIds = nodes.map((n) => n.id);
 
-        for (const node of nodes) {
-            for (const edge of await this.repo.getDependencies(node.id)) {
-                const target = await this.repo.getNodeById(edge.targetId);
-                if (target) dependencies.push({ node: target, edge });
-            }
-            for (const edge of await this.repo.getDependents(node.id)) {
-                const source = await this.repo.getNodeById(edge.sourceId);
-                if (source) dependents.push({ node: source, edge });
-            }
+        const allDeps: EdgeRecord[] = [];
+        const allDependents: EdgeRecord[] = [];
+        for (const id of nodeIds) {
+            const deps = await this.repo.getDependencies(id);
+            allDeps.push(...deps);
+            const dependentEdges = await this.repo.getDependents(id);
+            allDependents.push(...dependentEdges);
+        }
+
+        const targetIds = allDeps.map((e) => e.targetId);
+        const sourceIds = allDependents.map((e) => e.sourceId);
+        const allIds = [...new Set([...targetIds, ...sourceIds])];
+        const nodeMap = await this.repo.getNodesByIds(allIds);
+
+        const dependencies: FileContext['dependencies'] = [];
+        for (const edge of allDeps) {
+            const target = nodeMap.get(edge.targetId);
+            if (target) dependencies.push({ node: target, edge });
+        }
+
+        const dependents: FileContext['dependents'] = [];
+        for (const edge of allDependents) {
+            const source = nodeMap.get(edge.sourceId);
+            if (source) dependents.push({ node: source, edge });
         }
 
         return { filePath, nodes, dependencies, dependents };

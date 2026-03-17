@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import type { Repository, NodeRecord } from '../storage/repository.js';
+import type { Repository } from '../storage/repository.js';
 
 const require = createRequire(import.meta.url);
 const Graph = require('graphology');
@@ -50,44 +50,31 @@ export class GraphAlgorithms {
 
     async runLouvain(): Promise<Record<string, number>> {
         const graph = await this.loadGraph();
-
         if (graph.order === 0) return {};
-
-        const undirected = new Graph({ multi: false, type: 'undirected' });
-        graph.forEachNode((node: string, attrs: Record<string, unknown>) => {
-            undirected.addNode(node, attrs);
-        });
-        graph.forEachEdge(
-            (_edge: string, _attrs: Record<string, unknown>, source: string, target: string) => {
-                if (source !== target && !undirected.hasEdge(source, target)) {
-                    undirected.addEdge(source, target);
-                }
-            },
-        );
-
-        return louvain(undirected);
+        return this.computeLouvain(graph);
     }
 
     async runPageRank(): Promise<Record<string, number>> {
         const graph = await this.loadGraph();
-
         if (graph.order === 0) return {};
-
         return centrality.pagerank(graph);
     }
 
     async runBetweennessCentrality(): Promise<Record<string, number>> {
         const graph = await this.loadGraph();
-
         if (graph.order === 0) return {};
-
         return centrality.betweenness(graph);
     }
 
     async runAll(): Promise<AlgorithmResults> {
-        const communities = await this.runLouvain();
-        const ranks = await this.runPageRank();
-        const betweenness = await this.runBetweennessCentrality();
+        const graph = await this.loadGraph();
+        if (graph.order === 0) {
+            return { communities: {}, pageRank: {}, betweenness: {} };
+        }
+
+        const communities = this.computeLouvain(graph);
+        const ranks = centrality.pagerank(graph);
+        const betweenness = centrality.betweenness(graph);
 
         const allNodes = await this.repo.getAllNodes();
 
@@ -100,10 +87,21 @@ export class GraphAlgorithms {
             await this.repo.insertNodes([{ ...node, metadata }]);
         }
 
-        return {
-            communities,
-            pageRank: ranks,
-            betweenness,
-        };
+        return { communities, pageRank: ranks, betweenness };
+    }
+
+    private computeLouvain(graph: GraphInstance): Record<string, number> {
+        const undirected = new Graph({ multi: false, type: 'undirected' });
+        graph.forEachNode((node: string, attrs: Record<string, unknown>) => {
+            undirected.addNode(node, attrs);
+        });
+        graph.forEachEdge(
+            (_edge: string, _attrs: Record<string, unknown>, source: string, target: string) => {
+                if (source !== target && !undirected.hasEdge(source, target)) {
+                    undirected.addEdge(source, target);
+                }
+            },
+        );
+        return louvain(undirected);
     }
 }

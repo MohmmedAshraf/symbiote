@@ -47,14 +47,15 @@ export class Scanner {
 
         for (const filePath of files) {
             try {
-                const hash = hashFileContent(filePath);
+                const source = fs.readFileSync(filePath, 'utf-8');
+                const hash = hashFileContent(filePath, source);
 
                 if (!options.force && !(await this.repo.isFileChanged(filePath, hash))) {
                     result.filesSkipped++;
                     continue;
                 }
 
-                const parsed = parseFile(filePath);
+                const parsed = parseFile(filePath, source);
                 if (!parsed) {
                     result.filesSkipped++;
                     continue;
@@ -67,7 +68,6 @@ export class Scanner {
 
                 if (this.embeddingService && this.db) {
                     await this.embeddingService.clearForFile(this.db, filePath);
-                    const source = fs.readFileSync(filePath, 'utf-8');
                     result.embeddingsGenerated += await this.embeddingService.generateForNodes(
                         this.db,
                         parsed.nodes,

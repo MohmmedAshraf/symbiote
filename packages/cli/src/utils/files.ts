@@ -43,7 +43,7 @@ export function walkFiles(rootDir: string, ignoreDirs: string[] = DEFAULT_IGNORE
     return files;
 }
 
-export function hashFileContent(filePath: string): string {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
+export function hashFileContent(filePath: string, content?: string): string {
+    const source = content ?? fs.readFileSync(filePath, 'utf-8');
+    return crypto.createHash('sha256').update(source).digest('hex').slice(0, 16);
 }
