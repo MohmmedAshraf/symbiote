@@ -177,7 +177,120 @@ export interface ContainsEdge {
     reason: string | null;
 }
 
-export type CortexEdge = CallsEdge | ImportsEdge | ExtendsEdge | ImplementsEdge | ContainsEdge;
+// --- Stage 4: Type Inference ---
+
+export type ConstraintSource =
+    | 'annotation'
+    | 'constructor'
+    | 'return_type'
+    | 'assignment'
+    | 'parameter'
+    | 'typeof'
+    | 'implements'
+    | 'extends'
+    | 'duck_type';
+
+export interface TypeConstraint {
+    symbolId: string;
+    typeName: string;
+    source: ConstraintSource;
+    confidence: number;
+    filePath: string;
+    line: number;
+}
+
+export interface GenericInstantiation {
+    symbolId: string;
+    genericName: string;
+    typeArguments: string[];
+    filePath: string;
+    line: number;
+}
+
+// --- Stage 5: Flow Analysis ---
+
+export type FlowPointKind =
+    | 'parameter'
+    | 'return'
+    | 'field_read'
+    | 'field_write'
+    | 'assignment'
+    | 'call_arg';
+
+export interface FlowPoint {
+    symbolId: string;
+    kind: FlowPointKind;
+    name: string;
+    parameterIndex: number | null;
+    filePath: string;
+    line: number;
+}
+
+export type TaintLabel = string;
+
+export interface TaintConfig {
+    sources: string[];
+    sinks: string[];
+}
+
+export interface FlowsToEdge {
+    sourceId: string;
+    targetId: string;
+    parameterIndex: number | null;
+    transform: 'passthrough' | 'destructure' | 'wrap' | 'map';
+    taintLabel: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+export interface ReadsEdge {
+    sourceId: string;
+    targetId: string;
+    line: number | null;
+    field: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+export interface WritesEdge {
+    sourceId: string;
+    targetId: string;
+    line: number | null;
+    field: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+export interface ReturnsEdge {
+    sourceId: string;
+    targetId: string;
+    line: number | null;
+    returnType: string | null;
+    confidence: number;
+    stage: number;
+    reason: string | null;
+}
+
+export interface FlowPath {
+    nodes: string[];
+    hasAsync: boolean;
+    hasErrorPath: boolean;
+    taintLabels: string[];
+}
+
+export type CortexEdge =
+    | CallsEdge
+    | ImportsEdge
+    | ExtendsEdge
+    | ImplementsEdge
+    | ContainsEdge
+    | FlowsToEdge
+    | ReadsEdge
+    | WritesEdge
+    | ReturnsEdge;
 
 export interface StageResult {
     stage: number;
