@@ -28,7 +28,7 @@ cd packages/cli && npx vitest run
 cd packages/cli && npx vitest
 
 # Type-check both packages
-npx turbo type-check
+npx tsc -b --noEmit
 
 # Build web UI
 cd packages/web && npm run build
@@ -52,7 +52,7 @@ This project enforces strict conventions. Your PR will be rejected if it doesn't
 - **`const` over `let`**, never `var`
 - **Early returns** over nested conditions
 
-Prettier and ESLint run on pre-commit hooks. If the hook fails, fix the issue — don't skip the hook.
+Prettier runs on pre-commit hooks via lint-staged. Type-check runs after staging. If the hook fails, fix the issue — don't skip the hook.
 
 ## Testing
 
@@ -90,7 +90,7 @@ Keep commits small and focused. One logical change per commit.
 2. Make your changes following the code style above
 3. Write or update tests for your changes
 4. Make sure all tests pass: `cd packages/cli && npx vitest run`
-5. Make sure TypeScript compiles: `npx turbo type-check`
+5. Make sure TypeScript compiles: `npx tsc -b --noEmit`
 6. Open a PR with a clear description of what and why
 
 ### PR title format
@@ -109,26 +109,31 @@ Same as commit format: `feat(scope): description`
 
 If you're contributing to a specific area, here's where things live:
 
-| Area             | Location                              | What it does                                |
-| ---------------- | ------------------------------------- | ------------------------------------------- |
-| Code parsing     | `packages/cli/src/core/parser.ts`     | Tree-sitter AST → nodes + edges             |
-| Graph queries    | `packages/cli/src/core/graph.ts`      | Dependency traversal, symbol lookup         |
-| Graph algorithms | `packages/cli/src/core/algorithms.ts` | PageRank, Louvain, betweenness              |
-| Embeddings       | `packages/cli/src/core/embeddings.ts` | Transformers.js vector generation           |
-| Semantic search  | `packages/cli/src/core/search.ts`     | Hybrid keyword + vector search              |
-| Impact analysis  | `packages/cli/src/core/impact.ts`     | Blast radius from changes                   |
-| DNA engine       | `packages/cli/src/dna/engine.ts`      | Capture, match, promote traits              |
-| DNA storage      | `packages/cli/src/dna/storage.ts`     | Markdown files with frontmatter             |
-| MCP server       | `packages/cli/src/mcp/server.ts`      | Tool + resource registration                |
-| MCP tools        | `packages/cli/src/mcp/tools/`         | Individual tool handlers                    |
-| Health engine    | `packages/cli/src/brain/health/`      | Scoring, cycle detection, coupling          |
-| Intent layer     | `packages/cli/src/brain/intent.ts`    | Decisions + constraints store               |
-| Event system     | `packages/cli/src/events/`            | EventBus, IPC, session tracking             |
-| Hooks            | `packages/cli/src/hooks/`             | Claude Code pre/post tool hooks             |
-| Init/bonding     | `packages/cli/src/init/`              | Agent detection, rule import, DNA bootstrap |
-| CLI entry        | `packages/cli/bin/symbiote.ts`        | All commands                                |
-| 3D brain         | `packages/web/src/views/graph/`       | Three.js scene, neurons, synapses           |
-| Web UI           | `packages/web/src/`                   | React app, routing, API client              |
+| Area              | Location                                  | What it does                                                                                                                                               |
+| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code parsing      | `packages/cli/src/core/parser.ts`         | Tree-sitter AST → nodes + edges                                                                                                                            |
+| Graph queries     | `packages/cli/src/core/graph.ts`          | Dependency traversal, symbol lookup                                                                                                                        |
+| Graph algorithms  | `packages/cli/src/core/algorithms.ts`     | PageRank, Louvain, betweenness                                                                                                                             |
+| Embeddings        | `packages/cli/src/core/embeddings.ts`     | Transformers.js vector generation                                                                                                                          |
+| Semantic search   | `packages/cli/src/core/search.ts`         | Hybrid keyword + vector search                                                                                                                             |
+| Impact analysis   | `packages/cli/src/core/impact.ts`         | Blast radius from changes                                                                                                                                  |
+| DNA engine        | `packages/cli/src/dna/engine.ts`          | Capture, match, promote traits                                                                                                                             |
+| DNA storage       | `packages/cli/src/dna/storage.ts`         | Markdown files with frontmatter                                                                                                                            |
+| MCP server        | `packages/cli/src/mcp/server.ts`          | Tool + resource registration                                                                                                                               |
+| MCP tools         | `packages/cli/src/mcp/tools/`             | Individual tool handlers                                                                                                                                   |
+| Health engine     | `packages/cli/src/brain/health/`          | Scoring, cycle detection, coupling                                                                                                                         |
+| Intent layer      | `packages/cli/src/brain/intent.ts`        | Decisions + constraints store                                                                                                                              |
+| Event system      | `packages/cli/src/events/`                | EventBus, IPC, session tracking                                                                                                                            |
+| Indexing pipeline | `packages/cli/src/cortex/`                | 8-stage scan: structure → symbols → resolution → call graph → types → flow → topology → intelligence                                                       |
+| Hooks             | `packages/cli/src/hooks/`                 | 9 Claude Code lifecycle hooks (HTTP + command + prompt)                                                                                                    |
+| Hook handlers     | `packages/cli/src/hooks/handlers/`        | Individual handlers: session-start, pre-tool-use, post-tool-use, user-prompt-submit, pre-compact, stop, session-end, subagent-start, post-tool-use-failure |
+| Session store     | `packages/cli/src/hooks/session-store.ts` | Session + observation persistence in DuckDB                                                                                                                |
+| Attention set     | `packages/cli/src/hooks/attention.ts`     | In-memory file/symbol focus tracking with decay                                                                                                            |
+| Init/bonding      | `packages/cli/src/init/`                  | Agent detection, MCP registration, rule import, DNA bootstrap                                                                                              |
+| CLI commands      | `packages/cli/src/commands/`              | Command implementations (install, scan, serve, dna, etc.)                                                                                                  |
+| CLI entry         | `packages/cli/bin/symbiote.ts`            | CLI argument parsing and dispatch                                                                                                                          |
+| 3D brain          | `packages/web/src/views/graph/`           | Three.js scene, neurons, synapses                                                                                                                          |
+| Web UI            | `packages/web/src/`                       | React app, routing, API client                                                                                                                             |
 
 ## Adding a New MCP Tool
 
@@ -144,7 +149,7 @@ Tier 1 languages have dedicated Tree-sitter query patterns in `packages/cli/src/
 1. Add the grammar dependency
 2. Write extraction queries for functions, classes, imports, calls
 3. Add tests with fixture files in `packages/cli/test/fixtures/`
-4. Add to the `TIER_1_LANGUAGES` list in `packages/cli/src/core/languages.ts`
+4. Add to the `GRAMMAR_MAP` in `packages/cli/src/core/languages.ts`
 
 ## Questions?
 
