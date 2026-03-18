@@ -27,7 +27,7 @@ describe('createDatabase', () => {
 
         const rows = await db.all("SELECT value FROM meta WHERE key = 'schema_version'");
 
-        expect(rows[0].value).toBe('1');
+        expect(rows[0].value).toBe('2');
     });
 
     it('creates indexes on nodes and edges', async () => {

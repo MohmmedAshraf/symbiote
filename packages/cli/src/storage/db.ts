@@ -1,7 +1,7 @@
 import { DuckDBInstance } from '@duckdb/node-api';
 import { createCortexSchema } from '#cortex/schema.js';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export class SymbioteDB {
     private constructor(
@@ -146,6 +146,42 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
         CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
     `);
 
+    await db.exec(`
+        CREATE SEQUENCE IF NOT EXISTS session_obs_seq START 1;
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id TEXT PRIMARY KEY,
+            started_at BIGINT NOT NULL,
+            ended_at BIGINT,
+            reason TEXT,
+            files_touched TEXT,
+            symbols_modified TEXT,
+            tool_counts TEXT,
+            failure_count INTEGER DEFAULT 0,
+            interaction_count INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS session_observations (
+            id INTEGER DEFAULT nextval('session_obs_seq'),
+            session_id TEXT NOT NULL,
+            timestamp BIGINT NOT NULL,
+            tool_name TEXT NOT NULL,
+            event TEXT NOT NULL,
+            file_path TEXT,
+            symbols_affected TEXT,
+            metadata TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_obs_session ON session_observations(session_id);
+        CREATE INDEX IF NOT EXISTS idx_obs_tool ON session_observations(tool_name);
+        CREATE INDEX IF NOT EXISTS idx_obs_file ON session_observations(file_path);
+
+        CREATE TABLE IF NOT EXISTS session_snapshots (
+            session_id TEXT PRIMARY KEY,
+            snapshot TEXT NOT NULL
+        );
+    `);
+
     await createCortexSchema(db);
 
     await db.exec('INSTALL fts; LOAD fts;');
@@ -174,7 +210,42 @@ export async function createDatabase(path: string): Promise<SymbioteDB> {
     return db;
 }
 
-async function migrateSchema(_db: SymbioteDB, _from: number, _to: number): Promise<void> {
-    // Future migrations go here:
-    // if (_from < 2) { await _db.exec('ALTER TABLE ...'); }
+async function migrateSchema(db: SymbioteDB, from: number, _to: number): Promise<void> {
+    if (from < 2) {
+        await db.exec(`
+            CREATE SEQUENCE IF NOT EXISTS session_obs_seq START 1;
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id TEXT PRIMARY KEY,
+                started_at BIGINT NOT NULL,
+                ended_at BIGINT,
+                reason TEXT,
+                files_touched TEXT,
+                symbols_modified TEXT,
+                tool_counts TEXT,
+                failure_count INTEGER DEFAULT 0,
+                interaction_count INTEGER DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS session_observations (
+                id INTEGER DEFAULT nextval('session_obs_seq'),
+                session_id TEXT NOT NULL,
+                timestamp BIGINT NOT NULL,
+                tool_name TEXT NOT NULL,
+                event TEXT NOT NULL,
+                file_path TEXT,
+                symbols_affected TEXT,
+                metadata TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_obs_session ON session_observations(session_id);
+            CREATE INDEX IF NOT EXISTS idx_obs_tool ON session_observations(tool_name);
+            CREATE INDEX IF NOT EXISTS idx_obs_file ON session_observations(file_path);
+
+            CREATE TABLE IF NOT EXISTS session_snapshots (
+                session_id TEXT PRIMARY KEY,
+                snapshot TEXT NOT NULL
+            );
+        `);
+    }
 }
