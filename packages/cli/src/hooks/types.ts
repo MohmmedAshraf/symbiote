@@ -1,7 +1,15 @@
+export interface BaseHookPayload {
+    session_id: string;
+    cwd: string;
+    hook_event_name: string;
+}
+
 export interface PreToolUsePayload {
     type: 'pre_tool_use';
     tool_name: string;
     tool_input: Record<string, unknown>;
+    session_id?: string;
+    cwd?: string;
 }
 
 export interface PostToolUsePayload {
@@ -9,6 +17,52 @@ export interface PostToolUsePayload {
     tool_name: string;
     tool_input: Record<string, unknown>;
     tool_output: string;
+    session_id?: string;
+    cwd?: string;
+}
+
+export interface SessionStartPayload extends BaseHookPayload {
+    source: 'startup' | 'resume' | 'clear' | 'compact';
+    model: string;
+}
+
+export interface UserPromptSubmitPayload extends BaseHookPayload {
+    prompt: string;
+}
+
+export interface PostToolUseFailurePayload extends BaseHookPayload {
+    tool_name: string;
+    tool_input: Record<string, unknown>;
+    tool_use_id?: string;
+    error: string;
+    is_interrupt: boolean;
+}
+
+export interface SubagentStartPayload extends BaseHookPayload {
+    agent_id: string;
+    agent_type: string;
+}
+
+export interface PreCompactPayload extends BaseHookPayload {
+    trigger: 'manual' | 'auto';
+    custom_instructions: string;
+}
+
+export interface StopPayload extends BaseHookPayload {
+    stop_hook_active: boolean;
+    last_assistant_message: string;
+}
+
+export interface SessionEndPayload extends BaseHookPayload {
+    reason: string;
+}
+
+export interface HttpHookResponse {
+    hookSpecificOutput?: {
+        hookEventName: string;
+        additionalContext?: string;
+        permissionDecision?: 'allow' | 'deny' | 'ask';
+    };
 }
 
 export type HookPayload = PreToolUsePayload | PostToolUsePayload;

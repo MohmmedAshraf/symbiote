@@ -160,6 +160,62 @@ export class DnaEngine {
         return this.storage.listEntries().filter((e) => e.frontmatter.status !== 'rejected');
     }
 
+    batchPassiveReinforce(): void {
+        const entries = this.storage
+            .listEntries()
+            .filter((e) => e.frontmatter.status === 'suggested');
+        for (const entry of entries) {
+            entry.frontmatter.confidence = Math.min(entry.frontmatter.confidence + 0.05, 0.99);
+            this.storage.writeEntry(entry);
+        }
+    }
+
+    decayUnseenEntries(currentSessionId: string): void {
+        const entries = this.storage
+            .listEntries()
+            .filter((e) => e.frontmatter.status !== 'rejected');
+        for (const entry of entries) {
+            if (entry.frontmatter.sessionIds.includes(currentSessionId)) continue;
+            const lastSeen = new Date(entry.frontmatter.lastSeen).getTime();
+            const daysSinceSeen = (Date.now() - lastSeen) / (1000 * 60 * 60 * 24);
+            if (daysSinceSeen >= 30) {
+                entry.frontmatter.confidence = Math.max(entry.frontmatter.confidence - 0.05, 0.05);
+                this.storage.writeEntry(entry);
+            }
+        }
+    }
+
+    autoPromote(): void {
+        const entries = this.storage
+            .listEntries()
+            .filter((e) => e.frontmatter.status === 'suggested');
+        for (const entry of entries) {
+            if (
+                entry.frontmatter.confidence >= 0.7 &&
+                entry.frontmatter.sessionIds.length >= AUTO_PROMOTE_SESSIONS
+            ) {
+                entry.frontmatter.status = 'approved';
+                this.storage.writeEntry(entry);
+            }
+        }
+    }
+
+    reinforceObservedEntries(patterns: string[]): void {
+        if (patterns.length === 0) return;
+        const entries = this.storage
+            .listEntries()
+            .filter((e) => e.frontmatter.status !== 'rejected');
+        const lowerPatterns = patterns.map((p) => p.toLowerCase());
+        for (const entry of entries) {
+            const lowerContent = entry.content.toLowerCase();
+            const matches = lowerPatterns.some((p) => lowerContent.includes(p));
+            if (matches) {
+                entry.frontmatter.confidence = Math.min(entry.frontmatter.confidence + 0.1, 0.99);
+                this.storage.writeEntry(entry);
+            }
+        }
+    }
+
     private updateExistingEntry(entry: DnaEntry, sessionId: string, source: DnaSource): DnaEntry {
         const fm = entry.frontmatter;
         const today = new Date().toISOString().split('T')[0];
