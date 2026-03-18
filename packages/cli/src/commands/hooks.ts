@@ -4,6 +4,9 @@ import pc from 'picocolors';
 import { getProjectPort, SYMBIOTE_HOME } from '#utils/config.js';
 
 export async function cmdHookPre(): Promise<void> {
+    process.stderr.write(
+        '[symbiote] command hooks are deprecated, run symbiote install to upgrade to HTTP hooks\n',
+    );
     const { readStdinPayload, writeResponse, fireHookEvent } = await import('#hooks/types.js');
     const http = await import('node:http');
 
@@ -73,6 +76,9 @@ export async function cmdHookPre(): Promise<void> {
 }
 
 export async function cmdHookPost(): Promise<void> {
+    process.stderr.write(
+        '[symbiote] command hooks are deprecated, run symbiote install to upgrade to HTTP hooks\n',
+    );
     const { readStdinPayload, writeResponse, fireHookEvent } = await import('#hooks/types.js');
 
     const projectRoot = process.cwd();
