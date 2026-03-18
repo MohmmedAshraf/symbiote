@@ -14,7 +14,7 @@ Bonds with your AI coding tools, giving them a brain that understands your proje
 - Vite + React 19 (web UI)
 - react-three-fiber + Three.js + custom GLSL (3D brain visualization)
 - Tailwind CSS v4 (dark theme)
-- Vitest (testing — 356 tests across 56 files)
+- Vitest (testing — 799 tests across 85 files)
 
 ## Architecture
 
@@ -25,7 +25,8 @@ Bonds with your AI coding tools, giving them a brain that understands your proje
     - `src/mcp/` — MCP server (tools, resources, transports, SSE events)
     - `src/brain/` — Project brain (intent layer, health analysis)
     - `src/events/` — EventBus, IPC bridge, session tracker
-    - `src/hooks/` — Claude Code pre/post tool-use hooks
+    - `src/hooks/` — Session intelligence engine (9 Claude Code hook handlers, session store, attention tracker)
+    - `src/hooks/handlers/` — Hook handlers: session-start, user-prompt-submit, pre-tool-use, post-tool-use, post-tool-use-failure, subagent-start, pre-compact, stop, session-end
     - `src/init/` — Agent detection, bonding, rule import, DNA bootstrap
     - `src/utils/` — File walking, hashing, config
     - `bin/` — CLI entry point
@@ -64,10 +65,10 @@ Bonds with your AI coding tools, giving them a brain that understands your proje
 ## Key Files
 
 - `.brain/` — Per-project brain directory (DB is gitignored, intent layer is committed)
+- `.brain/symbiote.db` — DuckDB with code graph, sessions, observations, embeddings
 - `~/.symbiote/` — Global developer DNA
 - `~/.symbiote/dna/` — DNA entries (style, preferences, anti-patterns, decisions)
-- `~/.claude/hooks/symbiote/` — Global Claude Code hook script
-- `~/.claude/settings.json` — Claude Code hooks registration
+- `~/.claude/settings.json` — Claude Code hooks registration (HTTP + prompt hooks)
 
 ## Testing
 
@@ -96,21 +97,32 @@ symbiote unbond            # Detach from all AI agents
 - stdio transport for editor integration, HTTP + SSE for web UI
 - Zod schemas for all tool inputs
 
+## Session Intelligence Engine
+
+- 9 Claude Code hook events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, SubagentStart, PreCompact, Stop, SessionEnd
+- HTTP hooks (`type: "http"`) point at the running Symbiote server for 8 events
+- SessionStart is a `command` hook that bootstraps the server if needed
+- UserPromptSubmit includes a Haiku `prompt` hook for real-time correction detection
+- Session observations stored in DuckDB (graph-correlated metadata, no raw tool I/O)
+- DNA confidence evolves across sessions: decay (30+ days unseen), reinforce (pattern match), auto-promote (3+ sessions at >= 0.7 confidence)
+- AttentionSet tracks which files/symbols Claude is focused on (in-memory with decay)
+- PreCompact snapshots session state; SessionStart restores it after compaction
+
 ## Real-Time Event System
 
-- Hooks fire on every Claude Code tool call (pre + post)
-- Hook processes send events via HTTP POST to running server
+- Hooks fire on every Claude Code tool call (all tools, not just file ops)
+- HTTP hooks send payloads directly to server (no shell wrappers)
 - Server distributes events via SSE to the brain UI
-- Events: file:read, file:edit, file:create, node:reindexed, scan:complete, dna:recorded, dna:promoted, correction:detected, context:cluster, constraint:violated, impact:ripple
+- Events: file:read, file:edit, file:create, node:reindexed, scan:complete, dna:recorded, dna:promoted, correction:detected, context:cluster, constraint:violated, impact:ripple, intelligence:finding, intelligence:snapshot, attention:updated
 - Brain nodes glow on read, pulse on edit, bloom on create
 
 ## Host Integration
 
-- `symbiote init` auto-detects: Claude Code, Cursor, Windsurf, Copilot, OpenCode
-- Claude Code: MCP server + global hooks (deepest integration)
+- `symbiote install` auto-detects: Claude Code, Cursor, Windsurf, Copilot, OpenCode
+- Claude Code: MCP server + 9 hook events via HTTP/prompt (deepest integration)
 - Other hosts: MCP server only (AI calls tools when it needs context)
-- Hooks registered globally at `~/.claude/settings.json` — work across all projects
-- `symbiote unbond` cleanly removes MCP config and hooks
+- Hooks registered globally at `~/.claude/settings.json` — HTTP hooks point at running server
+- `symbiote unbond` cleanly removes MCP config and hooks for all 9 events
 
 ## Design Principles
 
@@ -131,7 +143,9 @@ When implementing from plans, convert indentation and quote style accordingly.
 Design specs and implementation plans are in `docs/` (gitignored).
 
 - `docs/superpowers/specs/2026-03-16-symbiote-v2-design.md`
+- `docs/superpowers/specs/2026-03-18-session-intelligence-design.md`
 - `docs/superpowers/plans/2026-03-16-symbiote-v2-phase-a.md`
+- `docs/superpowers/plans/2026-03-18-session-intelligence.md`
 
 ## Author
 
