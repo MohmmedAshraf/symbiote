@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import type { HealthReport, HealthCategory, HealthIssue } from '@/lib/types';
-import { ViewHeader } from '@/components/view-header';
 
 export function HealthView() {
     const [report, setReport] = useState<HealthReport | null>(null);
@@ -17,24 +16,20 @@ export function HealthView() {
     }, []);
 
     return (
-        <div className="flex h-full w-full flex-col bg-surface-0 text-text-primary">
-            <ViewHeader title="HEALTH PULSE" />
+        <div className="h-full w-full overflow-y-auto bg-slate-950 px-8 py-8 animate-fade-in">
+            {loading && (
+                <div className="flex h-full items-center justify-center">
+                    <div className="text-xs text-slate-500">Analyzing health...</div>
+                </div>
+            )}
 
-            <div className="flex-1 overflow-y-auto px-8 py-6 animate-fade-in">
-                {loading && (
-                    <div className="flex h-full items-center justify-center">
-                        <div className="text-xs text-text-muted">Analyzing health...</div>
-                    </div>
-                )}
+            {error && (
+                <div className="flex h-full items-center justify-center">
+                    <div className="text-xs text-red-400">Failed to load: {error}</div>
+                </div>
+            )}
 
-                {error && (
-                    <div className="flex h-full items-center justify-center">
-                        <div className="text-xs text-danger">Failed to load: {error}</div>
-                    </div>
-                )}
-
-                {report && <HealthDashboard report={report} />}
-            </div>
+            {report && <HealthDashboard report={report} />}
         </div>
     );
 }
@@ -47,14 +42,18 @@ function HealthDashboard({ report }: { report: HealthReport }) {
         ...report.categories.coupling.issues,
     ];
 
-    const scoreColor =
-        report.score >= 80 ? 'text-emerald' : report.score >= 50 ? 'text-warning' : 'text-danger';
     const strokeColor = report.score >= 80 ? '#34d399' : report.score >= 50 ? '#facc15' : '#f87171';
+    const scoreTextClass =
+        report.score >= 80
+            ? 'text-emerald-400'
+            : report.score >= 50
+              ? 'text-yellow-400'
+              : 'text-red-400';
 
     return (
         <div className="mx-auto max-w-3xl animate-slide-up">
-            <div className="mb-8 flex items-center gap-8">
-                <ScoreRing score={report.score} color={strokeColor} colorClass={scoreColor} />
+            <div className="mb-10 flex items-center gap-10">
+                <ScoreRing score={report.score} color={strokeColor} textClass={scoreTextClass} />
 
                 <div className="grid flex-1 grid-cols-2 gap-3">
                     <CategoryCard
@@ -68,16 +67,16 @@ function HealthDashboard({ report }: { report: HealthReport }) {
             </div>
 
             <div>
-                <h2 className="mb-2 text-[9px] font-bold uppercase tracking-[1px] text-text-muted">
+                <div className="mb-3 text-[9px] font-semibold uppercase tracking-[1.5px] text-slate-500">
                     All Issues ({allIssues.length})
-                </h2>
+                </div>
 
                 {allIssues.length === 0 ? (
-                    <div className="py-8 text-center text-[11px] text-text-muted">
+                    <div className="py-10 text-center text-[11px] text-slate-500">
                         No issues found.
                     </div>
                 ) : (
-                    <div className="overflow-hidden rounded-lg border border-border-subtle">
+                    <div className="overflow-hidden rounded-lg border border-slate-800">
                         {allIssues.map((issue, i) => (
                             <IssueRow key={i} issue={issue} />
                         ))}
@@ -91,25 +90,25 @@ function HealthDashboard({ report }: { report: HealthReport }) {
 function ScoreRing({
     score,
     color,
-    colorClass,
+    textClass,
 }: {
     score: number;
     color: string;
-    colorClass: string;
+    textClass: string;
 }) {
     const circumference = 2 * Math.PI * 54;
     const offset = circumference - (score / 100) * circumference;
 
     return (
-        <div className="relative size-32 shrink-0">
+        <div className="relative size-36 shrink-0">
             <svg className="size-full -rotate-90" viewBox="0 0 120 120">
                 <circle
                     cx="60"
                     cy="60"
                     r="54"
                     fill="none"
-                    stroke="rgba(255,255,255,0.06)"
-                    strokeWidth="8"
+                    stroke="rgba(255,255,255,0.05)"
+                    strokeWidth="7"
                 />
                 <circle
                     cx="60"
@@ -117,17 +116,21 @@ function ScoreRing({
                     r="54"
                     fill="none"
                     stroke={color}
-                    strokeWidth="8"
+                    strokeWidth="7"
                     strokeLinecap="round"
                     strokeDasharray={circumference}
                     strokeDashoffset={offset}
                     className="transition-all duration-700"
-                    style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+                    style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-[28px] font-black tabular-nums ${colorClass}`}>{score}</span>
-                <span className="text-[9px] text-text-muted">HEALTH</span>
+                <span className={`text-[32px] font-black tabular-nums leading-none ${textClass}`}>
+                    {score}
+                </span>
+                <span className="mt-1 text-[9px] font-semibold tracking-[1.5px] text-slate-500">
+                    HEALTH
+                </span>
             </div>
         </div>
     );
@@ -137,25 +140,26 @@ function CategoryCard({ title, category }: { title: string; category: HealthCate
     const color = category.score >= 80 ? '#34d399' : category.score >= 50 ? '#facc15' : '#f87171';
 
     return (
-        <div className="rounded-lg border border-border-subtle bg-surface-1 p-3">
-            <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-wide text-text-secondary">
+        <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 transition-colors hover:border-slate-700">
+            <div className="mb-2 flex items-center justify-between">
+                <span className="text-[9px] font-semibold uppercase tracking-[1px] text-slate-500">
                     {title}
                 </span>
-                <span className="text-base font-black tabular-nums" style={{ color }}>
+                <span className="text-lg font-black tabular-nums" style={{ color }}>
                     {category.score}
                 </span>
             </div>
-            <div className="mb-1 h-[3px] overflow-hidden rounded-full bg-white/5">
+            <div className="mb-1.5 h-[3px] overflow-hidden rounded-full bg-slate-800">
                 <div
-                    className="h-full rounded-full opacity-80 transition-all duration-500"
+                    className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${category.score}%`, background: color }}
                 />
             </div>
-            <div className="text-[8px] text-text-muted">
-                {Math.round(category.weight * 100)}% weight
-                {' \u00b7 '}
-                {category.issues.length} issue{category.issues.length !== 1 ? 's' : ''}
+            <div className="flex items-center justify-between text-[9px] text-slate-500">
+                <span>{Math.round(category.weight * 100)}% weight</span>
+                <span>
+                    {category.issues.length} issue{category.issues.length !== 1 ? 's' : ''}
+                </span>
             </div>
         </div>
     );
@@ -167,24 +171,24 @@ function IssueRow({ issue }: { issue: HealthIssue }) {
         warning: '#facc15',
         info: '#60a5fa',
     };
-    const color = colors[issue.severity] ?? '#475569';
+    const color = colors[issue.severity] ?? '#64748b';
 
     return (
-        <div className="flex items-center gap-2.5 border-b border-border-subtle bg-surface-1/60 px-3 py-2 last:border-b-0">
+        <div className="flex items-center gap-3 border-b border-slate-800/60 bg-slate-900/60 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-slate-900">
             <span
-                className="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase"
-                style={{ color, background: `${color}1a` }}
+                className="shrink-0 rounded-md px-2 py-0.5 text-[8px] font-bold uppercase"
+                style={{ color, background: `${color}15` }}
             >
                 {issue.severity}
             </span>
             <div className="min-w-0 flex-1">
-                <div className="text-[11px] text-text-primary">{issue.message}</div>
-                <div className="truncate text-[9px] text-text-muted">
+                <div className="text-[11px] text-slate-200">{issue.message}</div>
+                <div className="mt-0.5 truncate text-[9px] text-slate-500">
                     {issue.filePath}
                     {issue.line != null && `:${issue.line}`}
                 </div>
             </div>
-            <span className="shrink-0 text-[8px] text-text-dim">{issue.category}</span>
+            <span className="shrink-0 text-[8px] font-medium text-slate-600">{issue.category}</span>
         </div>
     );
 }

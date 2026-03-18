@@ -3,7 +3,7 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import {
-    cmdInit,
+    cmdInstall,
     cmdScan,
     cmdServe,
     cmdMcp,
@@ -49,7 +49,7 @@ function showHelp(): void {
     console.log(pc.dim('  Your codebase gets a brain. Your AI never forgets who you are.'));
     console.log();
     console.log(
-        `  ${pc.bold('$')} ${pc.cyan('symbiote init')}          Initialize for the current project`,
+        `  ${pc.bold('$')} ${pc.cyan('symbiote install')}       Install globally (hooks + skill)`,
     );
     console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote scan')}          Rescan codebase`);
     console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote serve')}         Start MCP server + web UI`);
@@ -160,8 +160,8 @@ async function main(): Promise<void> {
         case '':
             showHelp();
             break;
-        case 'init':
-            await cmdInit();
+        case 'install':
+            await cmdInstall();
             break;
         case 'scan':
             await cmdScan(flags);

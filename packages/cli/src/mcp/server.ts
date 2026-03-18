@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ImpactAnalyzer } from '#core/impact.js';
 import type { ServerContext } from './context.js';
-import { handleGetDeveloperDna } from './tools/dna-tools.js';
+import { handleGetDeveloperDna, handleRecordInstruction } from './tools/dna-tools.js';
 import {
     handleGetProjectOverview,
     handleGetContextForFile,
@@ -24,6 +24,12 @@ import {
     isLegacyQueryFormat,
 } from './tools/graph-tools.js';
 import { handleRenameSymbol } from './tools/rename-tool.js';
+import {
+    handleGetConstraints,
+    handleGetDecisions,
+    handleProposeConstraint,
+    handleProposeDecision,
+} from './tools/intent-tools.js';
 import {
     handleDnaResource,
     handleProjectOverviewResource,
@@ -77,6 +83,39 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         async (input) => ({
             content: [textResult(handleGetDeveloperDna(ctx, input))],
         }),
+    );
+
+    server.tool(
+        'record_instruction',
+        'Record a developer correction or coding preference as DNA. Call this whenever the developer corrects your output, states a preference, or gives style guidance. The instruction will be learned and applied in future sessions.',
+        {
+            instruction: z
+                .string()
+                .describe(
+                    'The correction or preference to record (e.g., "Use early returns instead of nested else blocks")',
+                ),
+            sessionId: z
+                .string()
+                .optional()
+                .default('')
+                .describe('Current session identifier (auto-generated if empty)'),
+            isExplicit: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe(
+                    'True if the developer explicitly asked to record this, false if inferred from a correction',
+                ),
+        },
+        async (input) => {
+            const sid = input.sessionId || `session-${Date.now()}`;
+            const result = handleRecordInstruction(ctx, {
+                instruction: input.instruction,
+                sessionId: sid,
+                isExplicit: input.isExplicit,
+            });
+            return { content: [textResult(result)] };
+        },
     );
 
     server.tool(
@@ -320,6 +359,78 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 { cortexRepo: ctx.cortexRepo, rootDir: ctx.rootDir },
                 { ...rest, newName },
             );
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'get_constraints',
+        'Returns active project constraints — rules the codebase enforces.',
+        {
+            scope: z
+                .string()
+                .optional()
+                .describe(
+                    'Filter by scope (e.g. file path). Returns global + matching scoped constraints.',
+                ),
+        },
+        async (input) => {
+            const result = await handleGetConstraints(ctx, input);
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'get_decisions',
+        'Returns architectural decisions — choices made with rationale.',
+        {
+            scope: z
+                .string()
+                .optional()
+                .describe(
+                    'Filter by scope (e.g. file path). Returns global + matching scoped decisions.',
+                ),
+        },
+        async (input) => {
+            const result = await handleGetDecisions(ctx, input);
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'propose_constraint',
+        'Propose a new project constraint. Status starts as "proposed" for developer review.',
+        {
+            id: z.string().describe('Unique constraint ID (slug format, e.g. "no-raw-sql")'),
+            content: z.string().describe('The constraint rule text'),
+            scope: z
+                .string()
+                .optional()
+                .default('global')
+                .describe('Scope: "global" or a file/dir path'),
+        },
+        (input) => {
+            const result = handleProposeConstraint(ctx, input);
+            return { content: [textResult(result)] };
+        },
+    );
+
+    server.tool(
+        'propose_decision',
+        'Record an architectural decision with rationale. Status starts as "proposed" for developer review.',
+        {
+            id: z
+                .string()
+                .describe('Unique decision ID (slug format, e.g. "chose-vitest-over-jest")'),
+            content: z.string().describe('The decision text with rationale'),
+            scope: z
+                .string()
+                .optional()
+                .default('global')
+                .describe('Scope: "global" or a file/dir path'),
+        },
+        (input) => {
+            const result = handleProposeDecision(ctx, input);
             return { content: [textResult(result)] };
         },
     );

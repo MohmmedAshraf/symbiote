@@ -28,13 +28,19 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
     const port =
         typeof flags.port === 'string' ? parseInt(flags.port, 10) : getProjectPort(projectRoot);
 
+    const noOpen = !!flags['no-open'];
+
     const alreadyRunning = await isPortServing(port);
     if (alreadyRunning) {
         const url = `http://localhost:${port}`;
         p.intro(pc.bold('Symbiote') + pc.dim(' — Brain is alive'));
         p.log.info(`${pc.dim('Web UI:')}  ${url}`);
-        p.outro(pc.dim('Opening browser...'));
-        openBrowser(url);
+        if (!noOpen) {
+            p.outro(pc.dim('Opening browser...'));
+            openBrowser(url);
+        } else {
+            p.outro(pc.dim('Already running.'));
+        }
         return;
     }
 
@@ -50,10 +56,14 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
         symbioteHome,
         rootDir: projectRoot,
     });
-    const { server } = createMcpServer(ctx);
-
     const { SSEServerTransport } = await import('@modelcontextprotocol/sdk/server/sse.js');
-    const transports = new Map<string, InstanceType<typeof SSEServerTransport>>();
+    const sessions = new Map<
+        string,
+        {
+            transport: InstanceType<typeof SSEServerTransport>;
+            server: ReturnType<typeof createMcpServer>['server'];
+        }
+    >();
 
     const webDistDir = path.resolve(__dirname, '../../../../web/dist');
 
@@ -62,8 +72,10 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
 
         if (url.pathname === '/sse' && req.method === 'GET') {
             const transport = new SSEServerTransport('/messages', res);
-            transports.set(transport.sessionId, transport);
+            const { server } = createMcpServer(ctx);
+            sessions.set(transport.sessionId, { transport, server });
             server.connect(transport).catch((err) => {
+                sessions.delete(transport.sessionId);
                 if (!res.headersSent) {
                     res.writeHead(500);
                     res.end(String(err));
@@ -74,13 +86,13 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
 
         if (url.pathname === '/messages' && req.method === 'POST') {
             const sessionId = url.searchParams.get('sessionId');
-            const transport = sessionId ? transports.get(sessionId) : undefined;
-            if (!transport) {
+            const session = sessionId ? sessions.get(sessionId) : undefined;
+            if (!session) {
                 res.writeHead(404);
                 res.end('Session not found');
                 return;
             }
-            transport.handlePostMessage(req, res);
+            session.transport.handlePostMessage(req, res);
             return;
         }
 
@@ -102,7 +114,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
                 `${pc.dim('Health:')}       http://localhost:${port}/internal/health`,
         );
         p.outro(pc.dim('Press Ctrl+C to stop.'));
-        openBrowser(url);
+        if (!noOpen) openBrowser(url);
     });
 
     process.on('SIGINT', () => {

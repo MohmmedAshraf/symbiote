@@ -1,4 +1,4 @@
-export { cmdInit } from './init.js';
+export { cmdInstall } from './install.js';
 export { cmdScan } from './scan.js';
 export { cmdServe } from './serve.js';
 export { cmdMcp } from './mcp.js';

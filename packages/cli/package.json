@@ -1,7 +1,7 @@
 {
     "name": "symbiote-cli",
     "version": "0.1.0",
-    "description": "A symbiont is an organism that lives in close association with another. Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA.",
+    "description": "Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA.",
     "type": "module",
     "imports": {
         "#storage/*": "./dist/src/storage/*",
@@ -29,6 +29,8 @@
     },
     "files": [
         "dist/",
+        "skills/",
+        "hooks/",
         "README.md",
         "LICENSE"
     ],

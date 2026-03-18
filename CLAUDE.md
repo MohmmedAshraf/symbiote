@@ -79,7 +79,7 @@ Bonds with your AI coding tools, giving them a brain that understands your proje
 ## CLI Commands
 
 ```
-symbiote init              # Scan + analyze + auto-bond with AI agents
+symbiote install           # Install globally (hooks + /symbiote-init skill)
 symbiote scan              # Rescan codebase (incremental)
 symbiote scan --force      # Full rescan
 symbiote serve             # MCP server + web UI (localhost:3333)

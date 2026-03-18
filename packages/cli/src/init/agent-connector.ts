@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { homedir } from 'node:os';
+import { getProjectPort } from '#utils/config.js';
 
 export interface AgentInfo {
     name: string;
@@ -79,10 +80,17 @@ export function connectAgent(agent: AgentInfo): {
 } {
     try {
         if (agent.id === 'claude-code') {
-            execSync('claude mcp add symbiote -- npx symbiote-cli mcp', { stdio: 'ignore' });
+            const port = getProjectPort(process.cwd());
+            const sseUrl = `http://localhost:${port}/sse`;
+            try {
+                execSync('claude mcp remove symbiote', { stdio: 'ignore' });
+            } catch {
+                // not registered yet
+            }
+            execSync(`claude mcp add --transport sse symbiote ${sseUrl}`, { stdio: 'ignore' });
             return {
                 success: true,
-                message: 'MCP server added to Claude Code',
+                message: `MCP server added to Claude Code (SSE on port ${port})`,
             };
         }
 
@@ -205,8 +213,8 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
         const sourceDir = getHooksSourceDir();
         const hookFiles: Record<string, { file: string; matcher: string }> = {
             SessionStart: { file: 'session-start.sh', matcher: '' },
-            PreToolUse: { file: 'pre-tool-use.js', matcher: 'Read|Edit|Write' },
-            PostToolUse: { file: 'post-tool-use.js', matcher: 'Read|Edit|Write|Bash' },
+            PreToolUse: { file: 'pre-tool-use.sh', matcher: 'Read|Edit|Write' },
+            PostToolUse: { file: 'post-tool-use.sh', matcher: 'Read|Edit|Write|Bash' },
         };
 
         for (const [, config] of Object.entries(hookFiles)) {
@@ -337,9 +345,11 @@ export function disconnectAgent(agent: AgentInfo): {
 } {
     try {
         if (agent.id === 'claude-code') {
-            execSync('claude mcp remove symbiote', {
-                stdio: 'ignore',
-            });
+            try {
+                execSync('claude mcp remove symbiote', { stdio: 'ignore' });
+            } catch {
+                // already removed
+            }
             return {
                 success: true,
                 message: 'Removed from Claude Code',

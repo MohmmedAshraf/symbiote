@@ -12,6 +12,8 @@ import { SessionTracker } from '#events/session.js';
 import type { GraphInstance } from '#core/types.js';
 import { CortexRepository } from '#cortex/repository.js';
 import { CortexEngine } from '#cortex/engine.js';
+import { createEvent } from '#events/types.js';
+import { detectLanguage } from '#core/languages.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
@@ -38,6 +40,23 @@ export interface ServerContext {
     rootDir: string;
 }
 
+const WATCH_IGNORE = [
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/.brain/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/.next/**',
+    '**/.turbo/**',
+    '**/coverage/**',
+    '**/__pycache__/**',
+    '**/.venv/**',
+    '**/vendor/**',
+    '**/target/**',
+];
+
+const DEBOUNCE_MS = 300;
+
 export async function createServerContext(options: ServerContextOptions): Promise<ServerContext> {
     const repo = new Repository(options.db);
     const cortexRepo = new CortexRepository(options.db);
@@ -57,6 +76,105 @@ export async function createServerContext(options: ServerContextOptions): Promis
     eventBus.on('*', (event) => {
         sessionTracker.processEvent(event);
     });
+
+    const pendingReindex = new Set<string>();
+    const pendingDeletes = new Set<string>();
+    let drainRunning = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const drainQueue = async (): Promise<void> => {
+        if (drainRunning) return;
+        drainRunning = true;
+        try {
+            while (pendingDeletes.size > 0) {
+                const batch = [...pendingDeletes];
+                pendingDeletes.clear();
+
+                for (const fp of batch) {
+                    await cortexRepo.deleteFileData(fp);
+                    eventBus.emit(
+                        createEvent('node:reindexed', {
+                            filePath: fp,
+                            metadata: { action: 'deleted' },
+                        }),
+                    );
+                }
+            }
+
+            while (pendingReindex.size > 0) {
+                const batch = [...pendingReindex];
+                pendingReindex.clear();
+
+                const absPaths = batch.map((fp) =>
+                    path.isAbsolute(fp) ? fp : path.resolve(options.rootDir, fp),
+                );
+
+                await cortexEngine.run({
+                    rootDir: options.rootDir,
+                    force: true,
+                    targetFiles: absPaths,
+                });
+
+                for (const fp of batch) {
+                    eventBus.emit(
+                        createEvent('node:reindexed', {
+                            filePath: fp,
+                        }),
+                    );
+                }
+            }
+        } catch (err) {
+            process.stderr.write(`[symbiote] reindex failed: ${err}\n`);
+        } finally {
+            drainRunning = false;
+        }
+    };
+
+    const scheduleDrain = (): void => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            debounceTimer = null;
+            drainQueue();
+        }, DEBOUNCE_MS);
+    };
+
+    const startFileWatcher = async (): Promise<void> => {
+        try {
+            const chokidar = await import('chokidar');
+            const watcher = chokidar.watch(options.rootDir, {
+                ignored: WATCH_IGNORE,
+                ignoreInitial: true,
+                persistent: true,
+                awaitWriteFinish: { stabilityThreshold: 200 },
+            });
+
+            watcher.on('change', (absPath: string) => {
+                if (!detectLanguage(absPath)) return;
+                const relPath = path.relative(options.rootDir, absPath);
+                pendingReindex.add(relPath);
+                scheduleDrain();
+            });
+
+            watcher.on('add', (absPath: string) => {
+                if (!detectLanguage(absPath)) return;
+                const relPath = path.relative(options.rootDir, absPath);
+                pendingReindex.add(relPath);
+                scheduleDrain();
+            });
+
+            watcher.on('unlink', (absPath: string) => {
+                if (!detectLanguage(absPath)) return;
+                const relPath = path.relative(options.rootDir, absPath);
+                pendingDeletes.add(relPath);
+                pendingReindex.delete(relPath);
+                scheduleDrain();
+            });
+        } catch (err) {
+            process.stderr.write(`[symbiote] file watcher failed: ${err}\n`);
+        }
+    };
+
+    startFileWatcher();
 
     return {
         db: options.db,

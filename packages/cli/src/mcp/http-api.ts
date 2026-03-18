@@ -85,23 +85,23 @@ async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<
                     filePath: s.filePath,
                     lineStart: s.lineStart,
                     lineEnd: s.lineEnd,
-                    metadata: {
-                        community: (attrs.community as number) ?? null,
-                        pageRank: (attrs.pagerank as number) ?? null,
-                        betweenness: (attrs.centrality as number) ?? null,
-                    },
+                    community: (attrs.community as number) ?? null,
+                    pageRank: (attrs.pagerank as number) ?? null,
+                    betweenness: (attrs.centrality as number) ?? null,
                 };
             }),
             ...fileOnly.map((n) => {
                 const attrs = getAttrs(n.id);
                 return {
-                    ...n,
-                    metadata: {
-                        ...n.metadata,
-                        community: (attrs.community as number) ?? n.metadata?.cluster ?? null,
-                        pageRank: (attrs.pagerank as number) ?? n.metadata?.pagerank ?? null,
-                        betweenness: (attrs.centrality as number) ?? n.metadata?.centrality ?? null,
-                    },
+                    id: n.id,
+                    type: n.type,
+                    name: n.name,
+                    filePath: n.filePath,
+                    lineStart: n.lineStart,
+                    lineEnd: n.lineEnd,
+                    community: (attrs.community as number) ?? n.metadata?.cluster ?? null,
+                    pageRank: (attrs.pagerank as number) ?? n.metadata?.pagerank ?? null,
+                    betweenness: (attrs.centrality as number) ?? n.metadata?.centrality ?? null,
                 };
             }),
         ];
@@ -136,10 +136,13 @@ async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<
         }
 
         return json(res, {
-            data: { nodes, edges },
+            data: {
+                nodes,
+                edges,
+                communityCount: communityCountStr ? Number(communityCountStr) : 0,
+            },
             depth: maxDepth,
             deepening: maxDepth < 7,
-            communityCount: communityCountStr ? Number(communityCountStr) : 0,
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
