@@ -1,6 +1,6 @@
 {
     "name": "symbiote-cli",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA.",
     "type": "module",
     "imports": {
@@ -17,7 +17,7 @@
         "#init/*": "./dist/src/init/*"
     },
     "bin": {
-        "symbiote": "./dist/bin/symbiote.js"
+        "symbiote": "dist/bin/symbiote.js"
     },
     "main": "./dist/src/index.js",
     "types": "./dist/src/index.d.ts",
@@ -42,7 +42,8 @@
         "dev": "tsc --watch",
         "test": "vitest run",
         "test:watch": "vitest",
-        "type-check": "tsc --noEmit"
+        "type-check": "tsc --noEmit",
+        "prepublishOnly": "cp ../../README.md . && npm run build"
     },
     "dependencies": {
         "@clack/prompts": "^0.10.0",
@@ -96,7 +97,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/MohmmedAshraf/symbiote.git"
+        "url": "git+https://github.com/MohmmedAshraf/symbiote.git"
     },
     "homepage": "https://github.com/MohmmedAshraf/symbiote"
 }
