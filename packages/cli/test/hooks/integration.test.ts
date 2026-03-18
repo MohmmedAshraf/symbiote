@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Graph from 'graphology';
-import { PreToolUseHandler } from '#hooks/pre-tool-use.js';
-import { PostToolUseHandler } from '#hooks/post-tool-use.js';
+import { PreToolUseHandler } from '#hooks/handlers/pre-tool-use.js';
+import { PostToolUseHandler } from '#hooks/handlers/post-tool-use.js';
 import type { PreToolUsePayload, PostToolUsePayload } from '#hooks/types.js';
+import type { DnaEngine } from '#dna/engine.js';
+import type { AttentionSet } from '#hooks/attention.js';
+import { EventBus } from '#events/bus.js';
 
 function buildGraph(): Graph {
     const g = new Graph({ type: 'directed', multi: true });
@@ -46,8 +49,16 @@ function buildGraph(): Graph {
     return g;
 }
 
+function makeDnaEngine(): DnaEngine {
+    return { getActiveEntries: vi.fn().mockReturnValue([]) } as unknown as DnaEngine;
+}
+
+function makeAttention(): AttentionSet {
+    return { touchFile: vi.fn() } as unknown as AttentionSet;
+}
+
 describe('Hook integration', () => {
-    it('pre-hook provides context, then post-hook would reindex', async () => {
+    it('pre-hook provides context for known file', () => {
         const graph = buildGraph();
 
         const preHandler = new PreToolUseHandler({
@@ -59,6 +70,8 @@ describe('Hook integration', () => {
                     content: 'Service layer must not import from API layer',
                 },
             ],
+            attention: makeAttention(),
+            dnaEngine: makeDnaEngine(),
         });
 
         const readPayload: PreToolUsePayload = {
@@ -68,9 +81,26 @@ describe('Hook integration', () => {
         };
 
         const readResponse = preHandler.handle(readPayload);
-        expect(readResponse.decision).toBe('allow');
-        expect(readResponse.message).toContain('processOrder');
-        expect(readResponse.message).toContain('validateOrder');
+        const ctx = readResponse.hookSpecificOutput?.additionalContext ?? '';
+        expect(ctx).toContain('processOrder');
+        expect(ctx).toContain('validateOrder');
+    });
+
+    it('pre-hook includes constraint for edit on constrained file', () => {
+        const graph = buildGraph();
+
+        const preHandler = new PreToolUseHandler({
+            graph,
+            projectRoot: '/project',
+            constraints: [
+                {
+                    scope: 'src/service.ts',
+                    content: 'Service layer must not import from API layer',
+                },
+            ],
+            attention: makeAttention(),
+            dnaEngine: makeDnaEngine(),
+        });
 
         const editPayload: PreToolUsePayload = {
             type: 'pre_tool_use',
@@ -79,16 +109,25 @@ describe('Hook integration', () => {
         };
 
         const editResponse = preHandler.handle(editPayload);
-        expect(editResponse.decision).toBe('allow');
-        expect(editResponse.message).toContain('Service layer must not import from API layer');
+        const ctx = editResponse.hookSpecificOutput?.additionalContext ?? '';
+        expect(ctx).toContain('Service layer must not import from API layer');
+    });
 
+    it('post-hook triggers reindex for edited file', async () => {
+        const graph = buildGraph();
         const reindexed: string[] = [];
+
         const postHandler = new PostToolUseHandler({
+            graph,
             projectRoot: '/project',
             onReindexFile: async (fp) => {
                 reindexed.push(fp);
             },
             onFullRescan: async () => {},
+            sessionStore: null as never,
+            attention: makeAttention(),
+            eventBus: new EventBus(),
+            sessionId: 'sess-1',
         });
 
         const postPayload: PostToolUsePayload = {
@@ -99,7 +138,7 @@ describe('Hook integration', () => {
         };
 
         const postResponse = await postHandler.handle(postPayload);
-        expect(postResponse.decision).toBe('allow');
+        expect(postResponse).toEqual({});
         expect(reindexed).toEqual(['src/service.ts']);
     });
 
@@ -109,6 +148,8 @@ describe('Hook integration', () => {
             graph,
             projectRoot: '/project',
             constraints: [],
+            attention: makeAttention(),
+            dnaEngine: makeDnaEngine(),
         });
 
         const payload: PreToolUsePayload = {
@@ -118,18 +159,24 @@ describe('Hook integration', () => {
         };
 
         const response = preHandler.handle(payload);
-        expect(response.decision).toBe('allow');
-        expect(response.message).toBeUndefined();
+        expect(response).toEqual({});
     });
 
     it('post-hook handles git commit trigger', async () => {
+        const graph = buildGraph();
         let rescanTriggered = false;
+
         const postHandler = new PostToolUseHandler({
+            graph,
             projectRoot: '/project',
             onReindexFile: async () => {},
             onFullRescan: async () => {
                 rescanTriggered = true;
             },
+            sessionStore: null as never,
+            attention: makeAttention(),
+            eventBus: new EventBus(),
+            sessionId: 'sess-1',
         });
 
         const payload: PostToolUsePayload = {
