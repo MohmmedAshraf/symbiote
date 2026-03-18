@@ -7,6 +7,8 @@ import {
     handleInternalEvent,
     handleSseConnection,
     handleHookContext,
+    handleHookRequest,
+    handleSessionStartRequest,
 } from '#mcp/http-api.js';
 import type { createServerContext } from '#mcp/context.js';
 
@@ -139,6 +141,16 @@ export async function handleHttpRequest(
 
     if (url.pathname === '/internal/hook-context' && req.method === 'GET') {
         await handleHookContext(ctx, req, res);
+        return;
+    }
+
+    if (url.pathname.startsWith('/internal/hooks/') && req.method === 'POST') {
+        await handleHookRequest(ctx, url.pathname, req, res);
+        return;
+    }
+
+    if (url.pathname === '/internal/hooks/session-start' && req.method === 'GET') {
+        await handleSessionStartRequest(ctx, url.searchParams, res);
         return;
     }
 

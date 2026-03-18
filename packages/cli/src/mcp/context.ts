@@ -14,6 +14,8 @@ import { CortexRepository } from '#cortex/repository.js';
 import { CortexEngine } from '#cortex/engine.js';
 import { createEvent } from '#events/types.js';
 import { detectLanguage } from '#core/languages.js';
+import { SessionStore } from '#hooks/session-store.js';
+import { AttentionSet } from '#hooks/attention.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
@@ -37,6 +39,10 @@ export interface ServerContext {
     dnaEngine: DnaEngine;
     eventBus: EventBus;
     sessionTracker: SessionTracker;
+    sessionStore: SessionStore;
+    attention: AttentionSet;
+    onReindexFile: (relativePath: string) => void;
+    onFullRescan: () => void;
     rootDir: string;
 }
 
@@ -72,6 +78,8 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const dnaEngine = new DnaEngine(dnaStorage);
     const eventBus = new EventBus();
     const sessionTracker = new SessionTracker();
+    const sessionStore = new SessionStore(options.db);
+    const attention = new AttentionSet();
 
     eventBus.on('*', (event) => {
         sessionTracker.processEvent(event);
@@ -190,6 +198,16 @@ export async function createServerContext(options: ServerContextOptions): Promis
         dnaEngine,
         eventBus,
         sessionTracker,
+        sessionStore,
+        attention,
+        onReindexFile: (relativePath: string): void => {
+            pendingReindex.add(relativePath);
+            scheduleDrain();
+        },
+        onFullRescan: (): void => {
+            pendingReindex.add('.');
+            scheduleDrain();
+        },
         rootDir: options.rootDir,
     };
 }

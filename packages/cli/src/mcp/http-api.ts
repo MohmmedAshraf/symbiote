@@ -10,6 +10,27 @@ import type {
     DeadCodeEntry,
     CouplingHotspot,
 } from '#brain/health/types.js';
+import {
+    PreToolUseHandler,
+    PostToolUseHandler,
+    PostToolUseFailureHandler,
+    SubagentStartHandler,
+    PreCompactHandler,
+    StopHandler,
+    SessionEndHandler,
+    SessionStartHandler,
+    UserPromptSubmitHandler,
+} from '#hooks/index.js';
+import type {
+    PreToolUsePayload,
+    PostToolUsePayload,
+    PostToolUseFailurePayload,
+    SubagentStartPayload,
+    PreCompactPayload,
+    StopPayload,
+    SessionEndPayload,
+    UserPromptSubmitPayload,
+} from '#hooks/types.js';
 
 const MAX_BODY_SIZE = 1024 * 1024; // 1MB
 
@@ -308,6 +329,7 @@ export async function handleHookContext(
     req: IncomingMessage,
     res: ServerResponse,
 ): Promise<void> {
+    process.stderr.write('[symbiote] /internal/hook-context is deprecated\n');
     const url = new URL(req.url ?? '/', 'http://localhost');
     const filePath = url.searchParams.get('file');
     const toolName = url.searchParams.get('tool');
@@ -531,4 +553,156 @@ export function handleSseConnection(
 
     res.on('close', cleanup);
     res.on('error', cleanup);
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+    return new Promise((resolve) => {
+        let body = '';
+        let destroyed = false;
+
+        req.on('data', (chunk) => {
+            body += chunk;
+            if (body.length > MAX_BODY_SIZE) {
+                destroyed = true;
+                req.destroy();
+                resolve({});
+            }
+        });
+        req.on('error', () => resolve({}));
+        req.on('end', () => {
+            if (destroyed) return;
+            try {
+                resolve(JSON.parse(body) as Record<string, unknown>);
+            } catch {
+                resolve({});
+            }
+        });
+    });
+}
+
+async function getConstraints(ctx: ServerContext): Promise<{ scope: string; content: string }[]> {
+    const entries = await ctx.intent.listEntries('constraint', { status: 'active' });
+    return entries.map((e) => ({ scope: e.frontmatter.scope as string, content: e.content }));
+}
+
+function sendJson(res: ServerResponse, data: unknown): void {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+}
+
+export async function handleHookRequest(
+    ctx: ServerContext,
+    pathname: string,
+    req: IncomingMessage,
+    res: ServerResponse,
+): Promise<void> {
+    try {
+        const body = await readJsonBody(req);
+        const sessionId = (body.session_id as string | undefined) ?? '';
+        let result: unknown = {};
+
+        if (pathname === '/internal/hooks/pre-tool-use') {
+            const constraints = await getConstraints(ctx);
+            const handler = new PreToolUseHandler({
+                graph: ctx.graphology,
+                projectRoot: ctx.rootDir,
+                constraints,
+                attention: ctx.attention,
+                dnaEngine: ctx.dnaEngine,
+            });
+            result = handler.handle(body as unknown as PreToolUsePayload);
+        } else if (pathname === '/internal/hooks/post-tool-use') {
+            const handler = new PostToolUseHandler({
+                projectRoot: ctx.rootDir,
+                onReindexFile: async (relativePath: string) => {
+                    ctx.onReindexFile(relativePath);
+                },
+                onFullRescan: async () => {
+                    ctx.onFullRescan();
+                },
+                sessionStore: ctx.sessionStore,
+                attention: ctx.attention,
+                eventBus: ctx.eventBus,
+                graph: ctx.graphology,
+                sessionId,
+            });
+            result = await handler.handle(body as unknown as PostToolUsePayload);
+        } else if (pathname === '/internal/hooks/post-tool-use-failure') {
+            const handler = new PostToolUseFailureHandler({
+                sessionStore: ctx.sessionStore,
+                attention: ctx.attention,
+                eventBus: ctx.eventBus,
+                graph: ctx.graphology,
+                projectRoot: ctx.rootDir,
+                sessionId,
+            });
+            result = await handler.handle(body as unknown as PostToolUseFailurePayload);
+        } else if (pathname === '/internal/hooks/user-prompt-submit') {
+            const handler = new UserPromptSubmitHandler({ dnaEngine: ctx.dnaEngine });
+            result = await handler.handle(body as unknown as UserPromptSubmitPayload);
+        } else if (pathname === '/internal/hooks/subagent-start') {
+            const constraints = await getConstraints(ctx);
+            const handler = new SubagentStartHandler({
+                dnaEngine: ctx.dnaEngine,
+                constraints,
+                sessionStore: ctx.sessionStore,
+                sessionId,
+            });
+            result = await handler.handle(body as unknown as SubagentStartPayload);
+        } else if (pathname === '/internal/hooks/pre-compact') {
+            const handler = new PreCompactHandler({
+                sessionStore: ctx.sessionStore,
+                attention: ctx.attention,
+                eventBus: ctx.eventBus,
+                sessionId,
+            });
+            result = await handler.handle(body as unknown as PreCompactPayload);
+        } else if (pathname === '/internal/hooks/stop') {
+            const handler = new StopHandler({
+                sessionStore: ctx.sessionStore,
+                attention: ctx.attention,
+                dnaEngine: ctx.dnaEngine,
+            });
+            result = await handler.handle(body as unknown as StopPayload);
+        } else if (pathname === '/internal/hooks/session-end') {
+            const handler = new SessionEndHandler({
+                sessionStore: ctx.sessionStore,
+                dnaEngine: ctx.dnaEngine,
+                eventBus: ctx.eventBus,
+            });
+            result = await handler.handle(body as unknown as SessionEndPayload);
+        }
+
+        sendJson(res, result);
+    } catch {
+        sendJson(res, {});
+    }
+}
+
+export async function handleSessionStartRequest(
+    ctx: ServerContext,
+    searchParams: URLSearchParams,
+    res: ServerResponse,
+): Promise<void> {
+    try {
+        const source = searchParams.get('source') ?? 'startup';
+        const sessionId = searchParams.get('sessionId') ?? '';
+
+        const constraints = await getConstraints(ctx);
+        const stats = await ctx.repo.getStats();
+        const projectName = path.basename(ctx.rootDir);
+
+        const handler = new SessionStartHandler({
+            dnaEngine: ctx.dnaEngine,
+            sessionStore: ctx.sessionStore,
+            constraints,
+            projectName,
+            fileCount: stats.files,
+        });
+
+        const result = await handler.handle({ sessionId, source });
+        sendJson(res, result);
+    } catch {
+        sendJson(res, {});
+    }
 }
