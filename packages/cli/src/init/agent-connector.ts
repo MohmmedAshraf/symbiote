@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { getProjectPort } from '#utils/config.js';
@@ -201,29 +200,22 @@ export function ensureClaudeHooks(): { success: boolean; message: string } {
     return installGlobalClaudeHooks();
 }
 
-function getHooksSourceDir(): string {
-    const filePath = fileURLToPath(import.meta.url);
-    return path.resolve(path.dirname(filePath), '../../../hooks');
-}
+const HOOK_EVENTS = [
+    'SessionStart',
+    'UserPromptSubmit',
+    'PreToolUse',
+    'PostToolUse',
+    'PostToolUseFailure',
+    'SubagentStart',
+    'PreCompact',
+    'Stop',
+    'SessionEnd',
+];
 
 function installGlobalClaudeHooks(): { success: boolean; message: string } {
     try {
-        fs.mkdirSync(CLAUDE_HOOKS_DIR, { recursive: true });
-
-        const sourceDir = getHooksSourceDir();
-        const hookFiles: Record<string, { file: string; matcher: string }> = {
-            SessionStart: { file: 'session-start.sh', matcher: '' },
-            PreToolUse: { file: 'pre-tool-use.sh', matcher: 'Read|Edit|Write' },
-            PostToolUse: { file: 'post-tool-use.sh', matcher: 'Read|Edit|Write|Bash' },
-        };
-
-        for (const [, config] of Object.entries(hookFiles)) {
-            const src = path.join(sourceDir, config.file);
-            const dest = path.join(CLAUDE_HOOKS_DIR, config.file);
-            if (fs.existsSync(src)) {
-                fs.copyFileSync(src, dest);
-                fs.chmodSync(dest, 0o755);
-            }
+        if (fs.existsSync(CLAUDE_HOOKS_DIR)) {
+            fs.rmSync(CLAUDE_HOOKS_DIR, { recursive: true });
         }
 
         let settings: Record<string, unknown> = {};
@@ -237,50 +229,80 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
 
         const hooks = (settings.hooks as Record<string, unknown[]>) ?? {};
 
-        interface HookEntry {
-            matcher?: string;
-            hooks?: Array<{ type?: string; command?: string; timeout?: number }>;
+        interface AnyHookEntry {
+            hooks?: Array<{ command?: string; url?: string; type?: string }>;
         }
 
-        for (const [eventName, config] of Object.entries(hookFiles)) {
-            const hookPath = path.join(CLAUDE_HOOKS_DIR, config.file);
-            const command = config.file.endsWith('.sh')
-                ? `bash "${hookPath}"`
-                : `node "${hookPath}"`;
-
-            const existing: HookEntry[] = Array.isArray(hooks[eventName])
-                ? (hooks[eventName] as HookEntry[])
-                : [];
-
-            const hasSymbiote = existing.some((h) =>
-                h.hooks?.some((hh) => hh.command?.includes('symbiote')),
-            );
-
-            if (!hasSymbiote) {
-                existing.push({
-                    matcher: config.matcher,
-                    hooks: [
-                        {
-                            type: 'command',
-                            command,
-                            timeout: eventName === 'SessionStart' ? 5 : 10,
-                        },
-                    ],
-                });
-            } else {
-                for (const entry of existing) {
-                    if (entry.hooks) {
-                        for (const h of entry.hooks) {
-                            if (h.command?.includes('symbiote')) {
-                                h.command = command;
-                            }
-                        }
-                    }
+        for (const eventName of HOOK_EVENTS) {
+            if (Array.isArray(hooks[eventName])) {
+                hooks[eventName] = (hooks[eventName] as AnyHookEntry[]).filter(
+                    (h) =>
+                        !h.hooks?.some(
+                            (hh) =>
+                                hh.command?.includes('symbiote') ||
+                                hh.url?.includes('localhost') ||
+                                hh.url?.includes('/internal/hooks/'),
+                        ),
+                );
+                if ((hooks[eventName] as unknown[]).length === 0) {
+                    delete hooks[eventName];
                 }
             }
-
-            hooks[eventName] = existing;
         }
+
+        const port = getProjectPort(process.cwd());
+        const base = `http://localhost:${port}/internal/hooks`;
+
+        hooks['SessionStart'] = [
+            {
+                matcher: 'startup|compact',
+                hooks: [
+                    {
+                        type: 'command',
+                        command: 'npx symbiote-cli hook session-start',
+                        timeout: 30,
+                    },
+                ],
+            },
+        ];
+
+        hooks['UserPromptSubmit'] = [
+            {
+                hooks: [
+                    {
+                        type: 'prompt',
+                        prompt: 'Analyze if this message contains a coding correction or preference. Message: $ARGUMENTS\nRespond JSON only: {"is_instruction":boolean,"type":"correction|preference|reinforcement|none","instruction":"extracted or null","anti_pattern":"what to avoid or null"}',
+                        model: 'claude-haiku-4-5-20251001',
+                    },
+                    {
+                        type: 'http',
+                        url: `${base}/user-prompt-submit`,
+                    },
+                ],
+            },
+        ];
+
+        hooks['PreToolUse'] = [
+            { matcher: '*', hooks: [{ type: 'http', url: `${base}/pre-tool-use` }] },
+        ];
+        hooks['PostToolUse'] = [
+            { matcher: '*', hooks: [{ type: 'http', url: `${base}/post-tool-use` }] },
+        ];
+        hooks['PostToolUseFailure'] = [
+            {
+                matcher: '*',
+                hooks: [{ type: 'http', url: `${base}/post-tool-use-failure` }],
+            },
+        ];
+        hooks['SubagentStart'] = [{ hooks: [{ type: 'http', url: `${base}/subagent-start` }] }];
+        hooks['PreCompact'] = [
+            {
+                matcher: 'manual|auto',
+                hooks: [{ type: 'http', url: `${base}/pre-compact` }],
+            },
+        ];
+        hooks['Stop'] = [{ hooks: [{ type: 'http', url: `${base}/stop` }] }];
+        hooks['SessionEnd'] = [{ hooks: [{ type: 'http', url: `${base}/session-end` }] }];
 
         settings.hooks = hooks;
         const tmpSettings = CLAUDE_SETTINGS_PATH + '.tmp';
@@ -304,13 +326,18 @@ function removeGlobalClaudeHooks(): { success: boolean; message: string } {
 
             if (hooks) {
                 interface HookEntry {
-                    hooks?: Array<{ command?: string }>;
+                    hooks?: Array<{ command?: string; url?: string }>;
                 }
 
-                for (const eventName of ['SessionStart', 'PreToolUse', 'PostToolUse']) {
+                for (const eventName of HOOK_EVENTS) {
                     if (Array.isArray(hooks[eventName])) {
                         hooks[eventName] = (hooks[eventName] as HookEntry[]).filter(
-                            (h) => !h.hooks?.some((hh) => hh.command?.includes('symbiote')),
+                            (h) =>
+                                !h.hooks?.some(
+                                    (hh) =>
+                                        hh.command?.includes('symbiote') ||
+                                        hh.url?.includes('/internal/hooks/'),
+                                ),
                         );
                         if ((hooks[eventName] as unknown[]).length === 0) {
                             delete hooks[eventName];
