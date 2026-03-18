@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { getProjectPort } from '#utils/config.js';
+import { getProjectPort, SYMBIOTE_HOME } from '#utils/config.js';
 
 export async function cmdHookPre(): Promise<void> {
     const { readStdinPayload, writeResponse, fireHookEvent } = await import('#hooks/types.js');
@@ -124,6 +124,99 @@ export async function cmdHooksInstall(): Promise<void> {
     }
 
     p.outro('Hooks installed. Symbiote will inject context on every tool call.');
+}
+
+export async function cmdHookSessionStart(): Promise<void> {
+    const http = await import('node:http');
+
+    const projectRoot = process.cwd();
+    const port = getProjectPort(projectRoot);
+
+    let source = 'startup';
+    let sessionId = '';
+
+    try {
+        const raw = await new Promise<string>((resolve, reject) => {
+            let data = '';
+            process.stdin.setEncoding('utf-8');
+            process.stdin.on('data', (chunk: string) => {
+                data += chunk;
+            });
+            process.stdin.on('end', () => resolve(data));
+            process.stdin.on('error', reject);
+        });
+
+        if (raw.trim()) {
+            const payload = JSON.parse(raw) as Record<string, unknown>;
+            if (typeof payload.source === 'string') source = payload.source;
+            if (typeof payload.session_id === 'string') sessionId = payload.session_id;
+        }
+    } catch {
+        // Proceed with defaults
+    }
+
+    const serverRunning = await new Promise<boolean>((resolve) => {
+        const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 }, (res) => {
+            res.resume();
+            resolve(res.statusCode === 200);
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => {
+            req.destroy();
+            resolve(false);
+        });
+    });
+
+    if (serverRunning) {
+        const params = new URLSearchParams({ source, sessionId });
+        const url = `http://127.0.0.1:${port}/internal/hooks/session-start?${params}`;
+
+        const response = await new Promise<string>((resolve) => {
+            const req = http.get(url, { timeout: 3000 }, (res) => {
+                let data = '';
+                res.on('data', (chunk: string) => {
+                    data += chunk;
+                });
+                res.on('end', () => resolve(data));
+            });
+            req.on('error', () => resolve('{}'));
+            req.on('timeout', () => {
+                req.destroy();
+                resolve('{}');
+            });
+        });
+
+        process.stdout.write(response + '\n');
+        return;
+    }
+
+    try {
+        const { DnaStorage } = await import('#dna/storage.js');
+        const dnaDir = path.join(SYMBIOTE_HOME, 'dna');
+        const dnaStorage = new DnaStorage(dnaDir);
+        const entries = dnaStorage
+            .listEntries()
+            .filter((e) => e.frontmatter.status !== 'rejected')
+            .slice(0, 5);
+        const dnaRules = entries.map((e) => e.content).join(', ');
+
+        const projectName = path.basename(projectRoot);
+        const lines: string[] = [`[Symbiote] Project: ${projectName}`];
+        if (dnaRules) {
+            lines.push(`DNA: ${dnaRules}`);
+        }
+
+        const output = JSON.stringify({
+            hookSpecificOutput: {
+                hookEventName: 'SessionStart',
+                additionalContext: lines.join('\n'),
+            },
+        });
+
+        process.stdout.write(output + '\n');
+    } catch {
+        process.stdout.write('{}\n');
+    }
 }
 
 export async function cmdHooksUninstall(): Promise<void> {

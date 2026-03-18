@@ -11,6 +11,7 @@ import {
     cmdImpact,
     cmdHookPre,
     cmdHookPost,
+    cmdHookSessionStart,
     cmdHooksInstall,
     cmdHooksUninstall,
     cmdUnbond,
@@ -181,9 +182,11 @@ async function main(): Promise<void> {
                 await cmdHookPre();
             } else if (subcommand === 'post') {
                 await cmdHookPost();
+            } else if (subcommand === 'session-start') {
+                await cmdHookSessionStart();
             } else {
                 p.log.error(`Unknown hook subcommand: ${subcommand}`);
-                console.log(pc.dim('  Available: pre, post'));
+                console.log(pc.dim('  Available: pre, post, session-start'));
                 process.exit(1);
             }
             break;
