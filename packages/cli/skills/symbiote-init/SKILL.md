@@ -1,19 +1,20 @@
 ---
 name: symbiote-init
-description: Initialize Symbiote for the current project. Scans the codebase, starts the server, registers the MCP server via SSE, and extracts developer DNA (coding preferences), project constraints, and architectural decisions from the current context. Use when the developer runs /symbiote-init, asks to "initialize symbiote", "set up symbiote", or "scan my project". Requires symbiote-cli to be installed (npx symbiote-cli).
+description: Initialize Symbiote for the current project. Scans the codebase and extracts developer DNA (coding preferences), project constraints, and architectural decisions from the current context. Use when the developer runs /symbiote-init, asks to "initialize symbiote", "set up symbiote", or "scan my project". Requires symbiote-cli to be installed (npx symbiote-cli install).
 ---
 
 # Symbiote Project Init
 
-Initialize Symbiote for the current project — scan, start server, register MCP, extract DNA + intent.
+Initialize Symbiote for the current project — scan codebase and extract DNA + intent.
+
+MCP server is already registered globally by `symbiote install`. This skill only scans and extracts.
 
 ## Process
 
 1. Scan the codebase
-2. Start symbiote server (background) and register MCP via SSE
-3. Build extraction lists from context
-4. Dispatch subagent to record everything
-5. Print one-line summary
+2. Build extraction lists from context
+3. Dispatch subagent to record everything
+4. Print one-line summary
 
 ## Step 1: Scan
 
@@ -21,26 +22,7 @@ Initialize Symbiote for the current project — scan, start server, register MCP
 npx symbiote-cli scan
 ```
 
-## Step 2: Start Server + Register MCP
-
-Start the server in the background, then register MCP via SSE transport.
-
-```bash
-# Start server if not running (detached, no browser)
-nohup npx symbiote-cli serve --no-open > /dev/null 2>&1 &
-sleep 2
-```
-
-Read the port from `.brain/port`, then register:
-
-```bash
-PORT=$(cat .brain/port 2>/dev/null || echo "3333")
-claude mcp add --transport sse --scope project symbiote "http://localhost:$PORT/sse"
-```
-
-SSE transport allows multiple Claude Code sessions to share the same server — no DB lock conflicts.
-
-## Step 3: Build Extraction Lists
+## Step 2: Build Extraction Lists
 
 Read your context (CLAUDE.md, memories, rule files) and build three separate lists:
 
@@ -87,7 +69,7 @@ Each entry must be:
 - Self-contained — understandable without context
 - Specific — not vague or overly broad
 
-## Step 4: Dispatch Subagent
+## Step 3: Dispatch Subagent
 
 Launch a single Agent to record everything. Pass it all three lists.
 
@@ -111,7 +93,7 @@ Record the following Symbiote entries using MCP tools. Call tools in parallel wh
 Return counts: { dna: N, constraints: N, decisions: N, failed: N }
 ```
 
-## Step 5: Output
+## Step 4: Output
 
 One line, nothing more:
 

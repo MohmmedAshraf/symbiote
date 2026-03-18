@@ -10,6 +10,7 @@ export interface AgentInfo {
     installed: boolean;
     configPath: string;
     configType: 'cli-command' | 'json-file';
+    configKey: 'mcpServers' | 'mcp';
 }
 
 const CLAUDE_SETTINGS_PATH = path.join(homedir(), '.claude', 'settings.json');
@@ -21,30 +22,35 @@ const AGENTS: Omit<AgentInfo, 'installed'>[] = [
         id: 'claude-code',
         configPath: '',
         configType: 'cli-command',
+        configKey: 'mcpServers',
     },
     {
         name: 'Cursor',
         id: 'cursor',
         configPath: path.join(homedir(), '.cursor', 'mcp.json'),
         configType: 'json-file',
+        configKey: 'mcpServers',
     },
     {
         name: 'Windsurf',
         id: 'windsurf',
         configPath: path.join(homedir(), '.windsurf', 'mcp.json'),
         configType: 'json-file',
+        configKey: 'mcpServers',
     },
     {
         name: 'Copilot',
         id: 'copilot',
         configPath: path.join(homedir(), '.github', 'copilot', 'mcp.json'),
         configType: 'json-file',
+        configKey: 'mcpServers',
     },
     {
         name: 'OpenCode',
         id: 'opencode',
-        configPath: path.join(homedir(), '.config', 'opencode', 'config.json'),
+        configPath: path.join(homedir(), '.config', 'opencode', '.opencode.json'),
         configType: 'json-file',
+        configKey: 'mcpServers',
     },
 ];
 
@@ -79,17 +85,15 @@ export function connectAgent(agent: AgentInfo): {
 } {
     try {
         if (agent.id === 'claude-code') {
-            const port = getProjectPort(process.cwd());
-            const sseUrl = `http://localhost:${port}/sse`;
             try {
                 execSync('claude mcp remove symbiote', { stdio: 'ignore' });
             } catch {
                 // not registered yet
             }
-            execSync(`claude mcp add --transport sse symbiote ${sseUrl}`, { stdio: 'ignore' });
+            execSync('claude mcp add symbiote -- npx -y symbiote-cli mcp', { stdio: 'ignore' });
             return {
                 success: true,
-                message: `MCP server added to Claude Code (SSE on port ${port})`,
+                message: 'MCP server added to Claude Code (stdio)',
             };
         }
 
@@ -129,12 +133,13 @@ function writeJsonMcpConfig(agent: AgentInfo): {
         }
     }
 
-    const mcpServers = (config.mcpServers as Record<string, unknown>) ?? {};
-    mcpServers.symbiote = {
+    const key = agent.configKey;
+    const servers = (config[key] as Record<string, unknown>) ?? {};
+    servers.symbiote = {
         command: 'npx',
-        args: ['symbiote-cli', 'mcp'],
+        args: ['-y', 'symbiote-cli', 'mcp'],
     };
-    config.mcpServers = mcpServers;
+    config[key] = servers;
 
     const tmpPath = configPath + '.tmp';
     fs.writeFileSync(tmpPath, JSON.stringify(config, null, 4) + '\n');
@@ -159,7 +164,8 @@ export function isBonded(agent: AgentInfo): boolean {
     if (agent.configType === 'json-file' && fs.existsSync(agent.configPath)) {
         try {
             const config = JSON.parse(fs.readFileSync(agent.configPath, 'utf-8'));
-            return !!config.mcpServers?.symbiote;
+            const servers = config[agent.configKey] as Record<string, unknown> | undefined;
+            return !!servers?.symbiote;
         } catch {
             return false;
         }
@@ -385,9 +391,10 @@ export function disconnectAgent(agent: AgentInfo): {
 
         if (agent.configType === 'json-file' && fs.existsSync(agent.configPath)) {
             const config = JSON.parse(fs.readFileSync(agent.configPath, 'utf-8'));
-            const mcpServers = config.mcpServers ?? {};
-            delete mcpServers.symbiote;
-            config.mcpServers = mcpServers;
+            const key = agent.configKey;
+            const servers = config[key] ?? {};
+            delete servers.symbiote;
+            config[key] = servers;
             fs.writeFileSync(agent.configPath, JSON.stringify(config, null, 4) + '\n');
             return {
                 success: true,

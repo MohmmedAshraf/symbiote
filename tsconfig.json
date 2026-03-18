@@ -14,5 +14,7 @@
         "isolatedModules": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true
-    }
+    },
+    "files": [],
+    "references": [{ "path": "packages/cli" }, { "path": "packages/web" }]
 }

@@ -38,24 +38,44 @@ function installSkill(): { success: boolean; message: string } {
 }
 
 export async function cmdInstall(): Promise<void> {
-    const { ensureClaudeHooks } = await import('#init/agent-connector.js');
+    const { ensureClaudeHooks, detectInstalledAgents, connectAgent } =
+        await import('#init/agent-connector.js');
 
     p.intro(pc.bold('Symbiote') + pc.dim(' — Installing globally'));
 
     ensureSymbioteHome();
 
-    const hooksResult = ensureClaudeHooks();
-    if (hooksResult.success) {
-        p.log.success('Hooks registered');
-    } else {
-        p.log.error(`Hooks failed: ${hooksResult.message}`);
+    const agents = detectInstalledAgents();
+    const installed = agents.filter((a) => a.installed);
+
+    for (const agent of installed) {
+        const result = connectAgent(agent);
+        if (result.success) {
+            p.log.success(`${agent.name}: MCP registered`);
+        } else {
+            p.log.error(`${agent.name}: ${result.message}`);
+        }
     }
 
-    const skillResult = installSkill();
-    if (skillResult.success) {
-        p.log.success('Skill /symbiote-init installed');
-    } else {
-        p.log.error(`Skill failed: ${skillResult.message}`);
+    const hasClaude = installed.some((a) => a.id === 'claude-code');
+    if (hasClaude) {
+        const hooksResult = ensureClaudeHooks();
+        if (hooksResult.success) {
+            p.log.success('Claude Code: hooks registered');
+        } else {
+            p.log.error(`Claude Code hooks failed: ${hooksResult.message}`);
+        }
+
+        const skillResult = installSkill();
+        if (skillResult.success) {
+            p.log.success('Claude Code: skill /symbiote-init installed');
+        } else {
+            p.log.error(`Skill failed: ${skillResult.message}`);
+        }
+    }
+
+    if (installed.length === 0) {
+        p.log.warn('No supported AI editors detected');
     }
 
     p.outro(`Run ${pc.cyan('/symbiote-init')} in Claude Code to set up your project.`);

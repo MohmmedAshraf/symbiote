@@ -54,3 +54,4 @@ packages/cli/LICENSE
 # Internal docs (specs, plans, design docs)
 docs/
 /.superpowers
+.mcp.json

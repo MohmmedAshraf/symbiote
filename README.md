@@ -35,13 +35,15 @@ CLAUDE.md is great for explicit instructions — but it's static text you mainta
 
 They're complementary. Use CLAUDE.md for explicit instructions your AI should always follow. Use Symbiote for the deep project understanding no static file can provide.
 
-## Getting Started
+---
+
+## Quick Start
 
 ```bash
 npx symbiote-cli install
 ```
 
-This installs Symbiote globally — registers 9 hooks and the `/symbiote-init` skill with Claude Code. Run it once.
+One command. Auto-detects your installed editors (Claude Code, Cursor, Windsurf, Copilot, OpenCode), registers the MCP server globally for each, and sets up 9 Claude Code hooks + the `/symbiote-init` skill. Run it once.
 
 Then in any project, open Claude Code and run:
 
@@ -49,7 +51,7 @@ Then in any project, open Claude Code and run:
 /symbiote-init
 ```
 
-This scans your codebase, starts the server, registers MCP, and uses AI to extract your coding preferences, project constraints, and architectural decisions — all in one step.
+This scans your codebase, extracts your coding preferences, project constraints, and architectural decisions — all in one step.
 
 ```
 Symbiote initialized — scanned 142 files, recorded 18 DNA entries, 5 constraints, 3 decisions.
@@ -57,7 +59,31 @@ Symbiote initialized — scanned 142 files, recorded 18 DNA entries, 5 constrain
 
 No manual config. No copy-pasting. After the first init, Symbiote's SessionStart hook auto-scans and boots the server on every new Claude Code session — zero cold start.
 
-## Two Layers of Intelligence
+---
+
+## How It Works
+
+Symbiote has two layers of intelligence that work together: **Developer DNA** (who you are) and the **Project Brain** (what your code is).
+
+```mermaid
+sequenceDiagram
+    participant Brain as .brain/<br>Code Graph
+    participant Sym as Symbiote
+    participant AI as Claude Code
+    participant DNA as ~/.symbiote/<br>Developer DNA
+
+    Brain->>Sym: project structure, dependencies, health
+    DNA->>Sym: style traits, preferences, anti-patterns
+
+    loop Every interaction
+        Sym->>AI: injects context (MCP + hooks)
+        AI->>Sym: actions observed
+        Sym->>Brain: re-indexes changed files
+        Sym->>DNA: records corrections
+    end
+
+    Note over DNA: confidence evolves across sessions
+```
 
 ### Developer DNA — Your Coding Identity
 
@@ -83,17 +109,105 @@ Lives at `.brain/` in each repo. Auto-generated, optionally enriched.
 - **Health engine** — Dead code, circular deps, coupling hotspots, constraint violations
 - **Impact analysis** — "What breaks if I change this?" with confidence-weighted blast radius
 
+---
+
+## DNA Learning System
+
+Corrections don't just get recorded — they evolve. Symbiote tracks confidence across sessions and promotes patterns that hold up over time.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Detected: AI observes pattern
+    Detected --> Suggested: Confidence 0.3
+    Suggested --> Reinforced: Pattern holds (+0.05/session)
+    Reinforced --> Approved: 3+ sessions at ≥0.7
+    Approved --> Core: Auto-promoted
+
+    Detected --> Approved: Explicit correction (1.0)
+
+    Reinforced --> Decayed: 30+ days unseen
+    Suggested --> Decayed: 30+ days unseen
+    Decayed --> [*]: Fades away
+
+    Approved --> Replaced: Contradiction detected
+    Replaced --> [*]: Old pattern removed
+```
+
+| Path              | How it works                                                                   |
+| ----------------- | ------------------------------------------------------------------------------ |
+| **Observed**      | Symbiote detects a pattern in your code or corrections                         |
+| **Reinforced**    | Same pattern appears across multiple sessions (+0.05 confidence each time)     |
+| **Auto-promoted** | After 3+ sessions at ≥0.7 confidence, becomes an approved trait                |
+| **Explicit**      | Direct corrections (_"don't use semicolons"_) skip straight to approved at 1.0 |
+| **Decayed**       | Patterns unseen for 30+ days gradually fade                                    |
+| **Contradicted**  | New correction replaces the old pattern entirely                               |
+
+---
+
+## Session Intelligence
+
+Symbiote hooks into **9 Claude Code lifecycle events** — not just file reads and edits, but session start, user prompts, subagent spawns, compaction, and session end.
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant CC as Claude Code
+    participant Sym as Symbiote
+
+    Note over CC,Sym: Session starts
+    CC->>Sym: SessionStart
+    Sym-->>CC: DNA + constraints + project overview
+
+    Note over Dev,CC: Developer types a prompt
+    Dev->>CC: "refactor the auth module"
+    CC->>Sym: UserPromptSubmit
+    Sym->>Sym: Haiku detects corrections
+
+    Note over CC,Sym: AI reads a file
+    CC->>Sym: PreToolUse (Read)
+    Sym-->>CC: File context + dependencies + constraints
+    CC->>Sym: PostToolUse (Read)
+    Sym->>Sym: Update attention set
+
+    Note over CC,Sym: AI edits a file
+    CC->>Sym: PreToolUse (Edit)
+    Sym-->>CC: Impact warnings + dependents
+    CC->>Sym: PostToolUse (Edit)
+    Sym->>Sym: Re-index file + record observation
+
+    Note over CC,Sym: AI spawns subagent
+    CC->>Sym: SubagentStart
+    Sym-->>CC: DNA + constraints (~50 tokens)
+
+    Note over CC,Sym: Context compacts
+    CC->>Sym: PreCompact
+    Sym->>Sym: Snapshot session state
+
+    Note over CC,Sym: Session ends
+    CC->>Sym: SessionEnd
+    Sym->>Sym: Evolve DNA confidence
+```
+
+The hooks are the key. Your AI doesn't _choose_ to use Symbiote — Symbiote is injected into every interaction. The AI writes better code because it has better context.
+
+Every tool call is observed and correlated with the code graph — not raw text logs, structured graph metadata. Over time, Symbiote learns:
+
+- **Corrections** — detected in real-time via Haiku, recorded with evidence
+- **Style patterns** — extracted from what you actually write, not what you say
+- **Hotspots** — files edited 3+ times in a session get flagged
+- **Failure patterns** — errors correlated with affected symbols across sessions
+
+---
+
 ## The Living Brain
 
 ```bash
-npx symbiote-cli serve
+symbiote serve
 ```
 
 Open `localhost:3333`. Your project's brain — a 3D neural graph of your entire codebase. Nodes are files, functions, classes. Edges are calls, imports, dependencies. Color-coded by module cluster. Sized by PageRank importance.
 
 **It reacts in real time.** When your AI reads a file, the node glows. When it edits, the node pulses bright. When it navigates between files, impulses fire along the edges. You're watching your AI think.
-
-Three views:
 
 | View             | What it shows                                    |
 | ---------------- | ------------------------------------------------ |
@@ -101,9 +215,11 @@ Three views:
 | **Health Pulse** | Code health score (0-100) with actionable issues |
 | **DNA Lab**      | Your traits — approve, reject, edit              |
 
-## Host Integration
+---
 
-Symbiote works with any MCP-compatible AI tool.
+## Editor Support
+
+Symbiote works with any MCP-compatible AI tool. `symbiote install` auto-detects your editors and configures everything.
 
 | Host               | MCP | Hooks (9 events) | Session Intelligence | Real-Time Brain |
 | ------------------ | --- | ---------------- | -------------------- | --------------- |
@@ -113,12 +229,45 @@ Symbiote works with any MCP-compatible AI tool.
 | **GitHub Copilot** | Yes | —                | —                    | —               |
 | **OpenCode**       | Yes | —                | —                    | —               |
 
-Claude Code gets the deepest integration — 9 hook events cover the full session lifecycle (start, prompts, tool calls, failures, subagents, compaction, stop, end). The brain reacts in real time. Other hosts access Symbiote through MCP tools the AI calls when it needs context.
+Claude Code gets the deepest integration — 9 hook events cover the full session lifecycle. The brain reacts in real time. Other hosts access Symbiote through MCP tools the AI calls when it needs context.
+
+### Manual Setup
+
+If you prefer to configure manually instead of `symbiote install`:
+
+**Claude Code:**
 
 ```bash
-symbiote unbond              # Detach from all hosts
-symbiote unbond claude-code  # Detach from a specific host
+claude mcp add symbiote -- npx -y symbiote-cli mcp
 ```
+
+**Cursor** (`~/.cursor/mcp.json`):
+
+```json
+{
+    "mcpServers": {
+        "symbiote": {
+            "command": "npx",
+            "args": ["-y", "symbiote-cli", "mcp"]
+        }
+    }
+}
+```
+
+**OpenCode** (`~/.config/opencode/.opencode.json`):
+
+```json
+{
+    "mcpServers": {
+        "symbiote": {
+            "command": "npx",
+            "args": ["-y", "symbiote-cli", "mcp"]
+        }
+    }
+}
+```
+
+---
 
 ## What Your AI Gets
 
@@ -146,56 +295,7 @@ When bonded, your AI gains 17 tools via MCP:
 
 Plus 3 MCP resources: `symbiote://dna`, `symbiote://project/overview`, `symbiote://project/health`
 
-## How It Actually Works
-
-Symbiote hooks into **9 Claude Code lifecycle events** — not just file reads and edits, but session start, user prompts, subagent spawns, compaction, and session end.
-
-```
-Session starts
-    → Auto-scans codebase, injects DNA + constraints + project overview
-
-You type a prompt
-    → Haiku detects corrections in real-time, records to DNA
-
-AI calls any tool (Read, Edit, Write, Bash, Agent, Grep, ...)
-    → BEFORE: injects file context, dependencies, constraints, impact warnings
-    → AI acts with full context
-    → AFTER: re-indexes changed files, records observation, fires brain events
-    → ON FAILURE: correlates errors with the code graph
-
-AI spawns a subagent
-    → Injects DNA + constraints (~50 tokens, every subagent inherits your style)
-
-Context compacts
-    → Snapshots session state, restores it after — zero context loss
-
-Session ends
-    → Finalizes session, evolves DNA confidence (decay, reinforce, promote)
-```
-
-The hooks are the key. Your AI doesn't _choose_ to use Symbiote — Symbiote is injected into every interaction. The AI just writes better code because it has better context.
-
-### Session Intelligence
-
-Every tool call is observed and correlated with the code graph — not raw text logs, structured graph metadata. Over time, Symbiote learns:
-
-- **Corrections** — detected in real-time via Haiku, recorded with evidence
-- **Style patterns** — extracted from what you actually write, not what you say
-- **Hotspots** — files edited 3+ times in a session get flagged
-- **Failure patterns** — errors correlated with affected symbols across sessions
-
-DNA confidence evolves across sessions:
-
-```
-  Detected ──→ Suggested (0.3) ──→ Reinforced ──→ Approved (0.7+) ──→ Core trait
-               applied              +0.05/session   auto-promoted      your AI just
-               tentatively          when pattern    after 3+ sessions  knows this
-                                    holds
-                                          │
-                                          └──→ Decayed (30+ days unseen → fades)
-```
-
-Explicit corrections skip straight to approved at confidence 1.0. Contradictions replace old patterns. Your AI gets better every session.
+---
 
 ## Project Health
 
@@ -213,6 +313,8 @@ The health engine scores your project 0-100 across four dimensions:
 | Coupling hotspots     | 20%    | Files that change together too often        |
 
 Every issue links to a file and line number. The Health Pulse view in the web UI makes them actionable.
+
+---
 
 ## What Gets Created
 
@@ -235,6 +337,8 @@ your-project/.brain/         # Per-project — the brain
 
 The intent layer is committed to git. New team member runs `/symbiote-init` — they get the full project brain plus their personal DNA on top. Same project understanding, individual style.
 
+---
+
 ## Language Support
 
 Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship with the package and have dedicated extraction patterns. **On-demand** languages are downloaded on first encounter and use generic AST traversal.
@@ -253,25 +357,47 @@ Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship w
 | Ruby       | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
 | PHP        | ✓         | ✓       | ✓       | ✓       | ✓     | —     | —     |
 
-> **Any other language** with a Tree-sitter grammar also works — downloaded and cached at `~/.symbiote/grammars/` on first encounter. Functions and classes are extracted via generic traversal; deeper features (imports, calls, types) depend on language-specific patterns.
+> **Any other language** with a Tree-sitter grammar also works — downloaded and cached at `~/.symbiote/grammars/` on first encounter. Functions and classes are extracted via generic traversal; deeper features depend on language-specific patterns.
+
+---
 
 ## CLI Reference
 
-| Command                  | What it does                               |
-| ------------------------ | ------------------------------------------ |
-| `symbiote install`       | One-time setup — registers 9 hooks + skill |
-| `symbiote scan`          | Rescan codebase (incremental)              |
-| `symbiote scan --force`  | Full rescan, ignore cache                  |
-| `symbiote serve`         | MCP server + web UI at localhost:3333      |
-| `symbiote mcp`           | MCP server only (stdio, for editors)       |
-| `symbiote dna`           | View and manage developer DNA              |
-| `symbiote impact`        | Analyze impact of working changes          |
-| `symbiote hooks install` | Register hooks with Claude Code            |
-| `symbiote unbond`        | Detach from AI agents                      |
+| Command                 | What it does                                   |
+| ----------------------- | ---------------------------------------------- |
+| `symbiote install`      | One-time global setup for all detected editors |
+| `symbiote scan`         | Rescan codebase (incremental)                  |
+| `symbiote scan --force` | Full rescan, ignore cache                      |
+| `symbiote serve`        | MCP server + web UI at localhost:3333          |
+| `symbiote mcp`          | MCP server only (stdio, for editors)           |
+| `symbiote dna`          | View and manage developer DNA                  |
+| `symbiote impact`       | Analyze impact of working changes              |
+| `symbiote unbond`       | Detach from all AI hosts                       |
+
+---
+
+## Tech Stack
+
+| Layer          | Technology                                                   |
+| -------------- | ------------------------------------------------------------ |
+| **Language**   | TypeScript (strict mode)                                     |
+| **Monorepo**   | Turborepo (packages/cli + packages/web)                      |
+| **Parsing**    | Tree-sitter (11 bundled languages)                           |
+| **Database**   | DuckDB + sqlite-vec (graph storage + vector search)          |
+| **MCP**        | @modelcontextprotocol/sdk (stdio + HTTP)                     |
+| **Embeddings** | Transformers.js (local, all-MiniLM-L6-v2)                    |
+| **Graph**      | Graphology (Louvain, PageRank, betweenness)                  |
+| **Web UI**     | Vite + React 19 + react-three-fiber + Three.js + custom GLSL |
+| **Styling**    | Tailwind CSS v4 (dark theme)                                 |
+| **Testing**    | Vitest (799 tests across 85 files)                           |
+
+---
 
 ## Privacy
 
 Everything runs locally. No data leaves your machine. No external API calls for core features. The code graph, embeddings, DNA, session observations, and health analysis all run on your hardware. Observations store graph metadata only (which tool, which file, which symbols) — never file contents or command outputs.
+
+---
 
 ## License
 

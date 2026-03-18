@@ -25,6 +25,7 @@ describe('isBonded', () => {
             installed: true,
             configPath: '/nonexistent/mcp.json',
             configType: 'json-file' as const,
+            configKey: 'mcpServers' as const,
         };
         expect(isBonded(agent)).toBe(false);
     });
