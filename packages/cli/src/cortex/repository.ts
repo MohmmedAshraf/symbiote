@@ -21,7 +21,7 @@ import type {
     GenericInstantiation,
     SymbolTableEntry,
 } from './types.js';
-import type { ExecutionFlow, TemporalSnapshot } from './topology-types.js';
+import type { TemporalSnapshot } from './topology-types.js';
 
 const CHUNK_SIZE = 500;
 
@@ -78,25 +78,6 @@ interface MethodNodeRow extends Record<string, unknown> {
     community: number | null;
     page_rank: number | null;
     betweenness: number | null;
-}
-
-interface InterfaceNodeRow extends Record<string, unknown> {
-    id: string;
-    name: string;
-    file_path: string;
-    line_start: number;
-    line_end: number;
-    is_exported: boolean;
-}
-
-interface TypeNodeRow extends Record<string, unknown> {
-    id: string;
-    name: string;
-    kind: string;
-    file_path: string;
-    line_start: number;
-    line_end: number;
-    is_exported: boolean;
 }
 
 interface VariableNodeRow extends Record<string, unknown> {
@@ -233,16 +214,6 @@ interface CortexFlowRow extends Record<string, unknown> {
     has_error_path: boolean;
 }
 
-interface TemporalSnapshotRow extends Record<string, unknown> {
-    commit_hash: string;
-    timestamp: string;
-    node_counts: string;
-    edge_counts: string;
-    community_hash: string;
-    top_pagerank: string;
-    hotspot_rankings: string;
-}
-
 interface NodeMetricsUpdate {
     nodeId: string;
     community: number;
@@ -261,6 +232,7 @@ interface SymbolRow extends Record<string, unknown> {
     line_start: number;
     line_end: number;
     kind: string;
+    is_exported: boolean;
 }
 
 interface MetaRow extends Record<string, unknown> {
@@ -723,22 +695,6 @@ export class CortexRepository {
         return rows.map(this.mapMethodNodeRow);
     }
 
-    async getInterfacesByFile(filePath: string): Promise<InterfaceNode[]> {
-        const rows = await this.db.all<InterfaceNodeRow>(
-            'SELECT * FROM nodes_interface WHERE file_path = $1',
-            filePath,
-        );
-        return rows.map(this.mapInterfaceNodeRow);
-    }
-
-    async getTypesByFile(filePath: string): Promise<TypeNode[]> {
-        const rows = await this.db.all<TypeNodeRow>(
-            'SELECT * FROM nodes_type WHERE file_path = $1',
-            filePath,
-        );
-        return rows.map(this.mapTypeNodeRow);
-    }
-
     async getVariablesByFile(filePath: string): Promise<VariableNode[]> {
         const rows = await this.db.all<VariableNodeRow>(
             'SELECT * FROM nodes_variable WHERE file_path = $1',
@@ -903,14 +859,6 @@ export class CortexRepository {
         return rows.map(this.mapReadsEdgeRow);
     }
 
-    async getReadsOf(targetId: string): Promise<ReadsEdge[]> {
-        const rows = await this.db.all<ReadsEdgeRow>(
-            'SELECT * FROM edges_reads WHERE target_id = $1',
-            targetId,
-        );
-        return rows.map(this.mapReadsEdgeRow);
-    }
-
     async getWritesFrom(sourceId: string): Promise<WritesEdge[]> {
         const rows = await this.db.all<WritesEdgeRow>(
             'SELECT * FROM edges_writes WHERE source_id = $1',
@@ -931,14 +879,6 @@ export class CortexRepository {
         const rows = await this.db.all<ReturnsEdgeRow>(
             'SELECT * FROM edges_returns WHERE source_id = $1',
             sourceId,
-        );
-        return rows.map(this.mapReturnsEdgeRow);
-    }
-
-    async getReturnsTo(targetId: string): Promise<ReturnsEdge[]> {
-        const rows = await this.db.all<ReturnsEdgeRow>(
-            'SELECT * FROM edges_returns WHERE target_id = $1',
-            targetId,
         );
         return rows.map(this.mapReturnsEdgeRow);
     }
@@ -1213,6 +1153,7 @@ export class CortexRepository {
             lineStart: number;
             lineEnd: number;
             kind: string;
+            isExported: boolean;
         }[]
     > {
         const rows = await this.db.all<SymbolRow>('SELECT * FROM symbols');
@@ -1223,6 +1164,7 @@ export class CortexRepository {
             lineStart: r.line_start,
             lineEnd: r.line_end,
             kind: r.kind,
+            isExported: Boolean(r.is_exported),
         }));
     }
 
@@ -1439,29 +1381,6 @@ export class CortexRepository {
         };
     }
 
-    private mapInterfaceNodeRow(row: InterfaceNodeRow): InterfaceNode {
-        return {
-            id: row.id,
-            name: row.name,
-            filePath: row.file_path,
-            lineStart: row.line_start,
-            lineEnd: row.line_end,
-            isExported: row.is_exported,
-        };
-    }
-
-    private mapTypeNodeRow(row: TypeNodeRow): TypeNode {
-        return {
-            id: row.id,
-            name: row.name,
-            kind: row.kind,
-            filePath: row.file_path,
-            lineStart: row.line_start,
-            lineEnd: row.line_end,
-            isExported: row.is_exported,
-        };
-    }
-
     private mapVariableNodeRow(row: VariableNodeRow): VariableNode {
         return {
             id: row.id,
@@ -1617,61 +1536,6 @@ export class CortexRepository {
         };
     }
 
-    // --- Single-item insert/get methods for topology tests ---
-
-    async insertFunction(node: FunctionNode): Promise<void> {
-        await this.insertFunctionNodes([node]);
-    }
-
-    async getFunction(id: string): Promise<FunctionNode | null> {
-        const rows = await this.db.all<FunctionNodeRow>(
-            'SELECT * FROM nodes_function WHERE id = $1',
-            id,
-        );
-        if (rows.length === 0) return null;
-        return this.mapFunctionNodeRow(rows[0]);
-    }
-
-    async insertClass(node: ClassNode): Promise<void> {
-        await this.insertClassNodes([node]);
-    }
-
-    async getClass(id: string): Promise<ClassNode | null> {
-        const rows = await this.db.all<ClassNodeRow>('SELECT * FROM nodes_class WHERE id = $1', id);
-        if (rows.length === 0) return null;
-        return this.mapClassNodeRow(rows[0]);
-    }
-
-    async insertMethod(node: MethodNode): Promise<void> {
-        await this.insertMethodNodes([node]);
-    }
-
-    async getMethod(id: string): Promise<MethodNode | null> {
-        const rows = await this.db.all<MethodNodeRow>(
-            'SELECT * FROM nodes_method WHERE id = $1',
-            id,
-        );
-        if (rows.length === 0) return null;
-        return this.mapMethodNodeRow(rows[0]);
-    }
-
-    async insertFileNode(node: {
-        id: string;
-        path: string;
-        extension: string;
-        language: string;
-        depthLevel: number;
-    }): Promise<void> {
-        await this.upsertFileNode({
-            id: node.id,
-            path: node.path,
-            hash: null,
-            language: node.language,
-            depthLevel: node.depthLevel,
-            lastIndexed: null,
-        });
-    }
-
     // --- Topology write-back methods ---
 
     async updateNodeMetrics(
@@ -1736,26 +1600,6 @@ export class CortexRepository {
         return rows.map((r) => this.mapMethodNodeRow(r));
     }
 
-    // --- Single-item flow CRUD ---
-
-    async insertFlow(flow: ExecutionFlow): Promise<void> {
-        await this.insertFlows([flow]);
-    }
-
-    async getFlow(id: string): Promise<ExecutionFlow | null> {
-        const rows = await this.db.all<CortexFlowRow>(
-            'SELECT * FROM cortex_flows WHERE id = $1',
-            id,
-        );
-        if (rows.length === 0) return null;
-        return this.mapCortexFlowRow(rows[0]) as ExecutionFlow;
-    }
-
-    async getAllFlows(): Promise<ExecutionFlow[]> {
-        const rows = await this.db.all<CortexFlowRow>('SELECT * FROM cortex_flows');
-        return rows.map((r) => this.mapCortexFlowRow(r) as ExecutionFlow);
-    }
-
     async deleteAllFlows(): Promise<void> {
         await this.db.run('DELETE FROM cortex_flows');
     }
@@ -1775,14 +1619,6 @@ export class CortexRepository {
             JSON.stringify(snapshot.topPagerank),
             JSON.stringify(snapshot.hotspotRankings),
         );
-    }
-
-    async getTemporalSnapshots(limit: number): Promise<TemporalSnapshot[]> {
-        const rows = await this.db.all<TemporalSnapshotRow>(
-            'SELECT * FROM cortex_temporal_snapshots ORDER BY timestamp DESC LIMIT $1',
-            limit,
-        );
-        return rows.map((r) => this.mapSnapshotRow(r));
     }
 
     // --- Private helpers ---
@@ -1818,30 +1654,6 @@ export class CortexRepository {
             nodeIds,
             hasAsync: row.has_async,
             hasErrorPath: row.has_error_path,
-        };
-    }
-
-    private mapSnapshotRow(row: TemporalSnapshotRow): TemporalSnapshot {
-        return {
-            commitHash: row.commit_hash,
-            timestamp: new Date(row.timestamp),
-            nodeCounts:
-                typeof row.node_counts === 'string'
-                    ? JSON.parse(row.node_counts)
-                    : (row.node_counts as Record<string, number>),
-            edgeCounts:
-                typeof row.edge_counts === 'string'
-                    ? JSON.parse(row.edge_counts)
-                    : (row.edge_counts as Record<string, number>),
-            communityHash: row.community_hash,
-            topPagerank:
-                typeof row.top_pagerank === 'string'
-                    ? JSON.parse(row.top_pagerank)
-                    : (row.top_pagerank as Array<{ nodeId: string; score: number }>),
-            hotspotRankings:
-                typeof row.hotspot_rankings === 'string'
-                    ? JSON.parse(row.hotspot_rankings)
-                    : (row.hotspot_rankings as Array<{ nodeId: string; score: number }>),
         };
     }
 }

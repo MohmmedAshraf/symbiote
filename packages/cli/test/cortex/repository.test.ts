@@ -371,8 +371,12 @@ describe('CortexRepository', () => {
             expect(from).toHaveLength(1);
             expect(from[0].field).toBe('length');
 
-            const of = await repo.getReadsOf('var:a.ts:x');
-            expect(of).toHaveLength(1);
+            const rows = await db.all(
+                'SELECT * FROM edges_reads WHERE target_id = $1',
+                'var:a.ts:x',
+            );
+            expect(rows).toHaveLength(1);
+            expect(rows[0].source_id).toBe('fn:a.ts:foo');
         });
 
         it('queries writes edges by source and target', async () => {
@@ -410,8 +414,12 @@ describe('CortexRepository', () => {
             expect(from).toHaveLength(1);
             expect(from[0].returnType).toBe('Result');
 
-            const to = await repo.getReturnsTo('type:a.ts:Result');
-            expect(to).toHaveLength(1);
+            const rows = await db.all(
+                'SELECT * FROM edges_returns WHERE target_id = $1',
+                'type:a.ts:Result',
+            );
+            expect(rows).toHaveLength(1);
+            expect(rows[0].source_id).toBe('fn:a.ts:foo');
         });
 
         it('deletes flow edges for a file', async () => {

@@ -54,10 +54,14 @@ describe('Stage 7: Intelligence (Batch)', () => {
             await engine.run({ rootDir: TOPOLOGY });
             await runStage6(repo, TOPOLOGY);
             await saveTemporalSnapshot(repo, 'test-commit-hash');
-            const snapshots = await repo.getTemporalSnapshots(1);
+            const snapshots = await db.all(
+                'SELECT * FROM cortex_temporal_snapshots ORDER BY timestamp DESC LIMIT $1',
+                1,
+            );
             expect(snapshots).toHaveLength(1);
-            expect(snapshots[0].commitHash).toBe('test-commit-hash');
-            expect(Object.keys(snapshots[0].nodeCounts).length).toBeGreaterThan(0);
+            expect(snapshots[0].commit_hash).toBe('test-commit-hash');
+            const nodeCounts = JSON.parse(snapshots[0].node_counts as string);
+            expect(Object.keys(nodeCounts).length).toBeGreaterThan(0);
         });
 
         it('includes top PageRank nodes', async () => {
@@ -65,8 +69,12 @@ describe('Stage 7: Intelligence (Batch)', () => {
             await engine.run({ rootDir: TOPOLOGY });
             await runStage6(repo, TOPOLOGY);
             await saveTemporalSnapshot(repo, 'snapshot-2');
-            const snapshots = await repo.getTemporalSnapshots(1);
-            expect(snapshots[0].topPagerank.length).toBeGreaterThan(0);
+            const snapshots = await db.all(
+                'SELECT * FROM cortex_temporal_snapshots ORDER BY timestamp DESC LIMIT $1',
+                1,
+            );
+            const topPagerank = JSON.parse(snapshots[0].top_pagerank as string);
+            expect(topPagerank.length).toBeGreaterThan(0);
         });
     });
 

@@ -309,17 +309,17 @@ CREATE INDEX IF NOT EXISTS idx_generic_symbol ON generic_instantiations(symbol_i
 
 const SYMBOLS_VIEW_DDL = `
 CREATE OR REPLACE VIEW symbols AS
-    SELECT id, name, file_path, line_start, line_end, 'function' AS kind FROM nodes_function
+    SELECT id, name, file_path, line_start, line_end, 'function' AS kind, is_exported FROM nodes_function
     UNION ALL
-    SELECT id, name, file_path, line_start, line_end, 'class' AS kind FROM nodes_class
+    SELECT id, name, file_path, line_start, line_end, 'class' AS kind, is_exported FROM nodes_class
     UNION ALL
-    SELECT id, name, file_path, line_start, line_end, 'method' AS kind FROM nodes_method
+    SELECT id, name, file_path, line_start, line_end, 'method' AS kind, false AS is_exported FROM nodes_method
     UNION ALL
-    SELECT id, name, file_path, line_start, line_end, 'interface' AS kind FROM nodes_interface
+    SELECT id, name, file_path, line_start, line_end, 'interface' AS kind, is_exported FROM nodes_interface
     UNION ALL
-    SELECT id, name, file_path, line_start, line_end, 'type' AS kind FROM nodes_type
+    SELECT id, name, file_path, line_start, line_end, 'type' AS kind, is_exported FROM nodes_type
     UNION ALL
-    SELECT id, name, file_path, line_start, line_end, 'variable' AS kind FROM nodes_variable;
+    SELECT id, name, file_path, line_start, line_end, 'variable' AS kind, is_exported FROM nodes_variable;
 `;
 
 export async function createCortexSchema(db: SymbioteDB): Promise<void> {
@@ -354,16 +354,16 @@ export async function refreshSymbolsTable(db: SymbioteDB): Promise<void> {
     }
     await db.exec(`
         CREATE TABLE symbols AS
-            SELECT id, name, file_path, line_start, line_end, 'function' AS kind FROM nodes_function
+            SELECT id, name, file_path, line_start, line_end, 'function' AS kind, is_exported FROM nodes_function
             UNION ALL
-            SELECT id, name, file_path, line_start, line_end, 'class' AS kind FROM nodes_class
+            SELECT id, name, file_path, line_start, line_end, 'class' AS kind, is_exported FROM nodes_class
             UNION ALL
-            SELECT id, name, file_path, line_start, line_end, 'method' AS kind FROM nodes_method
+            SELECT id, name, file_path, line_start, line_end, 'method' AS kind, false AS is_exported FROM nodes_method
             UNION ALL
-            SELECT id, name, file_path, line_start, line_end, 'interface' AS kind FROM nodes_interface
+            SELECT id, name, file_path, line_start, line_end, 'interface' AS kind, is_exported FROM nodes_interface
             UNION ALL
-            SELECT id, name, file_path, line_start, line_end, 'type' AS kind FROM nodes_type
+            SELECT id, name, file_path, line_start, line_end, 'type' AS kind, is_exported FROM nodes_type
             UNION ALL
-            SELECT id, name, file_path, line_start, line_end, 'variable' AS kind FROM nodes_variable;
+            SELECT id, name, file_path, line_start, line_end, 'variable' AS kind, is_exported FROM nodes_variable;
     `);
 }

@@ -196,7 +196,7 @@ describe('CortexEngine — Stages 6-7', () => {
 
     it('produces topology metadata after Stage 6', async () => {
         await engine.run({ rootDir: TOPOLOGY, maxStage: 6 });
-        const flows = await repo.getAllFlows();
+        const flows = await repo.getFlowsByEntryPoint('fn:controller.ts:handleGetUser');
         expect(flows.length).toBeGreaterThan(0);
     });
 

@@ -51,7 +51,7 @@ describe('Full Pipeline Integration (Stages 0-7)', () => {
 
     it('execution flows are stored', async () => {
         await engine.run({ rootDir: TOPOLOGY });
-        const flows = await repo.getAllFlows();
+        const flows = await repo.getFlowsByEntryPoint('fn:controller.ts:handleGetUser');
         expect(flows.length).toBeGreaterThan(0);
         for (const flow of flows) {
             expect(flow.entryPointId).toBeTruthy();
@@ -69,7 +69,10 @@ describe('Full Pipeline Integration (Stages 0-7)', () => {
 
     it('temporal snapshot is saved', async () => {
         await engine.run({ rootDir: TOPOLOGY });
-        const snapshots = await repo.getTemporalSnapshots(1);
+        const snapshots = await db.all(
+            'SELECT * FROM cortex_temporal_snapshots ORDER BY timestamp DESC LIMIT $1',
+            1,
+        );
         expect(snapshots.length).toBe(1);
     });
 

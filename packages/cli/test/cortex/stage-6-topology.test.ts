@@ -160,7 +160,8 @@ describe('Stage 6: Topology', () => {
     describe('runStage6 (full)', () => {
         it('writes community, pageRank, betweenness to node metadata', async () => {
             await runStage6(repo, TOPOLOGY);
-            const fn = await repo.getFunction('fn:controller.ts:handleGetUser');
+            const fns = await repo.getFunctionsByFile('controller.ts');
+            const fn = fns.find((f) => f.id === 'fn:controller.ts:handleGetUser');
             expect(fn?.community).not.toBeNull();
             expect(fn?.pageRank).not.toBeNull();
             expect(fn?.betweenness).not.toBeNull();
@@ -168,7 +169,7 @@ describe('Stage 6: Topology', () => {
 
         it('stores execution flows in cortex_flows table', async () => {
             await runStage6(repo, TOPOLOGY);
-            const flows = await repo.getAllFlows();
+            const flows = await repo.getFlowsByEntryPoint('fn:controller.ts:handleGetUser');
             expect(flows.length).toBeGreaterThan(0);
         });
 
@@ -186,9 +187,9 @@ describe('Stage 6: Topology', () => {
 
         it('clears previous flows before re-tracing', async () => {
             await runStage6(repo, TOPOLOGY);
-            const firstFlows = await repo.getAllFlows();
+            const firstFlows = await repo.getFlowsByEntryPoint('fn:controller.ts:handleGetUser');
             await runStage6(repo, TOPOLOGY, { force: true });
-            const secondFlows = await repo.getAllFlows();
+            const secondFlows = await repo.getFlowsByEntryPoint('fn:controller.ts:handleGetUser');
             expect(secondFlows.length).toBe(firstFlows.length);
         });
     });

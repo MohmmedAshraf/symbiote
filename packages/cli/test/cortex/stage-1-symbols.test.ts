@@ -48,15 +48,15 @@ describe('Stage 1: Symbols', () => {
     it('extracts interfaces', async () => {
         await runStage0(repo, CALLGRAPH);
         await runStage1(repo, CALLGRAPH);
-        const ifaces = await repo.getInterfacesByFile('types.ts');
-        expect(ifaces.some((i) => i.name === 'IUserService')).toBe(true);
+        const rows = await db.all('SELECT * FROM nodes_interface WHERE file_path = $1', 'types.ts');
+        expect(rows.some((i: Record<string, unknown>) => i.name === 'IUserService')).toBe(true);
     });
 
     it('extracts type aliases', async () => {
         await runStage0(repo, SIMPLE);
         await runStage1(repo, SIMPLE);
-        const types = await repo.getTypesByFile('types.ts');
-        expect(types.some((t) => t.name === 'UserRole')).toBe(true);
+        const rows = await db.all('SELECT * FROM nodes_type WHERE file_path = $1', 'types.ts');
+        expect(rows.some((t: Record<string, unknown>) => t.name === 'UserRole')).toBe(true);
     });
 
     it('marks exported symbols', async () => {
