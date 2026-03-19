@@ -54,10 +54,20 @@ function textResult(data: unknown): { type: 'text'; text: string } {
 }
 
 export function createMcpServer(ctx: ServerContext): { server: McpServer } {
-    const server = new McpServer({
-        name: 'symbiote',
-        version,
-    });
+    const server = new McpServer(
+        { name: 'symbiote', version },
+        {
+            instructions: [
+                'Symbiote provides code intelligence through graph analysis.',
+                'Search for these tools when:',
+                '- Before refactoring or renaming: get_impact, rename_symbol',
+                '- Understanding unfamiliar code: get_context_for_file, get_context_for_symbol',
+                '- Finding code by meaning: semantic_search',
+                '- Reviewing changes before commit: detect_changes',
+                '- Recording developer corrections: record_instruction',
+            ].join('\n'),
+        },
+    );
 
     let cachedImpact: ImpactAnalyzer | null = null;
     function getImpactAnalyzer(): ImpactAnalyzer {
@@ -69,7 +79,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_developer_dna',
-        "Returns the developer's coding style, preferences, and anti-patterns.",
+        "Get the developer's coding style and preferences. Call when unsure about conventions.",
         {
             category: z
                 .string()
@@ -87,7 +97,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'record_instruction',
-        'Record a developer correction or coding preference as DNA. Call this whenever the developer corrects your output, states a preference, or gives style guidance. The instruction will be learned and applied in future sessions.',
+        'When the developer corrects your style or preferences, call this so it persists across sessions.',
         {
             instruction: z
                 .string()
@@ -127,7 +137,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_project_overview',
-        "Returns the project's structure, stats, and health summary.",
+        'Get project structure, stats, and active constraints. Use when starting work on an unfamiliar area.',
         {},
         async () => ({
             content: [textResult(await handleGetProjectOverview(ctx))],
@@ -136,7 +146,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_context_for_file',
-        'Returns everything about a specific file: symbols, dependencies, dependents, constraints, decisions.',
+        'Before refactoring a file, call this to see all dependencies and dependents — prevents breaking downstream code.',
         {
             filePath: z.string().describe('The file path to get context for'),
         },
@@ -147,7 +157,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'query_graph',
-        'Query the code graph using SQL/PGQ or plain SQL. Accepts any read-only SELECT query against cortex tables and the code_graph property graph.',
+        'Advanced: raw SQL against the code graph. Prefer get_context_for_file or get_context_for_symbol for common lookups.',
         {
             query: z.string().describe('SQL or SQL/PGQ query (read-only SELECT only)'),
             type: z
@@ -178,7 +188,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'semantic_search',
-        'Natural language search over the codebase using vector embeddings.',
+        "Find code by meaning, not keywords. Use when looking for functionality but don't know exact names or locations.",
         {
             query: z.string().describe("Natural language description of what you're looking for"),
             limit: z.number().optional().default(10).describe('Maximum number of results'),
@@ -190,7 +200,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_health',
-        "Returns the project's health report: dead code, circular deps, orphans, violations.",
+        'Get actionable health issues: circular dependencies, dead code, coupling hotspots. Use before major changes.',
         {},
         async () => ({
             content: [textResult(await handleGetHealth(ctx))],
@@ -199,7 +209,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_impact',
-        'Analyze blast radius: what breaks if a given symbol changes. Returns affected nodes grouped by depth with confidence scores.',
+        'Before changing a shared function or class, see every file affected with confidence scores. Essential for safe refactoring.',
         {
             target: z
                 .string()
@@ -221,7 +231,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'detect_changes',
-        'Analyze uncommitted git changes: maps modified files to affected modules with risk assessment.',
+        'Map uncommitted git changes to affected modules with risk levels. Use before committing or creating PRs.',
         {},
         async () => {
             const result = await handleDetectChanges(
@@ -287,7 +297,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'find_patterns',
-        'Detect anti-patterns, architectural violations, and complexity hotspots within a scope',
+        'Detect anti-patterns and complexity hotspots in a scope. Use during code review or when investigating quality.',
         {
             scope: z.string().describe('Scope to search: file path, directory, or "all"'),
             kinds: z
@@ -321,7 +331,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_architecture',
-        'Get detected architectural layers, boundaries, dependency direction, and violation summary',
+        'Understand module structure: layers, boundaries, dependency violations. Use when working across module boundaries.',
         {},
         async () => {
             const result = await handleGetArchitecture(ctx.cortexRepo);
@@ -331,7 +341,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_context_for_symbol',
-        'Deep dive into one function, class, or method: callers, callees, type relationships, import references.',
+        'Deep dive into a function or class: callers, callees, type relationships. Use before modifying shared code.',
         {
             symbol: z
                 .string()
@@ -350,7 +360,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'rename_symbol',
-        'Graph-aware multi-file rename preview. Returns a diff — does NOT write to disk.',
+        "Safe rename across the codebase — shows every file that needs to change. Returns a preview, doesn't write.",
         {
             symbol: z.string().describe('Symbol name or ID to rename'),
             new_name: z.string().describe('New name for the symbol'),
@@ -372,7 +382,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_constraints',
-        'Returns active project constraints — rules the codebase enforces.',
+        'List active architectural rules scoped to a directory or the whole project.',
         {
             scope: z
                 .string()
@@ -389,7 +399,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'get_decisions',
-        'Returns architectural decisions — choices made with rationale.',
+        'List architectural decisions with rationale. Use to understand why something was built a certain way.',
         {
             scope: z
                 .string()
@@ -406,7 +416,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'propose_constraint',
-        'Propose a new project constraint. Status starts as "proposed" for developer review.',
+        'Suggest a new architectural rule for developer review.',
         {
             id: z.string().describe('Unique constraint ID (slug format, e.g. "no-raw-sql")'),
             content: z.string().describe('The constraint rule text'),
@@ -424,7 +434,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
 
     server.tool(
         'propose_decision',
-        'Record an architectural decision with rationale. Status starts as "proposed" for developer review.',
+        'Record an architectural decision with rationale for developer review.',
         {
             id: z
                 .string()

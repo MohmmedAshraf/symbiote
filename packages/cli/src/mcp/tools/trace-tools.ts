@@ -286,7 +286,7 @@ function textResult(data: unknown): { type: 'text'; text: string } {
 export function registerTraceTools(server: McpServer, repo: CortexRepository): void {
     server.tool(
         'trace_flow',
-        'Trace execution flow from an entry point through calls and data flows.',
+        'Follow execution from an entry point through call chains. Use when debugging or understanding how a feature works end-to-end.',
         {
             entryPoint: z.string().describe('Symbol ID or name to start tracing from'),
             maxDepth: z
@@ -322,7 +322,7 @@ export function registerTraceTools(server: McpServer, repo: CortexRepository): v
 
     server.tool(
         'trace_data',
-        'Trace data flow forward or backward from a symbol.',
+        'Track how data moves through the codebase from a symbol. Use when investigating data transformation bugs or tracing inputs to outputs.',
         {
             symbol: z.string().describe('Symbol ID or name to trace data flow from'),
             direction: z
@@ -346,7 +346,7 @@ export function registerTraceTools(server: McpServer, repo: CortexRepository): v
 
     server.tool(
         'find_implementations',
-        'Find all classes that implement an interface or extend a base class.',
+        'Find all classes implementing an interface or extending a base class. Use before modifying contracts to see every affected implementation.',
         {
             interfaceName: z.string().describe('Interface or base class name/ID'),
             includeIndirect: z
