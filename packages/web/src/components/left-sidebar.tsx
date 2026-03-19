@@ -14,13 +14,8 @@ const EVENT_COLORS: Record<string, string> = {
     'file:edit': '#facc15',
     'file:create': '#34d399',
     'node:reindexed': '#22d3ee',
-    'scan:complete': '#c084fc',
-    'dna:recorded': '#f472b6',
-    'dna:promoted': '#34d399',
-    'correction:detected': '#fb923c',
-    'context:cluster': '#818cf8',
-    'constraint:violated': '#f87171',
-    'impact:ripple': '#fbbf24',
+    'intelligence:finding': '#fb923c',
+    'intelligence:snapshot': '#c084fc',
 };
 
 export function LeftSidebar() {

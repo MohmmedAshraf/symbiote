@@ -66,13 +66,6 @@ export interface CortexGraphData {
     maxDepth: number;
 }
 
-export interface LayoutCortexNode extends CortexNode {
-    x: number;
-    y: number;
-    z: number;
-    depthBand: 'cortical' | 'subcortical' | 'deep';
-}
-
 export interface ExecutionFlow {
     id: string;
     name: string;
