@@ -160,7 +160,7 @@ describe('PreToolUseHandler (handlers/)', () => {
             expect(result.hookSpecificOutput!.additionalContext).toContain('query');
         });
 
-        it('includes impact warning when dependents exceed threshold', () => {
+        it('includes impact preview when dependents exist', () => {
             for (let i = 0; i < 6; i++) {
                 const callerId = `fn:src/caller${i}.ts:fn${i}`;
                 graph.addNode(callerId, {
@@ -181,20 +181,41 @@ describe('PreToolUseHandler (handlers/)', () => {
 
             const result = handler.handle(payload);
 
-            expect(result.hookSpecificOutput!.additionalContext).toContain('Impact warning');
-            expect(result.hookSpecificOutput!.additionalContext).toContain('dependents');
+            expect(result.hookSpecificOutput!.additionalContext).toContain('Impact preview');
+            expect(result.hookSpecificOutput!.additionalContext).toContain('Dependents affected');
         });
 
-        it('does not include impact warning when dependents are 5 or fewer', () => {
-            const payload: PreToolUsePayload = {
+        it('does not include impact warnings when no dependents', () => {
+            const g = new Graph({ multi: true, type: 'directed' });
+            g.addNode('file:src/solo.ts', {
+                type: 'file',
+                name: 'solo.ts',
+                filePath: 'src/solo.ts',
+            });
+            g.addNode('fn:src/solo.ts:doStuff', {
+                type: 'function',
+                name: 'doStuff',
+                filePath: 'src/solo.ts',
+                lineStart: 1,
+                lineEnd: 5,
+            });
+            g.addEdge('file:src/solo.ts', 'fn:src/solo.ts:doStuff', { type: 'contains' });
+
+            const h = new PreToolUseHandler({
+                graph: g,
+                projectRoot: '/project',
+                constraints: [],
+                attention,
+                dnaEngine,
+            });
+
+            const result = h.handle({
                 type: 'pre_tool_use',
                 tool_name: 'Edit',
-                tool_input: { file_path: '/project/src/auth.ts' },
-            };
+                tool_input: { file_path: '/project/src/solo.ts' },
+            });
 
-            const result = handler.handle(payload);
-
-            expect(result.hookSpecificOutput!.additionalContext).not.toContain('Impact warning');
+            expect(result.hookSpecificOutput!.additionalContext).not.toContain('Impact');
         });
 
         it('includes matching constraints', () => {
@@ -222,7 +243,7 @@ describe('PreToolUseHandler (handlers/)', () => {
     });
 
     describe('Write tool', () => {
-        it('includes impact warning when dependents exceed threshold', () => {
+        it('includes impact preview when dependents exist', () => {
             for (let i = 0; i < 6; i++) {
                 const callerId = `fn:src/caller${i}.ts:fn${i}`;
                 graph.addNode(callerId, {
@@ -243,7 +264,7 @@ describe('PreToolUseHandler (handlers/)', () => {
 
             const result = handler.handle(payload);
 
-            expect(result.hookSpecificOutput!.additionalContext).toContain('Impact warning');
+            expect(result.hookSpecificOutput!.additionalContext).toContain('Impact preview');
         });
     });
 
@@ -509,6 +530,58 @@ describe('PreToolUseHandler (handlers/)', () => {
 
             const ctx = result2.hookSpecificOutput?.additionalContext ?? '';
             expect(ctx).not.toContain('Blind spot');
+        });
+    });
+
+    describe('edit impact warnings', () => {
+        it('shows high-impact warning for files with >= 10 dependents', () => {
+            for (let i = 0; i < 10; i++) {
+                const callerId = `fn:src/caller${i}.ts:fn${i}`;
+                graph.addNode(callerId, {
+                    type: 'function',
+                    name: `fn${i}`,
+                    filePath: `src/caller${i}.ts`,
+                    lineStart: 1,
+                    lineEnd: 5,
+                });
+                graph.addEdge(callerId, 'fn:src/auth.ts:login', { type: 'calls' });
+            }
+
+            const result = handler.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('High-impact edit');
+            expect(ctx).toContain('After editing, verify');
+        });
+
+        it('stashes pre-edit symbols for PostToolUse diff', () => {
+            const preEditSymbols = new Map<
+                string,
+                { name: string; kind: string; lineStart: number; lineEnd: number }[]
+            >();
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [],
+                attention,
+                dnaEngine,
+                preEditSymbols,
+            });
+
+            h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            expect(preEditSymbols.has('src/auth.ts')).toBe(true);
+            const stashed = preEditSymbols.get('src/auth.ts')!;
+            expect(stashed.length).toBeGreaterThan(0);
+            expect(stashed[0].name).toBe('login');
         });
     });
 

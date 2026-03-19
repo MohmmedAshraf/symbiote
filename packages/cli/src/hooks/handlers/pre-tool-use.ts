@@ -10,6 +10,8 @@ export interface ConstraintRef {
     content: string;
 }
 
+type SymbolSnapshot = { name: string; kind: string; lineStart: number; lineEnd: number };
+
 export interface PreToolUseHandlerConfig {
     graph: GraphInstance;
     projectRoot: string;
@@ -17,11 +19,11 @@ export interface PreToolUseHandlerConfig {
     attention: AttentionSet;
     dnaEngine: DnaEngine;
     symbolCache?: SymbolCache;
+    preEditSymbols?: Map<string, SymbolSnapshot[]>;
 }
 
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write']);
 const PASSTHROUGH_TOOLS = new Set(['Glob', 'WebFetch', 'WebSearch']);
-const IMPACT_DEPENDENT_THRESHOLD = 5;
 
 export class PreToolUseHandler {
     private graph: GraphInstance;
@@ -30,6 +32,7 @@ export class PreToolUseHandler {
     private attention: AttentionSet;
     private dnaEngine: DnaEngine;
     private symbolCache?: SymbolCache;
+    private preEditSymbols?: Map<string, SymbolSnapshot[]>;
 
     constructor(config: PreToolUseHandlerConfig) {
         this.graph = config.graph;
@@ -38,6 +41,7 @@ export class PreToolUseHandler {
         this.attention = config.attention;
         this.dnaEngine = config.dnaEngine;
         this.symbolCache = config.symbolCache;
+        this.preEditSymbols = config.preEditSymbols;
     }
 
     handle(payload: PreToolUsePayload): HttpHookResponse {
@@ -147,14 +151,31 @@ export class PreToolUseHandler {
             }
         }
 
-        if (
-            (payload.tool_name === 'Edit' || payload.tool_name === 'Write') &&
-            dependents.length > IMPACT_DEPENDENT_THRESHOLD
-        ) {
-            lines.push('');
-            lines.push(
-                `Impact warning: ${dependents.length} dependents will be affected by changes to this file.`,
-            );
+        if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
+            this.stashPreEditSymbols(relativePath, symbols);
+
+            if (dependents.length >= 10) {
+                const topDeps = dependents
+                    .slice(0, 3)
+                    .filter((d) => this.graph.hasNode(d))
+                    .map((d) => String(this.graph.getNodeAttribute(d, 'name')))
+                    .join(', ');
+                lines.push('');
+                lines.push(
+                    `High-impact edit: ${path.basename(relativePath)} has ${dependents.length} dependents.`,
+                );
+                lines.push(`  Most critical: ${topDeps}`);
+                lines.push(`  After editing, verify at minimum: ${topDeps}`);
+            } else if (dependents.length > 0) {
+                const depNames = dependents
+                    .filter((d) => this.graph.hasNode(d))
+                    .map((d) => String(this.graph.getNodeAttribute(d, 'name')))
+                    .join(', ');
+                lines.push('');
+                lines.push('Impact preview:');
+                lines.push(`  Dependents affected: ${depNames}`);
+                lines.push('  After editing, verify these files still work correctly.');
+            }
         }
 
         return {
@@ -277,6 +298,22 @@ export class PreToolUseHandler {
                 additionalContext: lines.join('\n'),
             },
         };
+    }
+
+    private stashPreEditSymbols(relativePath: string, symbols: string[]): void {
+        if (!this.preEditSymbols) return;
+        const stashed: SymbolSnapshot[] = [];
+        for (const sym of symbols) {
+            if (!this.graph.hasNode(sym)) continue;
+            const attrs = this.graph.getNodeAttributes(sym);
+            stashed.push({
+                name: String(attrs.name ?? ''),
+                kind: String(attrs.type ?? ''),
+                lineStart: Number(attrs.lineStart ?? 0),
+                lineEnd: Number(attrs.lineEnd ?? 0),
+            });
+        }
+        this.preEditSymbols.set(relativePath, stashed);
     }
 
     private collectSymbols(fileNodeId: string): string[] {
