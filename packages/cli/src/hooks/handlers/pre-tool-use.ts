@@ -3,6 +3,7 @@ import type { PreToolUsePayload, HttpHookResponse } from '#hooks/types.js';
 import type { GraphInstance } from '#core/types.js';
 import type { AttentionSet } from '#hooks/attention.js';
 import type { DnaEngine } from '#dna/engine.js';
+import type { SymbolCache } from '#hooks/symbol-cache.js';
 
 export interface ConstraintRef {
     scope: string;
@@ -15,10 +16,11 @@ export interface PreToolUseHandlerConfig {
     constraints: ConstraintRef[];
     attention: AttentionSet;
     dnaEngine: DnaEngine;
+    symbolCache?: SymbolCache;
 }
 
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write']);
-const PASSTHROUGH_TOOLS = new Set(['Grep', 'Glob', 'WebFetch', 'WebSearch']);
+const PASSTHROUGH_TOOLS = new Set(['Glob', 'WebFetch', 'WebSearch']);
 const IMPACT_DEPENDENT_THRESHOLD = 5;
 
 export class PreToolUseHandler {
@@ -27,6 +29,7 @@ export class PreToolUseHandler {
     private constraints: ConstraintRef[];
     private attention: AttentionSet;
     private dnaEngine: DnaEngine;
+    private symbolCache?: SymbolCache;
 
     constructor(config: PreToolUseHandlerConfig) {
         this.graph = config.graph;
@@ -34,11 +37,16 @@ export class PreToolUseHandler {
         this.constraints = config.constraints;
         this.attention = config.attention;
         this.dnaEngine = config.dnaEngine;
+        this.symbolCache = config.symbolCache;
     }
 
     handle(payload: PreToolUsePayload): HttpHookResponse {
         if (PASSTHROUGH_TOOLS.has(payload.tool_name)) {
             return {};
+        }
+
+        if (payload.tool_name === 'Grep') {
+            return this.handleGrepTool(payload);
         }
 
         if (payload.tool_name === 'Agent') {
@@ -155,6 +163,22 @@ export class PreToolUseHandler {
                 additionalContext: lines.join('\n'),
             },
         };
+    }
+
+    private handleGrepTool(payload: PreToolUsePayload): HttpHookResponse {
+        const pattern = String(payload.tool_input?.pattern ?? '');
+        if (this.symbolCache) {
+            const match = this.symbolCache.get(pattern);
+            if (match) {
+                return {
+                    hookSpecificOutput: {
+                        hookEventName: 'PreToolUse',
+                        additionalContext: `Graph match: "${pattern}" is defined in ${match.filePath}:${match.line} (${match.kind})`,
+                    },
+                };
+            }
+        }
+        return {};
     }
 
     private handleAgentTool(): HttpHookResponse {

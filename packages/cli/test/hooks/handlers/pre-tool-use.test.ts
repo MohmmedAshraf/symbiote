@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Graph from 'graphology';
 import { PreToolUseHandler } from '#hooks/handlers/pre-tool-use.js';
 import { AttentionSet } from '#hooks/attention.js';
+import { SymbolCache } from '#hooks/symbol-cache.js';
 import type { PreToolUsePayload } from '#hooks/types.js';
 import type { DnaEngine } from '#dna/engine.js';
 
@@ -294,16 +295,44 @@ describe('PreToolUseHandler (handlers/)', () => {
     });
 
     describe('Grep tool', () => {
-        it('returns empty response', () => {
+        it('returns empty response when no symbol match', () => {
             const payload: PreToolUsePayload = {
                 type: 'pre_tool_use',
                 tool_name: 'Grep',
-                tool_input: { pattern: 'login' },
+                tool_input: { pattern: 'TODO|FIXME' },
             };
 
             const result = handler.handle(payload);
 
             expect(result).toEqual({});
+        });
+
+        it('augments with graph context when pattern matches a known symbol', () => {
+            const cache = new SymbolCache();
+            cache.set('createMcpServer', {
+                filePath: 'src/mcp/server.ts',
+                line: 56,
+                kind: 'function',
+            });
+
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [],
+                attention,
+                dnaEngine,
+                symbolCache: cache,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Grep',
+                tool_input: { pattern: 'createMcpServer' },
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Graph match');
+            expect(ctx).toContain('src/mcp/server.ts:56');
         });
     });
 
