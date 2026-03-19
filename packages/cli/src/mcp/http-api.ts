@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { ServerContext } from './context.js';
+import { parseFile } from '#core/parser.js';
 import type { EventBus } from '#events/bus.js';
 import type { SymbioteEvent } from '#events/types.js';
 import { EVENT_TYPES } from '#events/types.js';
@@ -619,6 +620,8 @@ export async function handleHookRequest(
                 constraints,
                 attention: ctx.attention,
                 dnaEngine: ctx.dnaEngine,
+                symbolCache: ctx.symbolCache,
+                preEditSymbols: ctx.preEditSymbols,
             });
             result = handler.handle(body as unknown as PreToolUsePayload);
         } else if (pathname === '/internal/hooks/post-tool-use') {
@@ -635,6 +638,8 @@ export async function handleHookRequest(
                 eventBus: ctx.eventBus,
                 graph: ctx.graphology,
                 sessionId,
+                preEditSymbols: ctx.preEditSymbols,
+                parseFileFn: parseFile,
             });
             result = await handler.handle(body as unknown as PostToolUsePayload);
         } else if (pathname === '/internal/hooks/post-tool-use-failure') {

@@ -54,7 +54,12 @@ function makeDnaEngine(): DnaEngine {
 }
 
 function makeAttention(): AttentionSet {
-    return { touchFile: vi.fn() } as unknown as AttentionSet;
+    return {
+        touchFile: vi.fn(),
+        hasDelivered: vi.fn().mockReturnValue(false),
+        markDelivered: vi.fn(),
+        getFile: vi.fn().mockReturnValue(undefined),
+    } as unknown as AttentionSet;
 }
 
 describe('Hook integration', () => {
