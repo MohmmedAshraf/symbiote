@@ -364,4 +364,123 @@ describe('PostToolUseHandler (handlers/)', () => {
             expect(attention.getSymbol('fn:src/auth.ts:login')).toBeDefined();
         });
     });
+
+    describe('symbol diff feedback', () => {
+        let preEditSymbols: Map<
+            string,
+            { name: string; kind: string; lineStart: number; lineEnd: number }[]
+        >;
+
+        beforeEach(() => {
+            preEditSymbols = new Map();
+        });
+
+        function makeHandlerWithSymbolDiff(
+            parseResult:
+                | { name: string; type: string; lineStart: number; lineEnd: number }[]
+                | null,
+        ): PostToolUseHandler {
+            return new PostToolUseHandler({
+                projectRoot: '/projects/my-app',
+                onReindexFile: async () => {},
+                onFullRescan: async () => {},
+                sessionStore,
+                attention,
+                eventBus,
+                graph,
+                sessionId: SESSION_ID,
+                preEditSymbols,
+                parseFileFn: parseResult
+                    ? () => ({
+                          filePath: 'src/auth.ts',
+                          language: 'typescript',
+                          nodes: parseResult.map((n) => ({
+                              id: `fn:src/auth.ts:${n.name}`,
+                              ...n,
+                              filePath: 'src/auth.ts',
+                          })),
+                          edges: [],
+                      })
+                    : () => null,
+            });
+        }
+
+        it('returns symbol diff when symbols change after edit', async () => {
+            preEditSymbols.set('src/auth.ts', [
+                { name: 'login', kind: 'function', lineStart: 1, lineEnd: 10 },
+            ]);
+
+            const h = makeHandlerWithSymbolDiff([
+                { name: 'login', type: 'function', lineStart: 1, lineEnd: 15 },
+                { name: 'logout', type: 'function', lineStart: 17, lineEnd: 25 },
+            ]);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/projects/my-app/src/auth.ts' },
+                tool_output: 'ok',
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(result.hookSpecificOutput?.hookEventName).toBe('PostToolUse');
+            expect(ctx).toContain('Modified: login');
+            expect(ctx).toContain('Added: logout');
+        });
+
+        it('returns empty when no pre-edit symbols stashed', async () => {
+            const h = makeHandlerWithSymbolDiff([
+                { name: 'login', type: 'function', lineStart: 1, lineEnd: 10 },
+            ]);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/projects/my-app/src/auth.ts' },
+                tool_output: 'ok',
+            });
+
+            expect(result).toEqual({});
+        });
+
+        it('reports removed symbols', async () => {
+            preEditSymbols.set('src/auth.ts', [
+                { name: 'login', kind: 'function', lineStart: 1, lineEnd: 10 },
+                { name: 'register', kind: 'function', lineStart: 12, lineEnd: 20 },
+            ]);
+
+            const h = makeHandlerWithSymbolDiff([
+                { name: 'login', type: 'function', lineStart: 1, lineEnd: 10 },
+            ]);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/projects/my-app/src/auth.ts' },
+                tool_output: 'ok',
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Removed: register');
+        });
+
+        it('returns empty when symbols unchanged', async () => {
+            preEditSymbols.set('src/auth.ts', [
+                { name: 'login', kind: 'function', lineStart: 1, lineEnd: 10 },
+            ]);
+
+            const h = makeHandlerWithSymbolDiff([
+                { name: 'login', type: 'function', lineStart: 1, lineEnd: 10 },
+            ]);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: { file_path: '/projects/my-app/src/auth.ts' },
+                tool_output: 'ok',
+            });
+
+            expect(result).toEqual({});
+        });
+    });
 });

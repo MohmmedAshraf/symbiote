@@ -3,8 +3,11 @@ import type { PostToolUsePayload, HttpHookResponse } from '#hooks/types.js';
 import type { SessionStore } from '#hooks/session-store.js';
 import type { AttentionSet } from '#hooks/attention.js';
 import type { GraphInstance } from '#core/types.js';
+import type { ParseResult } from '#core/parser.js';
 import { EventBus } from '#events/bus.js';
 import { createEvent } from '#events/types.js';
+
+type SymbolSnapshot = { name: string; kind: string; lineStart: number; lineEnd: number };
 
 export interface PostToolUseHandlerConfig {
     projectRoot: string;
@@ -15,6 +18,8 @@ export interface PostToolUseHandlerConfig {
     eventBus: EventBus;
     graph: GraphInstance;
     sessionId: string;
+    preEditSymbols?: Map<string, SymbolSnapshot[]>;
+    parseFileFn?: (filePath: string) => ParseResult | null;
 }
 
 const FILE_READ_TOOLS = new Set(['Read']);
@@ -49,15 +54,13 @@ export class PostToolUseHandler {
 
     async handle(payload: PostToolUsePayload): Promise<HttpHookResponse> {
         try {
-            await this.processPayload(payload);
+            return await this.processPayload(payload);
         } catch {
-            // Hooks must never fail
+            return {};
         }
-
-        return {};
     }
 
-    private async processPayload(payload: PostToolUsePayload): Promise<void> {
+    private async processPayload(payload: PostToolUsePayload): Promise<HttpHookResponse> {
         const { tool_name, tool_input } = payload;
 
         if (FILE_WRITE_TOOLS.has(tool_name)) {
@@ -84,8 +87,18 @@ export class PostToolUseHandler {
                     filePath: relativePath,
                     symbolsAffected: symbolIds,
                 });
+
+                const feedback = this.buildSymbolDiffFeedback(relativePath);
+                if (feedback) {
+                    return {
+                        hookSpecificOutput: {
+                            hookEventName: 'PostToolUse',
+                            additionalContext: feedback,
+                        },
+                    };
+                }
             }
-            return;
+            return {};
         }
 
         if (FILE_READ_TOOLS.has(tool_name)) {
@@ -104,7 +117,7 @@ export class PostToolUseHandler {
                     filePath: relativePath,
                 });
             }
-            return;
+            return {};
         }
 
         if (tool_name === 'Bash') {
@@ -119,7 +132,7 @@ export class PostToolUseHandler {
                 toolName: tool_name,
                 event: 'tool:use',
             });
-            return;
+            return {};
         }
 
         await this.config.sessionStore.recordObservation({
@@ -128,5 +141,67 @@ export class PostToolUseHandler {
             toolName: tool_name,
             event: 'tool:use',
         });
+        return {};
     }
+
+    private buildSymbolDiffFeedback(relativePath: string): string | null {
+        const preSymbols = this.config.preEditSymbols?.get(relativePath);
+        this.config.preEditSymbols?.delete(relativePath);
+        if (!preSymbols || !this.config.parseFileFn) return null;
+
+        try {
+            const absolutePath = path.join(this.config.projectRoot, relativePath);
+            const parsed = this.config.parseFileFn(absolutePath);
+            if (!parsed) return null;
+
+            const newSymbols = parsed.nodes
+                .filter((n) => n.type !== 'file')
+                .map((n) => ({
+                    name: n.name,
+                    kind: n.type,
+                    lineStart: n.lineStart,
+                    lineEnd: n.lineEnd,
+                }));
+
+            return buildSymbolDiff(preSymbols, newSymbols, relativePath);
+        } catch {
+            return null;
+        }
+    }
+}
+
+function buildSymbolDiff(
+    oldSymbols: SymbolSnapshot[],
+    newSymbols: SymbolSnapshot[],
+    filePath: string,
+): string | null {
+    const oldMap = new Map(oldSymbols.map((s) => [`${s.name}:${s.kind}`, s]));
+    const newMap = new Map(newSymbols.map((s) => [`${s.name}:${s.kind}`, s]));
+
+    const added = newSymbols.filter((s) => !oldMap.has(`${s.name}:${s.kind}`));
+    const removed = oldSymbols.filter((s) => !newMap.has(`${s.name}:${s.kind}`));
+    const modified = newSymbols.filter((s) => {
+        const old = oldMap.get(`${s.name}:${s.kind}`);
+        return old && (old.lineStart !== s.lineStart || old.lineEnd !== s.lineEnd);
+    });
+
+    if (added.length === 0 && removed.length === 0 && modified.length === 0) {
+        return null;
+    }
+
+    const lines: string[] = [`Symbol changes in ${path.basename(filePath)}:`];
+    for (const s of modified) {
+        const old = oldMap.get(`${s.name}:${s.kind}`)!;
+        lines.push(
+            `  Modified: ${s.name} (was lines ${old.lineStart}-${old.lineEnd}, now ${s.lineStart}-${s.lineEnd})`,
+        );
+    }
+    for (const s of added) {
+        lines.push(`  Added: ${s.name} (${s.kind}, lines ${s.lineStart}-${s.lineEnd})`);
+    }
+    for (const s of removed) {
+        lines.push(`  Removed: ${s.name} (${s.kind})`);
+    }
+
+    return lines.join('\n');
 }
