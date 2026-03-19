@@ -148,20 +148,26 @@ export class AttentionSet {
         return this.files.get(filePath)?.communityId;
     }
 
-    activeCluster(): { communityId: number; filesRead: number } | null {
+    activeCluster(): { communityId: number; filesRead: number; totalFiles: number } | null {
         const counts = new Map<number, number>();
+        const totals = new Map<number, number>();
         for (const entry of this.files.values()) {
             if (entry.communityId !== undefined) {
                 counts.set(entry.communityId, (counts.get(entry.communityId) ?? 0) + 1);
+                totals.set(entry.communityId, (totals.get(entry.communityId) ?? 0) + 1);
             }
         }
-        let best: { communityId: number; filesRead: number } | null = null;
+        let best: { communityId: number; filesRead: number; totalFiles: number } | null = null;
         for (const [communityId, filesRead] of counts) {
             if (filesRead >= 3 && (best === null || filesRead > best.filesRead)) {
-                best = { communityId, filesRead };
+                best = { communityId, filesRead, totalFiles: totals.get(communityId) ?? filesRead };
             }
         }
         return best;
+    }
+
+    blindSpotsInCommunity(_communityId: number, allCommunityFiles: string[]): string[] {
+        return allCommunityFiles.filter((f) => !this.files.has(f));
     }
 
     getDiscoveries(): number {

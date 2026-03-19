@@ -115,6 +115,8 @@ export class SessionStartHandler {
             }
         }
 
+        lines.push("Use get_context_for_file to restore context for files you're working on.");
+
         return {
             hookSpecificOutput: {
                 hookEventName: 'SessionStart',
@@ -154,6 +156,8 @@ export class SessionStartHandler {
             return this.cachedHealth.report;
         }
 
-        return this.health.analyze();
+        const report = await this.health.analyze();
+        this.cachedHealth = { report, timestamp: Date.now() };
+        return report;
     }
 }

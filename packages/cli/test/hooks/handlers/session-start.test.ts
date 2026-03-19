@@ -272,6 +272,13 @@ describe('SessionStartHandler', () => {
             expect(ctx).toContain('Focus area:');
         });
 
+        it('includes tool restore directive', async () => {
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'compact' });
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('get_context_for_file');
+        });
+
         it('handles missing snapshot gracefully', async () => {
             const handler = makeHandler();
             const result = await handler.handle({ sessionId: 'no-snapshot', source: 'compact' });
@@ -279,6 +286,7 @@ describe('SessionStartHandler', () => {
             expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
             expect(ctx).toContain('Session restored');
+            expect(ctx).toContain('get_context_for_file');
         });
     });
 

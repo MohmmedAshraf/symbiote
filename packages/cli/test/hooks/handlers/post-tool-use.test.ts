@@ -7,6 +7,7 @@ import { createDatabase, type SymbioteDB } from '#storage/db.js';
 import { SessionStore } from '#hooks/session-store.js';
 import type { PostToolUsePayload } from '#hooks/types.js';
 import type { SymbioteEvent } from '#events/types.js';
+import type { DnaEntry } from '#dna/types.js';
 
 function buildGraph(): InstanceType<typeof Graph> {
     const graph = new Graph({ multi: true, type: 'directed' });
@@ -424,6 +425,7 @@ describe('PostToolUseHandler (handlers/)', () => {
 
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
             expect(result.hookSpecificOutput?.hookEventName).toBe('PostToolUse');
+            expect(ctx).toContain('Edit applied.');
             expect(ctx).toContain('Modified: login');
             expect(ctx).toContain('Added: logout');
         });
@@ -477,6 +479,120 @@ describe('PostToolUseHandler (handlers/)', () => {
                 type: 'post_tool_use',
                 tool_name: 'Edit',
                 tool_input: { file_path: '/projects/my-app/src/auth.ts' },
+                tool_output: 'ok',
+            });
+
+            expect(result).toEqual({});
+        });
+    });
+
+    describe('DNA violation detection', () => {
+        function makeDnaEntry(content: string, pattern?: string): DnaEntry {
+            return {
+                frontmatter: {
+                    id: content.slice(0, 10),
+                    confidence: 0.8,
+                    source: 'explicit',
+                    status: 'approved',
+                    category: 'style',
+                    firstSeen: '2026-01-01',
+                    lastSeen: '2026-01-01',
+                    occurrences: 1,
+                    sessionIds: [],
+                    pattern,
+                },
+                content,
+            };
+        }
+
+        it('detects DNA violations when pattern matches edit content', async () => {
+            const h = new PostToolUseHandler({
+                projectRoot: '/projects/my-app',
+                onReindexFile: async () => {},
+                onFullRescan: async () => {},
+                sessionStore,
+                attention,
+                eventBus,
+                graph,
+                sessionId: SESSION_ID,
+                dnaEntries: [makeDnaEntry('No console.log in production', 'console\\.log')],
+            });
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/projects/my-app/src/auth.ts',
+                    new_string: 'console.log("debug");',
+                },
+                tool_output: 'ok',
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('DNA violation');
+            expect(ctx).toContain('No console.log');
+        });
+
+        it('returns empty when no DNA entries', async () => {
+            const result = await handler.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/projects/my-app/src/auth.ts',
+                    new_string: 'console.log("debug");',
+                },
+                tool_output: 'ok',
+            });
+
+            expect(result).toEqual({});
+        });
+
+        it('returns empty when no patterns match', async () => {
+            const h = new PostToolUseHandler({
+                projectRoot: '/projects/my-app',
+                onReindexFile: async () => {},
+                onFullRescan: async () => {},
+                sessionStore,
+                attention,
+                eventBus,
+                graph,
+                sessionId: SESSION_ID,
+                dnaEntries: [makeDnaEntry('No console.log', 'console\\.log')],
+            });
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/projects/my-app/src/auth.ts',
+                    new_string: '    const x = 1;',
+                },
+                tool_output: 'ok',
+            });
+
+            expect(result).toEqual({});
+        });
+
+        it('skips entries without patterns', async () => {
+            const h = new PostToolUseHandler({
+                projectRoot: '/projects/my-app',
+                onReindexFile: async () => {},
+                onFullRescan: async () => {},
+                sessionStore,
+                attention,
+                eventBus,
+                graph,
+                sessionId: SESSION_ID,
+                dnaEntries: [makeDnaEntry('Prefer const over let')],
+            });
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/projects/my-app/src/auth.ts',
+                    new_string: 'let x = 1;',
+                },
                 tool_output: 'ok',
             });
 

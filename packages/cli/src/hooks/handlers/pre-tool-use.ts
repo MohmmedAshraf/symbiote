@@ -191,15 +191,53 @@ export class PreToolUseHandler {
         if (this.symbolCache) {
             const match = this.symbolCache.get(pattern);
             if (match) {
+                let context = `Graph match: "${pattern}" is defined in ${match.filePath}:${match.line} (${match.kind})`;
+
+                const callers = this.findCallers(pattern);
+                if (callers.length > 0) {
+                    context += `\n  Called by: ${callers.slice(0, 5).join(', ')}`;
+                }
+
                 return {
                     hookSpecificOutput: {
                         hookEventName: 'PreToolUse',
-                        additionalContext: `Graph match: "${pattern}" is defined in ${match.filePath}:${match.line} (${match.kind})`,
+                        additionalContext: context,
                     },
                 };
             }
         }
         return {};
+    }
+
+    private findCallers(symbolName: string): string[] {
+        const callers: string[] = [];
+        const targetNodes: string[] = [];
+
+        this.graph.forEachNode((nodeId: string, attrs: Record<string, unknown>) => {
+            if (attrs.name === symbolName) {
+                targetNodes.push(nodeId);
+            }
+        });
+
+        for (const nodeId of targetNodes) {
+            this.graph.forEachInEdge(
+                nodeId,
+                (_edge: string, attrs: Record<string, unknown>, source: string) => {
+                    if (attrs.type !== 'contains') {
+                        const sourceAttrs = this.graph.getNodeAttributes(source);
+                        const file = sourceAttrs.filePath as string | undefined;
+                        const line = sourceAttrs.lineStart as number | undefined;
+                        if (file && line) {
+                            callers.push(`${path.basename(file)}:${line}`);
+                        } else if (file) {
+                            callers.push(path.basename(file));
+                        }
+                    }
+                },
+            );
+        }
+
+        return callers;
     }
 
     private handleAgentTool(): HttpHookResponse {

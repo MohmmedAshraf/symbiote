@@ -248,12 +248,34 @@ describe('AttentionSet', () => {
             expect(cluster).not.toBeNull();
             expect(cluster!.communityId).toBe(3);
             expect(cluster!.filesRead).toBe(3);
+            expect(cluster!.totalFiles).toBe(3);
         });
 
         it('should return null when no cluster has 3+ files', () => {
             attention.touchFile('src/a.ts', 'read', 1);
             attention.touchFile('src/b.ts', 'read', 2);
             expect(attention.activeCluster()).toBeNull();
+        });
+    });
+
+    describe('blindSpotsInCommunity', () => {
+        it('returns files not yet in attention set', () => {
+            attention.touchFile('src/mcp/server.ts', 'read', 3);
+            const allFiles = ['src/mcp/server.ts', 'src/mcp/index.ts', 'src/mcp/context.ts'];
+            const blind = attention.blindSpotsInCommunity(3, allFiles);
+            expect(blind).toEqual(['src/mcp/index.ts', 'src/mcp/context.ts']);
+        });
+
+        it('returns empty when all files are tracked', () => {
+            attention.touchFile('src/a.ts', 'read', 1);
+            attention.touchFile('src/b.ts', 'read', 1);
+            const blind = attention.blindSpotsInCommunity(1, ['src/a.ts', 'src/b.ts']);
+            expect(blind).toEqual([]);
+        });
+
+        it('returns all files when none are tracked', () => {
+            const blind = attention.blindSpotsInCommunity(1, ['src/a.ts', 'src/b.ts']);
+            expect(blind).toEqual(['src/a.ts', 'src/b.ts']);
         });
     });
 

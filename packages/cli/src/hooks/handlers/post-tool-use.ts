@@ -4,8 +4,10 @@ import type { SessionStore } from '#hooks/session-store.js';
 import type { AttentionSet } from '#hooks/attention.js';
 import type { GraphInstance } from '#core/types.js';
 import type { ParseResult } from '#core/parser.js';
+import type { DnaEntry } from '#dna/types.js';
 import { EventBus } from '#events/bus.js';
 import { createEvent } from '#events/types.js';
+import { checkDnaViolations } from '#hooks/dna-checker.js';
 
 type SymbolSnapshot = { name: string; kind: string; lineStart: number; lineEnd: number };
 
@@ -20,6 +22,7 @@ export interface PostToolUseHandlerConfig {
     sessionId: string;
     preEditSymbols?: Map<string, SymbolSnapshot[]>;
     parseFileFn?: (filePath: string) => ParseResult | null;
+    dnaEntries?: DnaEntry[];
 }
 
 const FILE_READ_TOOLS = new Set(['Read']);
@@ -88,12 +91,30 @@ export class PostToolUseHandler {
                     symbolsAffected: symbolIds,
                 });
 
-                const feedback = this.buildSymbolDiffFeedback(relativePath);
-                if (feedback) {
+                const parts: string[] = [];
+
+                const symbolFeedback = this.buildSymbolDiffFeedback(relativePath);
+                if (symbolFeedback) {
+                    parts.push(symbolFeedback);
+                }
+
+                const newContent = String(tool_input?.new_string ?? '');
+                if (newContent && this.config.dnaEntries) {
+                    const dnaIssue = checkDnaViolations(
+                        newContent,
+                        relativePath,
+                        this.config.dnaEntries,
+                    );
+                    if (dnaIssue) {
+                        parts.push(dnaIssue);
+                    }
+                }
+
+                if (parts.length > 0) {
                     return {
                         hookSpecificOutput: {
                             hookEventName: 'PostToolUse',
-                            additionalContext: feedback,
+                            additionalContext: parts.join('\n\n'),
                         },
                     };
                 }
@@ -259,7 +280,7 @@ function buildSymbolDiff(
         return null;
     }
 
-    const lines: string[] = [`Symbol changes in ${path.basename(filePath)}:`];
+    const lines: string[] = [`Edit applied. Symbol changes in ${path.basename(filePath)}:`];
     for (const s of modified) {
         const old = oldMap.get(`${s.name}:${s.kind}`)!;
         lines.push(

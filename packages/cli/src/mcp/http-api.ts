@@ -640,6 +640,7 @@ export async function handleHookRequest(
                 sessionId,
                 preEditSymbols: ctx.preEditSymbols,
                 parseFileFn: parseFile,
+                dnaEntries: ctx.dnaEngine.getActiveEntries(),
             });
             result = await handler.handle(body as unknown as PostToolUsePayload);
         } else if (pathname === '/internal/hooks/post-tool-use-failure') {

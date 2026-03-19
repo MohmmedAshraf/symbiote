@@ -18,6 +18,7 @@ export interface DnaFrontmatter {
     lastSeen: string;
     occurrences: number;
     sessionIds: string[];
+    pattern?: string;
 }
 
 export interface DnaEntry {
@@ -67,6 +68,7 @@ export function parseFrontmatter(
             ),
             occurrences: Number(frontmatter.occurrences ?? 1),
             sessionIds: (frontmatter.sessionIds as string[]) ?? [],
+            pattern: frontmatter.pattern ? String(frontmatter.pattern) : undefined,
         },
         content,
     };
@@ -93,6 +95,10 @@ export function serializeEntry(entry: DnaEntry): string {
         }
     } else {
         lines.push('sessionIds: []');
+    }
+
+    if (fm.pattern) {
+        lines.push(`pattern: "${fm.pattern}"`);
     }
 
     lines.push('---', '', entry.content, '');

@@ -355,6 +355,53 @@ describe('PreToolUseHandler (handlers/)', () => {
             expect(ctx).toContain('Graph match');
             expect(ctx).toContain('src/mcp/server.ts:56');
         });
+
+        it('includes Called by info when callers exist in graph', () => {
+            const g = new Graph({ multi: true, type: 'directed' });
+            g.addNode('fn:src/mcp/server.ts:createMcpServer', {
+                type: 'function',
+                name: 'createMcpServer',
+                filePath: 'src/mcp/server.ts',
+                lineStart: 56,
+                lineEnd: 100,
+            });
+            g.addNode('fn:src/mcp/http-api.ts:init', {
+                type: 'function',
+                name: 'init',
+                filePath: 'src/mcp/http-api.ts',
+                lineStart: 89,
+                lineEnd: 120,
+            });
+            g.addEdge('fn:src/mcp/http-api.ts:init', 'fn:src/mcp/server.ts:createMcpServer', {
+                type: 'calls',
+            });
+
+            const cache = new SymbolCache();
+            cache.set('createMcpServer', {
+                filePath: 'src/mcp/server.ts',
+                line: 56,
+                kind: 'function',
+            });
+
+            const h = new PreToolUseHandler({
+                graph: g,
+                projectRoot: '/project',
+                constraints: [],
+                attention,
+                dnaEngine,
+                symbolCache: cache,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Grep',
+                tool_input: { pattern: 'createMcpServer' },
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Called by');
+            expect(ctx).toContain('http-api.ts:89');
+        });
     });
 
     describe('Glob tool', () => {
