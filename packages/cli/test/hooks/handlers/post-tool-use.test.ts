@@ -483,4 +483,110 @@ describe('PostToolUseHandler (handlers/)', () => {
             expect(result).toEqual({});
         });
     });
+
+    describe('cluster awareness', () => {
+        function buildClusterGraph(): InstanceType<typeof Graph> {
+            const g = new Graph({ multi: true, type: 'directed' });
+            g.addNode('file:src/mcp/server.ts', {
+                type: 'file',
+                name: 'server.ts',
+                filePath: 'src/mcp/server.ts',
+                community: 3,
+            });
+            g.addNode('file:src/mcp/index.ts', {
+                type: 'file',
+                name: 'index.ts',
+                filePath: 'src/mcp/index.ts',
+                community: 3,
+            });
+            g.addNode('file:src/mcp/context.ts', {
+                type: 'file',
+                name: 'context.ts',
+                filePath: 'src/mcp/context.ts',
+                community: 3,
+            });
+            g.addNode('file:src/mcp/tools.ts', {
+                type: 'file',
+                name: 'tools.ts',
+                filePath: 'src/mcp/tools.ts',
+                community: 3,
+            });
+            return g;
+        }
+
+        function makeClusterHandler(
+            clusterGraph: InstanceType<typeof Graph>,
+            clusterAttention: AttentionSet,
+        ): PostToolUseHandler {
+            return new PostToolUseHandler({
+                projectRoot: '/projects/my-app',
+                onReindexFile: async () => {},
+                onFullRescan: async () => {},
+                sessionStore,
+                attention: clusterAttention,
+                eventBus,
+                graph: clusterGraph,
+                sessionId: SESSION_ID,
+            });
+        }
+
+        it('suggests cluster context when 3+ files from same community read', async () => {
+            const clusterGraph = buildClusterGraph();
+            const clusterAttention = new AttentionSet();
+
+            clusterAttention.touchFile('src/mcp/server.ts', 'read', 3);
+            clusterAttention.touchFile('src/mcp/index.ts', 'read', 3);
+
+            const h = makeClusterHandler(clusterGraph, clusterAttention);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/projects/my-app/src/mcp/context.ts' },
+                tool_output: 'file contents',
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('working in');
+            expect(ctx).toContain('mcp');
+        });
+
+        it('does not suggest cluster when fewer than 3 files read', async () => {
+            const clusterGraph = buildClusterGraph();
+            const clusterAttention = new AttentionSet();
+
+            clusterAttention.touchFile('src/mcp/server.ts', 'read', 3);
+
+            const h = makeClusterHandler(clusterGraph, clusterAttention);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/projects/my-app/src/mcp/index.ts' },
+                tool_output: 'file contents',
+            });
+
+            expect(result).toEqual({});
+        });
+
+        it('lists unread files in the cluster', async () => {
+            const clusterGraph = buildClusterGraph();
+            const clusterAttention = new AttentionSet();
+
+            clusterAttention.touchFile('src/mcp/server.ts', 'read', 3);
+            clusterAttention.touchFile('src/mcp/index.ts', 'read', 3);
+
+            const h = makeClusterHandler(clusterGraph, clusterAttention);
+
+            const result = await h.handle({
+                type: 'post_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/projects/my-app/src/mcp/context.ts' },
+                tool_output: 'file contents',
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('tools.ts');
+        });
+    });
 });

@@ -106,7 +106,15 @@ export class PostToolUseHandler {
                 typeof tool_input.file_path === 'string' ? tool_input.file_path : undefined;
             if (rawPath) {
                 const relativePath = toRelative(this.config.projectRoot, rawPath);
-                this.config.attention.touchFile(relativePath);
+
+                const fileNodeId = `file:${relativePath}`;
+                const communityId = this.config.graph.hasNode(fileNodeId)
+                    ? (this.config.graph.getNodeAttribute(fileNodeId, 'community') as
+                          | number
+                          | undefined)
+                    : undefined;
+
+                this.config.attention.touchFile(relativePath, 'read', communityId);
                 this.config.eventBus.emit(createEvent('file:read', { filePath: relativePath }));
 
                 await this.config.sessionStore.recordObservation({
@@ -116,6 +124,16 @@ export class PostToolUseHandler {
                     event: 'file:read',
                     filePath: relativePath,
                 });
+
+                const clusterFeedback = this.buildClusterFeedback(relativePath, communityId);
+                if (clusterFeedback) {
+                    return {
+                        hookSpecificOutput: {
+                            hookEventName: 'PostToolUse',
+                            additionalContext: clusterFeedback,
+                        },
+                    };
+                }
             }
             return {};
         }
@@ -142,6 +160,58 @@ export class PostToolUseHandler {
             event: 'tool:use',
         });
         return {};
+    }
+
+    private buildClusterFeedback(
+        relativePath: string,
+        communityId: number | undefined,
+    ): string | null {
+        const cluster = this.config.attention.activeCluster();
+        if (
+            !cluster ||
+            communityId !== cluster.communityId ||
+            this.config.attention.hasDelivered(relativePath, `cluster:${cluster.communityId}`)
+        ) {
+            return null;
+        }
+
+        this.config.attention.markDelivered(relativePath, `cluster:${cluster.communityId}`);
+
+        const communityFiles: string[] = [];
+        this.config.graph.forEachNode((nodeId: string, attrs: Record<string, unknown>) => {
+            if (attrs.community === cluster.communityId && nodeId.startsWith('file:')) {
+                communityFiles.push(nodeId.replace('file:', ''));
+            }
+        });
+
+        const unread = communityFiles.filter((f) => !this.config.attention.getFile(f));
+        if (unread.length === 0) return null;
+
+        const dirCounts = new Map<string, number>();
+        for (const f of communityFiles) {
+            const dir = path.dirname(f);
+            dirCounts.set(dir, (dirCounts.get(dir) ?? 0) + 1);
+        }
+        let bestDir = '';
+        let bestCount = 0;
+        for (const [dir, count] of dirCounts) {
+            if (count > bestCount) {
+                bestCount = count;
+                bestDir = dir;
+            }
+        }
+        const coverage = bestCount / communityFiles.length;
+        const moduleName =
+            coverage >= 0.6 ? `the ${path.basename(bestDir)} module` : 'a related code cluster';
+
+        const total = communityFiles.length;
+        const seen = total - unread.length;
+        const suggestion = unread.slice(0, 3).join(', ');
+
+        return [
+            `You're working in ${moduleName} (${seen} of ${total} files seen).`,
+            `  Not yet read: ${suggestion}`,
+        ].join('\n');
     }
 
     private buildSymbolDiffFeedback(relativePath: string): string | null {
