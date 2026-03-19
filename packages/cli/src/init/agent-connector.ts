@@ -85,12 +85,16 @@ export function connectAgent(agent: AgentInfo): {
 } {
     try {
         if (agent.id === 'claude-code') {
-            try {
-                execSync('claude mcp remove symbiote', { stdio: 'ignore' });
-            } catch {
-                // not registered yet
+            for (const scope of ['local', 'project', 'user']) {
+                try {
+                    execSync(`claude mcp remove symbiote -s ${scope}`, { stdio: 'ignore' });
+                } catch {
+                    // not registered in this scope
+                }
             }
-            execSync('claude mcp add symbiote -- npx -y symbiote-cli mcp', { stdio: 'ignore' });
+            execSync('claude mcp add -s user symbiote -- npx -y symbiote-cli mcp', {
+                stdio: 'ignore',
+            });
             return {
                 success: true,
                 message: 'MCP server added to Claude Code (stdio)',
@@ -275,11 +279,6 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
         hooks['UserPromptSubmit'] = [
             {
                 hooks: [
-                    {
-                        type: 'prompt',
-                        prompt: 'Analyze if this message contains a coding correction or preference. Message: $ARGUMENTS\nRespond JSON only: {"is_instruction":boolean,"type":"correction|preference|reinforcement|none","instruction":"extracted or null","anti_pattern":"what to avoid or null"}',
-                        model: 'claude-haiku-4-5-20251001',
-                    },
                     {
                         type: 'http',
                         url: `${base}/user-prompt-submit`,

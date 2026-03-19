@@ -180,6 +180,15 @@ describe('SessionStartHandler', () => {
             expect(ctx).toContain('[Symbiote] Project: myapp');
             expect(ctx).toContain('5 files');
         });
+
+        it('includes record_instruction guidance', async () => {
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('record_instruction');
+            expect(ctx).toContain('do NOT use your own memory system');
+        });
     });
 
     describe('hookEventName', () => {

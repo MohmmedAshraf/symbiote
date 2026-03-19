@@ -217,6 +217,7 @@ async function handleGetHealthApi(ctx: ServerContext, res: ServerResponse): Prom
                 ('constraintDescription' in item ? item.constraintDescription : null) ??
                 ('chain' in item ? item.chain.join(' \u2192 ') : null) ??
                 ('node' in item ? item.node.name : null) ??
+                ('kind' in item ? `${item.filePath} (${item.kind})` : null) ??
                 String(item),
             filePath:
                 ('filePath' in item ? item.filePath : null) ??
@@ -638,7 +639,7 @@ export async function handleHookRequest(
             });
             result = await handler.handle(body as unknown as PostToolUseFailurePayload);
         } else if (pathname === '/internal/hooks/user-prompt-submit') {
-            const handler = new UserPromptSubmitHandler({ dnaEngine: ctx.dnaEngine });
+            const handler = new UserPromptSubmitHandler();
             result = await handler.handle(body as unknown as UserPromptSubmitPayload);
         } else if (pathname === '/internal/hooks/subagent-start') {
             const constraints = await getConstraints(ctx);

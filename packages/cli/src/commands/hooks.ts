@@ -162,10 +162,14 @@ export async function cmdHookSessionStart(): Promise<void> {
     }
 
     const serverRunning = await new Promise<boolean>((resolve) => {
-        const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 }, (res) => {
-            res.resume();
-            resolve(res.statusCode === 200);
-        });
+        const req = http.get(
+            `http://127.0.0.1:${port}/internal/health`,
+            { timeout: 2000 },
+            (res) => {
+                res.resume();
+                resolve(res.statusCode === 200);
+            },
+        );
         req.on('error', () => resolve(false));
         req.on('timeout', () => {
             req.destroy();
@@ -211,6 +215,11 @@ export async function cmdHookSessionStart(): Promise<void> {
         if (dnaRules) {
             lines.push(`DNA: ${dnaRules}`);
         }
+        lines.push(
+            'When the developer gives you instructions, corrections, preferences,' +
+                ' or style guidance (in any language), use the record_instruction MCP' +
+                ' tool to record them as DNA — do NOT use your own memory system.',
+        );
 
         const output = JSON.stringify({
             hookSpecificOutput: {

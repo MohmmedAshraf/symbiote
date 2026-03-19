@@ -60,6 +60,12 @@ export class SessionStartHandler {
             lines.push(`Constraints: ${constraintText}`);
         }
 
+        lines.push(
+            'When the developer gives you instructions, corrections, preferences,' +
+                ' or style guidance (in any language), use the record_instruction MCP' +
+                ' tool to record them as DNA — do NOT use your own memory system.',
+        );
+
         if (source === 'compact') {
             const snapshot = await this.sessionStore.getSnapshot(sessionId);
             if (snapshot) {
