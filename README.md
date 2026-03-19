@@ -40,7 +40,8 @@ They're complementary. Use CLAUDE.md for explicit instructions your AI should al
 ## Quick Start
 
 ```bash
-npx symbiote-cli install
+npm install -g symbiote-cli
+symbiote install
 ```
 
 One command. Auto-detects your installed editors (Claude Code, Cursor, Windsurf, Copilot, OpenCode), registers the MCP server globally for each, and sets up 9 Claude Code hooks + the `/symbiote-init` skill. Run it once.
@@ -205,7 +206,7 @@ Every tool call is observed and correlated with the code graph — not raw text 
 symbiote serve
 ```
 
-Open `localhost:3333`. Your project's brain — a 3D neural graph of your entire codebase. Nodes are files, functions, classes. Edges are calls, imports, dependencies. Color-coded by module cluster. Sized by PageRank importance.
+Open the URL printed in your terminal. Your project's brain — a 3D neural graph of your entire codebase. Nodes are files, functions, classes. Edges are calls, imports, dependencies. Color-coded by module cluster. Sized by PageRank importance.
 
 **It reacts in real time.** When your AI reads a file, the node glows. When it edits, the node pulses bright. When it navigates between files, impulses fire along the edges. You're watching your AI think.
 
@@ -368,7 +369,7 @@ Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship w
 | `symbiote install`      | One-time global setup for all detected editors |
 | `symbiote scan`         | Rescan codebase (incremental)                  |
 | `symbiote scan --force` | Full rescan, ignore cache                      |
-| `symbiote serve`        | MCP server + web UI at localhost:3333          |
+| `symbiote serve`        | MCP server + web UI (port auto-assigned)       |
 | `symbiote mcp`          | MCP server only (stdio, for editors)           |
 | `symbiote dna`          | View and manage developer DNA                  |
 | `symbiote impact`       | Analyze impact of working changes              |

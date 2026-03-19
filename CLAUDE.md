@@ -83,7 +83,7 @@ Bonds with your AI coding tools, giving them a brain that understands your proje
 symbiote install           # Install globally (MCP + hooks + /symbiote-init skill)
 symbiote scan              # Rescan codebase (incremental)
 symbiote scan --force      # Full rescan
-symbiote serve             # MCP server + web UI (localhost:3333)
+symbiote serve             # MCP server + web UI (port auto-assigned)
 symbiote mcp               # MCP server only (stdio, for editors)
 symbiote dna               # View/manage developer DNA
 symbiote impact            # Analyze impact of working changes
