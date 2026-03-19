@@ -5,6 +5,7 @@ import { HybridSearch } from '#core/search.js';
 import { buildGraphFromDb } from '#core/graph-builder.js';
 import { IntentStore } from '#brain/intent.js';
 import { HealthEngine } from '#brain/health/index.js';
+import type { HealthReport } from '#brain/health/index.js';
 import { DnaStorage } from '#dna/storage.js';
 import { DnaEngine } from '#dna/engine.js';
 import { EventBus } from '#events/bus.js';
@@ -17,6 +18,7 @@ import { detectLanguage } from '#core/languages.js';
 import { SessionStore } from '#hooks/session-store.js';
 import { AttentionSet } from '#hooks/attention.js';
 import { BrainMetricsEngine } from '#brain/metrics.js';
+import { SymbolCache } from '#hooks/symbol-cache.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
@@ -43,6 +45,12 @@ export interface ServerContext {
     sessionStore: SessionStore;
     attention: AttentionSet;
     metrics: BrainMetricsEngine;
+    preEditSymbols: Map<
+        string,
+        { name: string; kind: string; lineStart: number; lineEnd: number }[]
+    >;
+    symbolCache: SymbolCache;
+    cachedHealth: { report: HealthReport; timestamp: number } | null;
     onReindexFile: (relativePath: string) => void;
     onFullRescan: () => void;
     rootDir: string;
@@ -83,6 +91,34 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const sessionStore = new SessionStore(options.db);
     const attention = new AttentionSet();
     const metrics = new BrainMetricsEngine(graphology, attention);
+
+    const symbolCache = new SymbolCache();
+
+    const rebuildSymbolCache = (): void => {
+        const topNodes: {
+            name: string;
+            filePath: string;
+            lineStart: number;
+            kind: string;
+            pagerank: number;
+        }[] = [];
+        graphology.forEachNode((nodeId, attrs) => {
+            const pagerank = attrs.pagerank as number | undefined;
+            if (attrs.type !== 'file' && pagerank !== undefined && pagerank > 0) {
+                topNodes.push({
+                    name: (attrs.name as string | undefined) ?? nodeId,
+                    filePath: (attrs.filePath as string | undefined) ?? '',
+                    lineStart: (attrs.lineStart as number | undefined) ?? 0,
+                    kind: (attrs.type as string | undefined) ?? 'unknown',
+                    pagerank,
+                });
+            }
+        });
+        topNodes.sort((a, b) => b.pagerank - a.pagerank);
+        symbolCache.rebuild(topNodes.slice(0, 200));
+    };
+
+    rebuildSymbolCache();
 
     let metricsTimer: ReturnType<typeof setTimeout> | null = null;
     const METRICS_DEBOUNCE_MS = 500;
@@ -216,6 +252,12 @@ export async function createServerContext(options: ServerContextOptions): Promis
 
     startFileWatcher();
 
+    eventBus.on('node:reindexed', () => {
+        rebuildSymbolCache();
+    });
+
+    search.warm().catch(() => {});
+
     return {
         db: options.db,
         repo,
@@ -233,6 +275,9 @@ export async function createServerContext(options: ServerContextOptions): Promis
         sessionStore,
         attention,
         metrics,
+        preEditSymbols: new Map(),
+        symbolCache,
+        cachedHealth: null,
         onReindexFile: (relativePath: string): void => {
             pendingReindex.add(relativePath);
             scheduleDrain();
