@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import type { BrainMetrics } from './brain-metrics';
+import { DEFAULT_BRAIN_METRICS } from './brain-metrics';
+import { api } from './api';
 
 export interface SymbioteEvent {
     type: string;
@@ -20,6 +23,7 @@ interface UseSymbioteEventsReturn {
     lastEvent: SymbioteEvent | null;
     connectionState: ConnectionState;
     eventCount: number;
+    brainMetrics: BrainMetrics;
 }
 
 const IDLE_TIMEOUT_MS = 30_000;
@@ -30,6 +34,7 @@ export function useSymbioteEvents(): UseSymbioteEventsReturn {
     const [lastEvent, setLastEvent] = useState<SymbioteEvent | null>(null);
     const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
     const [eventCount, setEventCount] = useState(0);
+    const [brainMetrics, setBrainMetrics] = useState<BrainMetrics>(DEFAULT_BRAIN_METRICS);
     const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const backoffMs = useRef(BACKOFF_BASE_MS);
@@ -54,12 +59,21 @@ export function useSymbioteEvents(): UseSymbioteEventsReturn {
             source.onopen = () => {
                 backoffMs.current = BACKOFF_BASE_MS;
                 resetIdleTimer();
+                api.brain
+                    .getMetrics()
+                    .then((m) => setBrainMetrics(m))
+                    .catch(() => {});
             };
 
             source.onmessage = (e) => {
                 try {
                     const event: SymbioteEvent = JSON.parse(e.data);
                     if (event.type === 'connected') return;
+                    if (event.type === 'brain:metrics') {
+                        setBrainMetrics(event.data.metadata as unknown as BrainMetrics);
+                        resetIdleTimer();
+                        return;
+                    }
                     setLastEvent(event);
                     setEventCount((c) => c + 1);
                     resetIdleTimer();
@@ -91,5 +105,5 @@ export function useSymbioteEvents(): UseSymbioteEventsReturn {
         };
     }, [resetIdleTimer]);
 
-    return { lastEvent, connectionState, eventCount };
+    return { lastEvent, connectionState, eventCount, brainMetrics };
 }

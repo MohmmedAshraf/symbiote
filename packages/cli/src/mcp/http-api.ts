@@ -59,6 +59,10 @@ export async function handleApiRequest(
         return await handleGetNodeContext(ctx, nodeId, res);
     }
 
+    if (pathname === '/api/brain/metrics' && req.method === 'GET') {
+        return handleGetBrainMetrics(ctx, res);
+    }
+
     if (pathname === '/api/health' && req.method === 'GET') {
         return await handleGetHealthApi(ctx, res);
     }
@@ -169,6 +173,11 @@ async function handleGetGraph(ctx: ServerContext, res: ServerResponse): Promise<
         const message = err instanceof Error ? err.message : String(err);
         return json(res, { error: message, nodes: [], edges: [] }, 500);
     }
+}
+
+function handleGetBrainMetrics(ctx: ServerContext, res: ServerResponse): boolean {
+    const snapshot = ctx.metrics.compute();
+    return json(res, snapshot);
 }
 
 async function handleGetNodeContext(

@@ -493,7 +493,6 @@ export class BrainRenderer {
 
         this.totalEvents++;
         this.targetVelocity = Math.min(120, this.targetVelocity * 0.4 + 30);
-        this.consciousness = Math.min(1.0, this.consciousness + 0.003);
 
         const color = lobe.color;
         this.fireRipple(lobe, color);

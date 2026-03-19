@@ -1,4 +1,5 @@
 import type { GraphData, NodeContext, HealthReport, DnaEntry } from './types';
+import type { BrainMetrics } from './brain-metrics';
 import type {
     CortexGraphData,
     CortexNodeContext,
@@ -75,6 +76,10 @@ export const api = {
         list: () => requestUnwrapped<IntelligenceFinding[]>('/findings'),
         forNode: (nodeId: string) =>
             requestUnwrapped<IntelligenceFinding[]>(`/findings/node/${encodeURIComponent(nodeId)}`),
+    },
+
+    brain: {
+        getMetrics: () => request<BrainMetrics>('/brain/metrics'),
     },
 
     dna: {

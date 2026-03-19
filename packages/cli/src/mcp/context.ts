@@ -16,6 +16,7 @@ import { createEvent } from '#events/types.js';
 import { detectLanguage } from '#core/languages.js';
 import { SessionStore } from '#hooks/session-store.js';
 import { AttentionSet } from '#hooks/attention.js';
+import { BrainMetricsEngine } from '#brain/metrics.js';
 import path from 'node:path';
 
 export interface ServerContextOptions {
@@ -41,6 +42,7 @@ export interface ServerContext {
     sessionTracker: SessionTracker;
     sessionStore: SessionStore;
     attention: AttentionSet;
+    metrics: BrainMetricsEngine;
     onReindexFile: (relativePath: string) => void;
     onFullRescan: () => void;
     rootDir: string;
@@ -80,9 +82,39 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const sessionTracker = new SessionTracker();
     const sessionStore = new SessionStore(options.db);
     const attention = new AttentionSet();
+    const metrics = new BrainMetricsEngine(graphology, attention);
+
+    let metricsTimer: ReturnType<typeof setTimeout> | null = null;
+    const METRICS_DEBOUNCE_MS = 500;
+
+    const emitMetrics = (): void => {
+        try {
+            const snapshot = metrics.compute();
+            eventBus.emit(
+                createEvent('brain:metrics', {
+                    metadata: snapshot as unknown as Record<string, unknown>,
+                }),
+            );
+        } catch {
+            // Metrics must never crash
+        }
+    };
+
+    const scheduleMetrics = (): void => {
+        if (metricsTimer) clearTimeout(metricsTimer);
+        metricsTimer = setTimeout(emitMetrics, METRICS_DEBOUNCE_MS);
+    };
 
     eventBus.on('*', (event) => {
         sessionTracker.processEvent(event);
+        if (
+            event.type === 'file:read' ||
+            event.type === 'file:edit' ||
+            event.type === 'file:create'
+        ) {
+            metrics.recordEvent(event.type);
+            scheduleMetrics();
+        }
     });
 
     const pendingReindex = new Set<string>();
@@ -200,6 +232,7 @@ export async function createServerContext(options: ServerContextOptions): Promis
         sessionTracker,
         sessionStore,
         attention,
+        metrics,
         onReindexFile: (relativePath: string): void => {
             pendingReindex.add(relativePath);
             scheduleDrain();

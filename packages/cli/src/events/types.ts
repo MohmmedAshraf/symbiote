@@ -5,6 +5,7 @@ export const EVENT_TYPES = [
     'node:reindexed',
     'intelligence:finding',
     'intelligence:snapshot',
+    'brain:metrics',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

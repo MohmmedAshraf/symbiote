@@ -66,11 +66,11 @@ export class PostToolUseHandler {
             if (rawPath) {
                 const relativePath = toRelative(this.config.projectRoot, rawPath);
                 await this.config.onReindexFile(relativePath);
-                this.config.attention.touchFile(relativePath);
+                this.config.attention.touchFile(relativePath, 'edit');
 
                 const symbolIds = collectSymbolIds(this.config.graph, `file:${relativePath}`);
                 for (const symId of symbolIds) {
-                    this.config.attention.touchSymbol(symId);
+                    this.config.attention.touchSymbol(symId, 'edit');
                 }
 
                 const eventType = tool_name === 'Write' ? 'file:create' : 'file:edit';

@@ -1,8 +1,11 @@
 import path from 'node:path';
 
+export type AttentionMode = 'read' | 'edit';
+
 export interface AttentionEntry {
     lastAccess: number;
     accessCount: number;
+    mode: AttentionMode;
 }
 
 export interface AttentionSnapshot {
@@ -17,24 +20,28 @@ export class AttentionSet {
     private files: Map<string, AttentionEntry> = new Map();
     private symbols: Map<string, AttentionEntry> = new Map();
     private tickCount: number = 0;
+    private discoveryCount: number = 0;
 
-    touchFile(filePath: string): void {
+    touchFile(filePath: string, mode: AttentionMode = 'read'): void {
         const entry = this.files.get(filePath);
         if (entry) {
             entry.lastAccess = this.tickCount;
             entry.accessCount += 1;
+            if (mode === 'edit') entry.mode = 'edit';
         } else {
-            this.files.set(filePath, { lastAccess: this.tickCount, accessCount: 1 });
+            this.discoveryCount++;
+            this.files.set(filePath, { lastAccess: this.tickCount, accessCount: 1, mode });
         }
     }
 
-    touchSymbol(symbolId: string): void {
+    touchSymbol(symbolId: string, mode: AttentionMode = 'read'): void {
         const entry = this.symbols.get(symbolId);
         if (entry) {
             entry.lastAccess = this.tickCount;
             entry.accessCount += 1;
+            if (mode === 'edit') entry.mode = 'edit';
         } else {
-            this.symbols.set(symbolId, { lastAccess: this.tickCount, accessCount: 1 });
+            this.symbols.set(symbolId, { lastAccess: this.tickCount, accessCount: 1, mode });
         }
     }
 
@@ -103,9 +110,26 @@ export class AttentionSet {
         };
     }
 
+    readFiles(): string[] {
+        return Array.from(this.files.entries())
+            .filter(([, e]) => e.mode === 'read')
+            .map(([fp]) => fp);
+    }
+
+    editedFiles(): string[] {
+        return Array.from(this.files.entries())
+            .filter(([, e]) => e.mode === 'edit')
+            .map(([fp]) => fp);
+    }
+
+    getDiscoveries(): number {
+        return this.discoveryCount;
+    }
+
     clear(): void {
         this.files.clear();
         this.symbols.clear();
         this.tickCount = 0;
+        this.discoveryCount = 0;
     }
 }
