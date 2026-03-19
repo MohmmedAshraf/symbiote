@@ -3,18 +3,8 @@ export const EVENT_TYPES = [
     'file:edit',
     'file:create',
     'node:reindexed',
-    'scan:complete',
-    'correction:detected',
-    'dna:recorded',
-    'dna:promoted',
-    'context:cluster',
-    'constraint:violated',
-    'impact:ripple',
-    'connection:restored',
-    'topology:complete',
     'intelligence:finding',
     'intelligence:snapshot',
-    'attention:updated',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

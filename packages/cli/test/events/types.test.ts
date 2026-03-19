@@ -20,14 +20,8 @@ describe('Event Types', () => {
             'file:edit',
             'file:create',
             'node:reindexed',
-            'scan:complete',
-            'correction:detected',
-            'dna:recorded',
-            'dna:promoted',
-            'context:cluster',
-            'constraint:violated',
-            'impact:ripple',
-            'connection:restored',
+            'intelligence:finding',
+            'intelligence:snapshot',
         ];
         for (const type of expected) {
             expect(EVENT_TYPES).toContain(type);
@@ -35,7 +29,7 @@ describe('Event Types', () => {
     });
 
     it('defaults optional data fields to undefined', () => {
-        const event = createEvent('scan:complete', {});
+        const event = createEvent('file:read', {});
         expect(event.data.filePath).toBeUndefined();
         expect(event.data.nodeIds).toBeUndefined();
         expect(event.data.toolName).toBeUndefined();
