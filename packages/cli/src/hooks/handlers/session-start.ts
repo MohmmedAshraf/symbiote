@@ -2,28 +2,31 @@ import type { HttpHookResponse } from '#hooks/types.js';
 import type { SessionStore } from '#hooks/session-store.js';
 import type { DnaEngine } from '#dna/engine.js';
 import type { ConstraintRef } from '#hooks/handlers/pre-tool-use.js';
+import type { HealthEngine, HealthReport } from '#brain/health/index.js';
+
+const HEALTH_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export interface SessionStartHandlerConfig {
     dnaEngine: DnaEngine;
     sessionStore: SessionStore;
     constraints: ConstraintRef[];
-    projectName: string;
-    fileCount: number;
+    health: HealthEngine;
+    cachedHealth: { report: HealthReport; timestamp: number } | null;
 }
 
 export class SessionStartHandler {
     private dnaEngine: DnaEngine;
     private sessionStore: SessionStore;
     private constraints: ConstraintRef[];
-    private projectName: string;
-    private fileCount: number;
+    private health: HealthEngine;
+    private cachedHealth: { report: HealthReport; timestamp: number } | null;
 
     constructor(config: SessionStartHandlerConfig) {
         this.dnaEngine = config.dnaEngine;
         this.sessionStore = config.sessionStore;
         this.constraints = config.constraints;
-        this.projectName = config.projectName;
-        this.fileCount = config.fileCount;
+        this.health = config.health;
+        this.cachedHealth = config.cachedHealth;
     }
 
     async handle(input: { sessionId: string; source: string }): Promise<HttpHookResponse> {
@@ -40,53 +43,75 @@ export class SessionStartHandler {
     }): Promise<HttpHookResponse> {
         const { sessionId, source } = input;
 
-        const activeEntries = this.dnaEngine.getActiveEntries().slice(0, 5);
-        const dnaRules = activeEntries.map((e) => e.content).join(', ');
+        if (source === 'compact') {
+            return this.buildCompactResponse(sessionId);
+        }
+
+        return this.buildStartupResponse();
+    }
+
+    private async buildStartupResponse(): Promise<HttpHookResponse> {
+        const lines: string[] = [];
+
+        lines.push(
+            'Symbiote is active. Hook responses on file operations include\n' +
+                'dependency analysis and impact previews — read and follow them.',
+        );
+
+        lines.push(
+            'When you need to understand code relationships, search for Symbiote MCP tools\n' +
+                '(get_impact, get_context_for_symbol, semantic_search, rename_symbol).',
+        );
+
+        const activeEntries = this.dnaEngine.getActiveEntries();
+        if (activeEntries.length > 0) {
+            const prose = activeEntries.map((e) => e.content).join(', ');
+            lines.push(`Developer style: ${prose}`);
+        }
 
         const activeConstraints = this.constraints.filter(
             (c) => c.scope === '*' || c.scope === 'global',
         );
-
-        const lines: string[] = [];
-
-        lines.push(`[Symbiote] Project: ${this.projectName} (${this.fileCount} files)`);
-
-        if (dnaRules) {
-            lines.push(`DNA: ${dnaRules}`);
-        }
-
         if (activeConstraints.length > 0) {
-            const constraintText = activeConstraints.map((c) => c.content).join(', ');
-            lines.push(`Constraints: ${constraintText}`);
+            const bulletLines = activeConstraints.map((c) => `  - ${c.content}`).join('\n');
+            lines.push(`Constraints:\n${bulletLines}`);
         }
 
-        lines.push(
-            'When the developer gives you instructions, corrections, preferences,' +
-                ' or style guidance (in any language), use the record_instruction MCP' +
-                ' tool to record them as DNA — do NOT use your own memory system.',
-        );
+        const healthAlerts = await this.getHealthAlerts();
+        if (healthAlerts) {
+            lines.push(healthAlerts);
+        }
 
-        if (source === 'compact') {
-            const snapshot = await this.sessionStore.getSnapshot(sessionId);
-            if (snapshot) {
-                try {
-                    const parsed = JSON.parse(snapshot) as {
-                        filesModified?: string[];
-                        attention?: string[];
-                    };
+        lines.push('When the developer corrects you, call record_instruction so it persists.');
 
-                    if (parsed.filesModified && parsed.filesModified.length > 0) {
-                        lines.push(
-                            `Files modified this session: ${parsed.filesModified.join(', ')}`,
-                        );
-                    }
+        return {
+            hookSpecificOutput: {
+                hookEventName: 'SessionStart',
+                additionalContext: lines.join('\n\n'),
+            },
+        };
+    }
 
-                    if (parsed.attention && parsed.attention.length > 0) {
-                        lines.push(`Active attention: ${parsed.attention.join(', ')}`);
-                    }
-                } catch {
-                    lines.push(snapshot);
+    private async buildCompactResponse(sessionId: string): Promise<HttpHookResponse> {
+        const lines: string[] = ['Session restored.'];
+
+        const snapshot = await this.sessionStore.getSnapshot(sessionId);
+        if (snapshot) {
+            try {
+                const parsed = JSON.parse(snapshot) as {
+                    filesModified?: string[];
+                    attention?: string[];
+                };
+
+                if (parsed.filesModified && parsed.filesModified.length > 0) {
+                    lines.push(`You were editing: ${parsed.filesModified.join(', ')}.`);
                 }
+
+                if (parsed.attention && parsed.attention.length > 0) {
+                    lines.push(`Focus area: ${parsed.attention.join(', ')}.`);
+                }
+            } catch {
+                // snapshot parse failure is non-fatal
             }
         }
 
@@ -96,5 +121,39 @@ export class SessionStartHandler {
                 additionalContext: lines.join('\n'),
             },
         };
+    }
+
+    private async getHealthAlerts(): Promise<string | null> {
+        try {
+            const report = await this.resolveHealthReport();
+            const alertLines: string[] = [];
+
+            if (report.circularDeps.length > 0) {
+                const count = report.circularDeps.length;
+                alertLines.push(`  - ${count} circular dependenc${count === 1 ? 'y' : 'ies'}`);
+            }
+
+            if (report.deadCode.length > 0) {
+                const count = report.deadCode.length;
+                alertLines.push(`  - ${count} dead function${count === 1 ? '' : 's'}`);
+            }
+
+            if (alertLines.length === 0) return null;
+
+            return `Health alerts:\n${alertLines.join('\n')}`;
+        } catch {
+            return null;
+        }
+    }
+
+    private async resolveHealthReport(): Promise<HealthReport> {
+        if (
+            this.cachedHealth !== null &&
+            Date.now() - this.cachedHealth.timestamp < HEALTH_CACHE_TTL_MS
+        ) {
+            return this.cachedHealth.report;
+        }
+
+        return this.health.analyze();
     }
 }

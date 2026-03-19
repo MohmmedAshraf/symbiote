@@ -130,20 +130,36 @@ describe('Session intelligence lifecycle integration', () => {
     });
 
     it('step 1 – SessionStart startup: returns project info and DNA context', async () => {
+        const mockHealth = {
+            analyze: vi.fn().mockResolvedValue({
+                score: 100,
+                categories: {
+                    constraints: { score: 100, weight: 0.3, issueCount: 0 },
+                    circularDeps: { score: 100, weight: 0.3, issueCount: 0 },
+                    deadCode: { score: 100, weight: 0.2, issueCount: 0 },
+                    coupling: { score: 100, weight: 0.2, issueCount: 0 },
+                },
+                constraintViolations: [],
+                descriptiveConstraints: [],
+                circularDeps: [],
+                deadCode: [],
+                couplingHotspots: [],
+                timestamp: new Date().toISOString(),
+            }),
+        };
         const handler = new SessionStartHandler({
             dnaEngine,
             sessionStore,
             constraints: [{ scope: 'global', content: 'No any types' }],
-            projectName: 'synapse',
-            fileCount: 120,
+            health: mockHealth as any,
+            cachedHealth: null,
         });
 
         const result = await handler.handle({ sessionId: SESSION_ID, source: 'startup' });
 
         const ctx = result.hookSpecificOutput?.additionalContext ?? '';
         expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
-        expect(ctx).toContain('[Symbiote] Project: synapse');
-        expect(ctx).toContain('120 files');
+        expect(ctx).toContain('Symbiote is active');
         expect(ctx).toContain('use single quotes');
         expect(ctx).toContain('No any types');
     });
@@ -334,19 +350,37 @@ describe('Session intelligence lifecycle integration', () => {
             }),
         );
 
+        const mockHealth = {
+            analyze: vi.fn().mockResolvedValue({
+                score: 100,
+                categories: {
+                    constraints: { score: 100, weight: 0.3, issueCount: 0 },
+                    circularDeps: { score: 100, weight: 0.3, issueCount: 0 },
+                    deadCode: { score: 100, weight: 0.2, issueCount: 0 },
+                    coupling: { score: 100, weight: 0.2, issueCount: 0 },
+                },
+                constraintViolations: [],
+                descriptiveConstraints: [],
+                circularDeps: [],
+                deadCode: [],
+                couplingHotspots: [],
+                timestamp: new Date().toISOString(),
+            }),
+        };
         const handler = new SessionStartHandler({
             dnaEngine,
             sessionStore,
             constraints: [],
-            projectName: 'synapse',
-            fileCount: 120,
+            health: mockHealth as any,
+            cachedHealth: null,
         });
 
         const result = await handler.handle({ sessionId: SESSION_ID, source: 'compact' });
 
         const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-        expect(ctx).toContain('Files modified this session: src/service.ts, src/api.ts');
-        expect(ctx).toContain('Active attention: src/service.ts');
+        expect(ctx).toContain('Session restored');
+        expect(ctx).toContain('src/service.ts');
+        expect(ctx).toContain('src/api.ts');
     });
 
     it('step 9 – SessionEnd: finalizes session and calls DNA lifecycle methods', async () => {

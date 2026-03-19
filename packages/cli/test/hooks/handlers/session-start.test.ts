@@ -5,6 +5,8 @@ import { createDatabase, type SymbioteDB } from '#storage/db.js';
 import type { DnaEngine } from '#dna/engine.js';
 import type { DnaEntry } from '#dna/types.js';
 import type { ConstraintRef } from '#hooks/handlers/pre-tool-use.js';
+import type { HealthEngine } from '#brain/health/index.js';
+import type { HealthReport } from '#brain/health/index.js';
 
 function makeDnaEntry(content: string): DnaEntry {
     return {
@@ -29,6 +31,31 @@ function makeDnaEngine(entries: DnaEntry[] = []): DnaEngine {
     } as unknown as DnaEngine;
 }
 
+function makeHealthReport(overrides: Partial<HealthReport> = {}): HealthReport {
+    return {
+        score: 100,
+        categories: {
+            constraints: { score: 100, weight: 0.3, issueCount: 0 },
+            circularDeps: { score: 100, weight: 0.3, issueCount: 0 },
+            deadCode: { score: 100, weight: 0.2, issueCount: 0 },
+            coupling: { score: 100, weight: 0.2, issueCount: 0 },
+        },
+        constraintViolations: [],
+        descriptiveConstraints: [],
+        circularDeps: [],
+        deadCode: [],
+        couplingHotspots: [],
+        timestamp: new Date().toISOString(),
+        ...overrides,
+    };
+}
+
+function makeHealthEngine(report?: HealthReport): HealthEngine {
+    return {
+        analyze: vi.fn().mockResolvedValue(report ?? makeHealthReport()),
+    } as unknown as HealthEngine;
+}
+
 describe('SessionStartHandler', () => {
     let db: SymbioteDB;
     let sessionStore: SessionStore;
@@ -50,8 +77,8 @@ describe('SessionStartHandler', () => {
         overrides: Partial<{
             dnaEntries: DnaEntry[];
             constraints: ConstraintRef[];
-            projectName: string;
-            fileCount: number;
+            health: HealthEngine;
+            cachedHealth: { report: HealthReport; timestamp: number } | null;
         }> = {},
     ): SessionStartHandler {
         const entries = overrides.dnaEntries ?? [];
@@ -59,24 +86,27 @@ describe('SessionStartHandler', () => {
             dnaEngine: makeDnaEngine(entries),
             sessionStore,
             constraints: overrides.constraints ?? constraints,
-            projectName: overrides.projectName ?? 'my-project',
-            fileCount: overrides.fileCount ?? 42,
+            health: overrides.health ?? makeHealthEngine(),
+            cachedHealth: overrides.cachedHealth !== undefined ? overrides.cachedHealth : null,
         });
     }
 
     describe('additionalContext content', () => {
-        it('includes project name and file count', async () => {
-            const handler = makeHandler({ projectName: 'synapse', fileCount: 100 });
-
+        it('includes Symbiote active preamble', async () => {
+            const handler = makeHandler();
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
-
-            expect(result.hookSpecificOutput?.additionalContext).toContain(
-                '[Symbiote] Project: synapse',
-            );
-            expect(result.hookSpecificOutput?.additionalContext).toContain('100 files');
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Symbiote is active');
         });
 
-        it('includes DNA rules as comma-separated list', async () => {
+        it('includes tool discovery prompt', async () => {
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('search for Symbiote MCP tools');
+        });
+
+        it('formats DNA as prose not bullet list', async () => {
             const handler = makeHandler({
                 dnaEntries: [
                     makeDnaEntry('use single quotes'),
@@ -87,12 +117,13 @@ describe('SessionStartHandler', () => {
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
 
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).toContain('DNA:');
+            expect(ctx).not.toMatch(/- \[style\]/);
+            expect(ctx).toContain('Developer style:');
             expect(ctx).toContain('use single quotes');
             expect(ctx).toContain('prefer const over let');
         });
 
-        it('includes global constraints', async () => {
+        it('includes global constraints as bulleted list', async () => {
             const handler = makeHandler({
                 constraints: [
                     { scope: 'global', content: 'No comments in code' },
@@ -118,67 +149,83 @@ describe('SessionStartHandler', () => {
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
             expect(ctx).toContain('Always use TypeScript');
         });
-    });
 
-    describe('compact source', () => {
-        it('includes snapshot data when source is compact', async () => {
-            await sessionStore.saveSnapshot(
-                'sess-1',
-                JSON.stringify({
-                    filesModified: ['src/auth.ts', 'src/db.ts'],
-                    attention: ['auth', 'database'],
-                }),
-            );
-
-            const handler = makeHandler();
-            const result = await handler.handle({ sessionId: 'sess-1', source: 'compact' });
-
-            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).toContain('Files modified this session: src/auth.ts, src/db.ts');
-            expect(ctx).toContain('Active attention: auth, database');
-        });
-
-        it('handles missing snapshot gracefully', async () => {
-            const handler = makeHandler();
-            const result = await handler.handle({ sessionId: 'no-snapshot', source: 'compact' });
-
-            expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
-            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).not.toContain('Files modified');
-            expect(ctx).not.toContain('Active attention');
-        });
-    });
-
-    describe('empty DNA and constraints', () => {
-        it('handles empty DNA gracefully', async () => {
-            const handler = makeHandler({ dnaEntries: [] });
-            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
-
-            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).not.toContain('DNA:');
-            expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
-        });
-
-        it('handles empty constraints gracefully', async () => {
-            const handler = makeHandler({ constraints: [] });
-            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
-
-            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).not.toContain('Constraints:');
-        });
-
-        it('still returns project info when DNA and constraints are empty', async () => {
-            const handler = makeHandler({
-                dnaEntries: [],
-                constraints: [],
-                projectName: 'myapp',
-                fileCount: 5,
+        it('includes health alerts when circular deps exist', async () => {
+            const report = makeHealthReport({
+                circularDeps: [{ chain: ['a', 'b', 'a'], filePaths: ['a.ts', 'b.ts'] }],
             });
+            const handler = makeHandler({ health: makeHealthEngine(report) });
+
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
 
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).toContain('[Symbiote] Project: myapp');
-            expect(ctx).toContain('5 files');
+            expect(ctx).toContain('Health alerts:');
+            expect(ctx).toContain('circular dependenc');
+        });
+
+        it('includes health alerts when dead code exists', async () => {
+            const report = makeHealthReport({
+                deadCode: [
+                    {
+                        node: {
+                            id: 'fn:unused',
+                            type: 'function',
+                            name: 'unusedFn',
+                            filePath: 'src/util.ts',
+                            lineStart: 1,
+                            lineEnd: 5,
+                            isExported: false,
+                        },
+                        reason: 'unreferenced',
+                    },
+                ],
+            });
+            const handler = makeHandler({ health: makeHealthEngine(report) });
+
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Health alerts:');
+            expect(ctx).toContain('dead function');
+        });
+
+        it('omits health alerts section when no issues', async () => {
+            const handler = makeHandler({ health: makeHealthEngine(makeHealthReport()) });
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Health alerts:');
+        });
+
+        it('uses cached health when fresh (under 5 min)', async () => {
+            const freshReport = makeHealthReport({
+                circularDeps: [{ chain: ['x', 'y', 'x'], filePaths: ['x.ts', 'y.ts'] }],
+            });
+            const cachedHealth = { report: freshReport, timestamp: Date.now() };
+            const healthEngine = makeHealthEngine();
+            const handler = makeHandler({ health: healthEngine, cachedHealth });
+
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+
+            expect(healthEngine.analyze).not.toHaveBeenCalled();
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Health alerts:');
+        });
+
+        it('re-runs health analysis when cache is stale (over 5 min)', async () => {
+            const staleReport = makeHealthReport();
+            const staleTimestamp = Date.now() - 6 * 60 * 1000;
+            const cachedHealth = { report: staleReport, timestamp: staleTimestamp };
+            const freshReport = makeHealthReport({
+                circularDeps: [{ chain: ['a', 'b', 'a'], filePaths: ['a.ts', 'b.ts'] }],
+            });
+            const healthEngine = makeHealthEngine(freshReport);
+            const handler = makeHandler({ health: healthEngine, cachedHealth });
+
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+
+            expect(healthEngine.analyze).toHaveBeenCalled();
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Health alerts:');
         });
 
         it('includes record_instruction guidance', async () => {
@@ -187,7 +234,67 @@ describe('SessionStartHandler', () => {
 
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
             expect(ctx).toContain('record_instruction');
-            expect(ctx).toContain('do NOT use your own memory system');
+        });
+    });
+
+    describe('compact source', () => {
+        it('shows session restored message with edited files', async () => {
+            await sessionStore.saveSnapshot(
+                'sess-1',
+                JSON.stringify({
+                    filesModified: ['src/auth.ts', 'src/db.ts'],
+                    attention: ['src/auth.ts'],
+                }),
+            );
+
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'compact' });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Session restored');
+            expect(ctx).toContain('src/auth.ts');
+            expect(ctx).toContain('src/db.ts');
+        });
+
+        it('shows focus area when attention is available', async () => {
+            await sessionStore.saveSnapshot(
+                'sess-1',
+                JSON.stringify({
+                    filesModified: ['src/auth.ts'],
+                    attention: ['src/auth.ts', 'src/db.ts'],
+                }),
+            );
+
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'compact' });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Focus area:');
+        });
+
+        it('handles missing snapshot gracefully', async () => {
+            const handler = makeHandler();
+            const result = await handler.handle({ sessionId: 'no-snapshot', source: 'compact' });
+
+            expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Session restored');
+        });
+    });
+
+    describe('empty DNA and constraints', () => {
+        it('omits Developer style line when DNA is empty', async () => {
+            const handler = makeHandler({ dnaEntries: [] });
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Developer style:');
+        });
+
+        it('omits Constraints section when constraints are empty', async () => {
+            const handler = makeHandler({ constraints: [] });
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Constraints:');
         });
     });
 
@@ -195,7 +302,6 @@ describe('SessionStartHandler', () => {
         it('sets hookEventName to SessionStart', async () => {
             const handler = makeHandler();
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
-
             expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
         });
     });
@@ -214,11 +320,26 @@ describe('SessionStartHandler', () => {
                 constraints: [],
                 projectName: 'test',
                 fileCount: 0,
+                health: makeHealthEngine(),
+                cachedHealth: null,
             });
 
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
 
             expect(result).toEqual({});
+        });
+
+        it('does not break when health analysis fails', async () => {
+            const failingHealth = {
+                analyze: vi.fn().mockRejectedValue(new Error('health failed')),
+            } as unknown as HealthEngine;
+
+            const handler = makeHandler({ health: failingHealth, cachedHealth: null });
+            const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
+
+            expect(result.hookSpecificOutput?.hookEventName).toBe('SessionStart');
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Health alerts:');
         });
     });
 });

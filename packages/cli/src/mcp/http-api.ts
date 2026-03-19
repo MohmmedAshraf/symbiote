@@ -699,15 +699,13 @@ export async function handleSessionStartRequest(
         const sessionId = searchParams.get('sessionId') ?? '';
 
         const constraints = await getConstraints(ctx);
-        const stats = await ctx.repo.getStats();
-        const projectName = path.basename(ctx.rootDir);
 
         const handler = new SessionStartHandler({
             dnaEngine: ctx.dnaEngine,
             sessionStore: ctx.sessionStore,
             constraints,
-            projectName,
-            fileCount: stats.files,
+            health: ctx.health,
+            cachedHealth: ctx.cachedHealth,
         });
 
         const result = await handler.handle({ sessionId, source });
