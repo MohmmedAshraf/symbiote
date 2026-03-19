@@ -26,9 +26,14 @@ export class DnaEngine {
         private embeddings?: EmbeddingModel,
     ) {}
 
-    captureInstruction(instruction: string, sessionId: string, source: DnaSource): DnaEntry {
-        const category = DnaEngine.classifyCategory(instruction);
-        const id = DnaEngine.generateId(category, instruction);
+    captureInstruction(
+        instruction: string,
+        sessionId: string,
+        source: DnaSource,
+        category?: DnaCategory,
+    ): DnaEntry {
+        const resolvedCategory = category ?? DnaEngine.classifyCategory(instruction);
+        const id = DnaEngine.generateId(resolvedCategory, instruction);
 
         const existing = this.storage.readEntry(id);
 
@@ -45,7 +50,7 @@ export class DnaEngine {
                 confidence: isExplicit ? EXPLICIT_CONFIDENCE : BASE_CONFIDENCE,
                 source,
                 status: isExplicit ? 'approved' : 'suggested',
-                category,
+                category: resolvedCategory,
                 firstSeen: today,
                 lastSeen: today,
                 occurrences: 1,

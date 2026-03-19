@@ -106,6 +106,12 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .describe(
                     'True if the developer explicitly asked to record this, false if inferred from a correction',
                 ),
+            category: z
+                .enum(['style', 'preferences', 'anti-patterns', 'decisions'])
+                .optional()
+                .describe(
+                    'Category for this instruction. Provide this so Symbiote does not have to guess.',
+                ),
         },
         async (input) => {
             const sid = input.sessionId || `session-${Date.now()}`;
@@ -113,6 +119,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 instruction: input.instruction,
                 sessionId: sid,
                 isExplicit: input.isExplicit,
+                category: input.category,
             });
             return { content: [textResult(result)] };
         },
