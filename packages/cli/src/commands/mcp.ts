@@ -10,16 +10,32 @@ import {
     clearPortFile,
 } from '#utils/config.js';
 import { createMcpServer } from '#mcp/server.js';
+import { createProxyMcpServer } from '#mcp/proxy-server.js';
 import { createServerContext } from '#mcp/context.js';
-import { handleHttpRequest } from './shared.js';
+import { handleHttpRequest, isPortServing } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function cmdMcp(): Promise<void> {
     const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
-    const http = await import('node:http');
 
     const projectRoot = process.cwd();
+    const port = getProjectPort(projectRoot);
+
+    const serverRunning = await isPortServing(port);
+
+    if (serverRunning) {
+        const { server } = createProxyMcpServer(port);
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+
+        process.on('SIGINT', () => {
+            process.exit(0);
+        });
+        return;
+    }
+
+    const http = await import('node:http');
     const brainDir = ensureBrainDir(projectRoot);
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
@@ -36,8 +52,6 @@ export async function cmdMcp(): Promise<void> {
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
-
-    const port = getProjectPort(projectRoot);
 
     const webDistDir = path.resolve(__dirname, '../../../../web/dist');
     const httpServer = http.createServer((req, res) => {

@@ -10,6 +10,7 @@ import {
     handleHookRequest,
     handleSessionStartRequest,
 } from '#mcp/http-api.js';
+import { handleMcpProxy } from '#mcp/proxy-handler.js';
 import type { createServerContext } from '#mcp/context.js';
 
 export type SymbioteDB = Awaited<ReturnType<typeof createDatabase>>;
@@ -86,6 +87,31 @@ export async function killSymbioteProcesses(): Promise<boolean> {
     }
 }
 
+export async function killProcessOnPort(port: number): Promise<void> {
+    const { execSync } = await import('node:child_process');
+    try {
+        const output = execSync(`lsof -ti:${port}`, { encoding: 'utf-8' }).trim();
+        if (!output) return;
+
+        const pids = output
+            .split('\n')
+            .map((p) => parseInt(p, 10))
+            .filter((pid) => pid && pid !== process.pid);
+
+        for (const pid of pids) {
+            try {
+                process.kill(pid, 'SIGTERM');
+            } catch {
+                // already dead
+            }
+        }
+
+        await new Promise((r) => setTimeout(r, 1500));
+    } catch {
+        // lsof returns non-zero when no matches
+    }
+}
+
 export async function createDatabaseWithRetry(dbPath: string): Promise<SymbioteDB> {
     try {
         return await createDatabase(dbPath);
@@ -144,6 +170,11 @@ export async function handleHttpRequest(
         return;
     }
 
+    if (url.pathname === '/internal/mcp-proxy' && req.method === 'POST') {
+        await handleMcpProxy(ctx, req, res);
+        return;
+    }
+
     if (url.pathname.startsWith('/internal/hooks/') && req.method === 'POST') {
         await handleHookRequest(ctx, url.pathname, req, res);
         return;
@@ -161,6 +192,12 @@ export async function handleHttpRequest(
 
     if (url.pathname.startsWith('/api/')) {
         if (await handleApiRequest(ctx, url.pathname, req, res)) return;
+    }
+
+    if (url.pathname.startsWith('/internal/')) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Not found' }));
+        return;
     }
 
     if (fs.existsSync(webDistDir)) {

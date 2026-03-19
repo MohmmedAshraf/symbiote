@@ -46,7 +46,7 @@ async function resolveSymbol(repo: CortexRepository, nameOrId: string): Promise<
     return null;
 }
 
-async function traceExecutionFlow(
+export async function traceExecutionFlow(
     repo: CortexRepository,
     entryPoint: string,
     maxDepth: number,
@@ -163,7 +163,7 @@ async function traceExecutionFlow(
     return steps;
 }
 
-async function traceDataFlow(
+export async function traceDataFlow(
     repo: CortexRepository,
     symbol: string,
     direction: 'forward' | 'backward',
@@ -232,7 +232,7 @@ async function traceDataFlow(
     return steps;
 }
 
-async function findImplementors(
+export async function findImplementors(
     repo: CortexRepository,
     interfaceName: string,
     includeIndirect: boolean,

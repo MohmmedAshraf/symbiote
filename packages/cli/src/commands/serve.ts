@@ -15,6 +15,7 @@ import { createServerContext } from '#mcp/context.js';
 import {
     createDatabaseWithRetry,
     isPortServing,
+    killProcessOnPort,
     openBrowser,
     handleHttpRequest,
 } from './shared.js';
@@ -32,16 +33,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
 
     const alreadyRunning = await isPortServing(port);
     if (alreadyRunning) {
-        const url = `http://localhost:${port}`;
-        p.intro(pc.bold('Symbiote') + pc.dim(' — Brain is alive'));
-        p.log.info(`${pc.dim('Web UI:')}  ${url}`);
-        if (!noOpen) {
-            p.outro(pc.dim('Opening browser...'));
-            openBrowser(url);
-        } else {
-            p.outro(pc.dim('Already running.'));
-        }
-        return;
+        await killProcessOnPort(port);
     }
 
     const brainDir = ensureBrainDir(projectRoot);
