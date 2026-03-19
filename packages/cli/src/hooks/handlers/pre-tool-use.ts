@@ -111,6 +111,24 @@ export class PreToolUseHandler {
                 const attrs = this.graph.getNodeAttributes(dep);
                 lines.push(`  - ${attrs.name} (${attrs.filePath})`);
             }
+
+            if (!this.attention.hasDelivered(relativePath, 'blind_spots')) {
+                const unreadDeps = dependents.filter((dep) => {
+                    if (!this.graph.hasNode(dep)) return false;
+                    const attrs = this.graph.getNodeAttributes(dep);
+                    const depFile = attrs.filePath as string | undefined;
+                    return depFile && !this.attention.getFile(depFile);
+                });
+
+                if (unreadDeps.length > 0) {
+                    const topUnread = this.graph.getNodeAttributes(unreadDeps[0]);
+                    lines.push('');
+                    lines.push(
+                        `Blind spot: ${topUnread.name} (${topUnread.filePath}) is a dependent you haven't read yet.`,
+                    );
+                    this.attention.markDelivered(relativePath, 'blind_spots');
+                }
+            }
         }
 
         if (matchingConstraints.length > 0) {

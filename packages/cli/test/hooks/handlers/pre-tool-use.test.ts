@@ -382,6 +382,107 @@ describe('PreToolUseHandler (handlers/)', () => {
         });
     });
 
+    describe('blind spot detection', () => {
+        it('shows blind spots for unread dependents', () => {
+            const g = buildGraph();
+            g.addNode('fn:src/api.ts:handleLogin', {
+                type: 'function',
+                name: 'handleLogin',
+                filePath: 'src/api.ts',
+                lineStart: 1,
+                lineEnd: 10,
+            });
+            g.addEdge('fn:src/api.ts:handleLogin', 'fn:src/auth.ts:login', { type: 'calls' });
+
+            const att = new AttentionSet();
+            const h = new PreToolUseHandler({
+                graph: g,
+                projectRoot: '/project',
+                constraints: [],
+                attention: att,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).toContain('Blind spot');
+            expect(ctx).toContain('handleLogin');
+        });
+
+        it('skips blind spots when dependents already read', () => {
+            const g = buildGraph();
+            g.addNode('fn:src/api.ts:handleLogin', {
+                type: 'function',
+                name: 'handleLogin',
+                filePath: 'src/api.ts',
+                lineStart: 1,
+                lineEnd: 10,
+            });
+            g.addEdge('fn:src/api.ts:handleLogin', 'fn:src/auth.ts:login', { type: 'calls' });
+
+            const att = new AttentionSet();
+            att.touchFile('src/api.ts');
+
+            const h = new PreToolUseHandler({
+                graph: g,
+                projectRoot: '/project',
+                constraints: [],
+                attention: att,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Blind spot');
+        });
+
+        it('only shows blind spot once per file (deliveredContext)', () => {
+            const g = buildGraph();
+            g.addNode('fn:src/api.ts:handleLogin', {
+                type: 'function',
+                name: 'handleLogin',
+                filePath: 'src/api.ts',
+                lineStart: 1,
+                lineEnd: 10,
+            });
+            g.addEdge('fn:src/api.ts:handleLogin', 'fn:src/auth.ts:login', { type: 'calls' });
+
+            const att = new AttentionSet();
+            const h = new PreToolUseHandler({
+                graph: g,
+                projectRoot: '/project',
+                constraints: [],
+                attention: att,
+                dnaEngine,
+            });
+
+            h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            const result2 = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Read',
+                tool_input: { file_path: '/project/src/auth.ts' },
+            });
+
+            const ctx = result2.hookSpecificOutput?.additionalContext ?? '';
+            expect(ctx).not.toContain('Blind spot');
+        });
+    });
+
     describe('attention tracking', () => {
         it('increments access count on repeated file reads', () => {
             const payload: PreToolUsePayload = {
