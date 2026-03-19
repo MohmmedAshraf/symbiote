@@ -648,7 +648,10 @@ export async function handleHookRequest(
             });
             result = await handler.handle(body as unknown as PostToolUseFailurePayload);
         } else if (pathname === '/internal/hooks/user-prompt-submit') {
-            const handler = new UserPromptSubmitHandler();
+            const handler = new UserPromptSubmitHandler({
+                search: ctx.search,
+                graph: ctx.graph,
+            });
             result = await handler.handle(body as unknown as UserPromptSubmitPayload);
         } else if (pathname === '/internal/hooks/subagent-start') {
             const constraints = await getConstraints(ctx);
