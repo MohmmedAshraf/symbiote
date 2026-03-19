@@ -164,7 +164,7 @@ describe('AttentionSet', () => {
 
     describe('toSnapshot', () => {
         it('serializes all tracked data', () => {
-            attention.touchFile('/src/auth.ts');
+            attention.touchFile('/src/auth.ts', 'edit');
             attention.touchSymbol('fn:src/auth.ts:login');
 
             const snapshot = attention.toSnapshot();
@@ -204,6 +204,67 @@ describe('AttentionSet', () => {
             expect(attention.getFile('/src/auth.ts')).toBeUndefined();
             expect(attention.getFile('/src/new.ts')).toBeDefined();
             expect(attention.getFile('/src/new.ts')!.lastAccess).toBe(0);
+        });
+    });
+
+    describe('deliveredContext tracking', () => {
+        it('should track delivered context per file', () => {
+            attention.touchFile('src/index.ts');
+            expect(attention.hasDelivered('src/index.ts', 'blind_spots')).toBe(false);
+            attention.markDelivered('src/index.ts', 'blind_spots');
+            expect(attention.hasDelivered('src/index.ts', 'blind_spots')).toBe(true);
+        });
+
+        it('should return false for unknown files', () => {
+            expect(attention.hasDelivered('unknown.ts', 'blind_spots')).toBe(false);
+        });
+
+        it('should not clear deliveredContext on repeated touchFile', () => {
+            attention.touchFile('src/index.ts');
+            attention.markDelivered('src/index.ts', 'blind_spots');
+            attention.touchFile('src/index.ts');
+            expect(attention.hasDelivered('src/index.ts', 'blind_spots')).toBe(true);
+        });
+
+        it('should clear deliveredContext on decay', () => {
+            attention.touchFile('src/index.ts');
+            attention.markDelivered('src/index.ts', 'blind_spots');
+            for (let i = 0; i < 51; i++) attention.tick();
+            expect(attention.hasDelivered('src/index.ts', 'blind_spots')).toBe(false);
+        });
+    });
+
+    describe('communityId tracking', () => {
+        it('should store communityId on touchFile', () => {
+            attention.touchFile('src/mcp/server.ts', 'read', 3);
+            expect(attention.getCommunityId('src/mcp/server.ts')).toBe(3);
+        });
+
+        it('should detect active cluster when 3+ files from same community', () => {
+            attention.touchFile('src/mcp/server.ts', 'read', 3);
+            attention.touchFile('src/mcp/index.ts', 'read', 3);
+            attention.touchFile('src/mcp/context.ts', 'read', 3);
+            const cluster = attention.activeCluster();
+            expect(cluster).not.toBeNull();
+            expect(cluster!.communityId).toBe(3);
+            expect(cluster!.filesRead).toBe(3);
+        });
+
+        it('should return null when no cluster has 3+ files', () => {
+            attention.touchFile('src/a.ts', 'read', 1);
+            attention.touchFile('src/b.ts', 'read', 2);
+            expect(attention.activeCluster()).toBeNull();
+        });
+    });
+
+    describe('toSnapshot', () => {
+        it('should only include edited files in filesModified', () => {
+            attention.touchFile('src/a.ts', 'read');
+            attention.touchFile('src/b.ts', 'edit');
+            attention.touchFile('src/c.ts', 'read');
+            const snapshot = attention.toSnapshot();
+            expect(snapshot.filesModified).toEqual(['src/b.ts']);
+            expect(snapshot.filesModified).not.toContain('src/a.ts');
         });
     });
 });

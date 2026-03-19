@@ -293,8 +293,8 @@ describe('Session intelligence lifecycle integration', () => {
     });
 
     it('step 7 – PreCompact: saves snapshot and returns context instruction', async () => {
-        attention.touchFile('src/service.ts');
-        attention.touchFile('src/api.ts');
+        attention.touchFile('src/service.ts', 'edit');
+        attention.touchFile('src/api.ts', 'edit');
         attention.touchSymbol('fn:src/service.ts:processOrder');
 
         const handler = new PreCompactHandler({

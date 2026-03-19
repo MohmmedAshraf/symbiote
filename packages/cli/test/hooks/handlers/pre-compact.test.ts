@@ -50,8 +50,8 @@ describe('PreCompactHandler', () => {
     });
 
     it('saves snapshot to SessionStore', async () => {
-        attention.touchFile('src/auth.ts');
-        attention.touchFile('src/db.ts');
+        attention.touchFile('src/auth.ts', 'edit');
+        attention.touchFile('src/db.ts', 'edit');
 
         await handler.handle(BASE_PAYLOAD);
 

@@ -6,6 +6,8 @@ export interface AttentionEntry {
     lastAccess: number;
     accessCount: number;
     mode: AttentionMode;
+    deliveredContext: Set<string>;
+    communityId?: number;
 }
 
 export interface AttentionSnapshot {
@@ -22,15 +24,22 @@ export class AttentionSet {
     private tickCount: number = 0;
     private discoveryCount: number = 0;
 
-    touchFile(filePath: string, mode: AttentionMode = 'read'): void {
+    touchFile(filePath: string, mode: AttentionMode = 'read', communityId?: number): void {
         const entry = this.files.get(filePath);
         if (entry) {
             entry.lastAccess = this.tickCount;
             entry.accessCount += 1;
             if (mode === 'edit') entry.mode = 'edit';
+            if (communityId !== undefined) entry.communityId = communityId;
         } else {
             this.discoveryCount++;
-            this.files.set(filePath, { lastAccess: this.tickCount, accessCount: 1, mode });
+            this.files.set(filePath, {
+                lastAccess: this.tickCount,
+                accessCount: 1,
+                mode,
+                deliveredContext: new Set(),
+                communityId,
+            });
         }
     }
 
@@ -41,7 +50,12 @@ export class AttentionSet {
             entry.accessCount += 1;
             if (mode === 'edit') entry.mode = 'edit';
         } else {
-            this.symbols.set(symbolId, { lastAccess: this.tickCount, accessCount: 1, mode });
+            this.symbols.set(symbolId, {
+                lastAccess: this.tickCount,
+                accessCount: 1,
+                mode,
+                deliveredContext: new Set(),
+            });
         }
     }
 
@@ -104,7 +118,7 @@ export class AttentionSet {
 
     toSnapshot(): AttentionSnapshot {
         return {
-            filesModified: this.allFiles(),
+            filesModified: this.editedFiles(),
             symbolsChanged: this.allSymbols(),
             activeAttention: this.activeDirectory(),
         };
@@ -120,6 +134,34 @@ export class AttentionSet {
         return Array.from(this.files.entries())
             .filter(([, e]) => e.mode === 'edit')
             .map(([fp]) => fp);
+    }
+
+    hasDelivered(filePath: string, contextKey: string): boolean {
+        return this.files.get(filePath)?.deliveredContext.has(contextKey) ?? false;
+    }
+
+    markDelivered(filePath: string, contextKey: string): void {
+        this.files.get(filePath)?.deliveredContext.add(contextKey);
+    }
+
+    getCommunityId(filePath: string): number | undefined {
+        return this.files.get(filePath)?.communityId;
+    }
+
+    activeCluster(): { communityId: number; filesRead: number } | null {
+        const counts = new Map<number, number>();
+        for (const entry of this.files.values()) {
+            if (entry.communityId !== undefined) {
+                counts.set(entry.communityId, (counts.get(entry.communityId) ?? 0) + 1);
+            }
+        }
+        let best: { communityId: number; filesRead: number } | null = null;
+        for (const [communityId, filesRead] of counts) {
+            if (filesRead >= 3 && (best === null || filesRead > best.filesRead)) {
+                best = { communityId, filesRead };
+            }
+        }
+        return best;
     }
 
     getDiscoveries(): number {
