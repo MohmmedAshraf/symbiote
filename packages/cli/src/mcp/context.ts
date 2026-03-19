@@ -71,7 +71,7 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const graphology = await buildGraphFromDb(options.db);
     const search = new HybridSearch(options.db, repo);
     const intent = new IntentStore(options.brainDir);
-    const health = new HealthEngine(repo, intent, options.db);
+    const health = new HealthEngine(cortexRepo, intent, options.db);
 
     const dnaDir = path.join(options.symbioteHome, 'dna');
     const dnaStorage = new DnaStorage(dnaDir);

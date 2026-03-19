@@ -7,6 +7,7 @@ export interface NodeRecord {
     filePath: string;
     lineStart: number;
     lineEnd: number;
+    isExported?: boolean;
     metadata?: Record<string, unknown>;
 }
 

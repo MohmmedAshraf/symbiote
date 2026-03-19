@@ -1,4 +1,3 @@
-import type { Repository } from '#storage/repository.js';
 import type { CouplingHotspot } from './types.js';
 import type { PreFetchedData } from './cycle-detector.js';
 
@@ -25,11 +24,8 @@ function computeThreshold(weightedCounts: number[]): number {
 }
 
 export class CouplingAnalyzer {
-    constructor(private repo: Repository) {}
-
-    async detect(preFetched?: PreFetchedData): Promise<CouplingHotspot[]> {
-        const allNodes = preFetched?.nodes ?? (await this.repo.getAllNodes());
-        const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
+    async detect(preFetched: PreFetchedData): Promise<CouplingHotspot[]> {
+        const { nodes: allNodes, edges: allEdges } = preFetched;
         if (allEdges.length === 0) return [];
 
         const nodeToFile = new Map<string, string>();
@@ -43,6 +39,8 @@ export class CouplingAnalyzer {
         const fileFanOut = new Map<string, number>();
 
         for (const edge of allEdges) {
+            if (edge.type === 'contains') continue;
+
             const sourceFile = nodeToFile.get(edge.sourceId);
             const targetFile = nodeToFile.get(edge.targetId);
 

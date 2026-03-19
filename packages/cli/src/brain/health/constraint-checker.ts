@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import type { Repository } from '#storage/repository.js';
 import type { IntentStore, IntentEntry } from '../intent.js';
 import { detectLanguage, getGrammar } from '#core/languages.js';
 import type { ConstraintViolation, DescriptiveConstraint } from './types.js';
@@ -14,23 +13,14 @@ export interface ConstraintCheckResult {
 }
 
 export class ConstraintChecker {
-    constructor(
-        private repo: Repository,
-        private intent: IntentStore,
-    ) {}
+    constructor(private intent: IntentStore) {}
 
-    async check(): Promise<ConstraintCheckResult> {
+    async check(allFilePaths: Set<string>): Promise<ConstraintCheckResult> {
         const constraints = await this.intent.listEntries('constraint', {
             status: 'active',
         });
         const violations: ConstraintViolation[] = [];
         const descriptive: DescriptiveConstraint[] = [];
-
-        const allNodes = await this.repo.getAllNodes();
-        const allFilePaths = new Set<string>();
-        for (const node of allNodes) {
-            allFilePaths.add(node.filePath);
-        }
 
         for (const constraint of constraints) {
             if (constraint.frontmatter.pattern) {

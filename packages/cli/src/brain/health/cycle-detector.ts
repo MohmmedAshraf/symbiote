@@ -1,4 +1,4 @@
-import type { Repository, NodeRecord, EdgeRecord } from '#storage/repository.js';
+import type { NodeRecord, EdgeRecord } from '#storage/repository.js';
 import type { CircularDep } from './types.js';
 
 export interface PreFetchedData {
@@ -7,21 +7,28 @@ export interface PreFetchedData {
 }
 
 export class CycleDetector {
-    constructor(private repo: Repository) {}
+    async detect(preFetched: PreFetchedData): Promise<CircularDep[]> {
+        const { nodes, edges } = preFetched;
+        if (edges.length === 0) return [];
 
-    async detect(preFetched?: PreFetchedData): Promise<CircularDep[]> {
-        const allEdges = preFetched?.edges ?? (await this.repo.getAllEdges());
-        if (allEdges.length === 0) return [];
+        const nodeToFile = new Map<string, string>();
+        for (const node of nodes) {
+            nodeToFile.set(node.id, node.filePath);
+        }
 
-        const nodeMap = preFetched ? new Map(preFetched.nodes.map((n) => [n.id, n])) : undefined;
+        const fileGraph = new Map<string, Set<string>>();
+        const DEP_EDGE_TYPES = new Set(['imports', 'calls', 'extends']);
+        for (const edge of edges) {
+            if (!DEP_EDGE_TYPES.has(edge.type)) continue;
 
-        const adjacency = new Map<string, string[]>();
-        for (const edge of allEdges) {
-            if (edge.sourceId === edge.targetId) continue;
-            if (!adjacency.has(edge.sourceId)) {
-                adjacency.set(edge.sourceId, []);
+            const sourceFile = nodeToFile.get(edge.sourceId);
+            const targetFile = nodeToFile.get(edge.targetId);
+            if (!sourceFile || !targetFile || sourceFile === targetFile) continue;
+
+            if (!fileGraph.has(sourceFile)) {
+                fileGraph.set(sourceFile, new Set());
             }
-            adjacency.get(edge.sourceId)!.push(edge.targetId);
+            fileGraph.get(sourceFile)!.add(targetFile);
         }
 
         const cycles: CircularDep[] = [];
@@ -29,59 +36,41 @@ export class CycleDetector {
         const inStack = new Set<string>();
         const seen = new Set<string>();
 
-        const resolveFilePaths = async (chain: string[]): Promise<Set<string>> => {
-            const filePaths = new Set<string>();
-            for (const id of chain) {
-                if (nodeMap) {
-                    const node = nodeMap.get(id);
-                    if (node) filePaths.add(node.filePath);
-                } else {
-                    const node = await this.repo.getNodeById(id);
-                    if (node) filePaths.add(node.filePath);
-                }
-            }
-            return filePaths;
-        };
-
-        const dfs = async (nodeId: string, nodePath: string[]): Promise<void> => {
-            if (inStack.has(nodeId)) {
-                const cycleStart = nodePath.indexOf(nodeId);
+        const dfs = (file: string, path: string[]): void => {
+            if (inStack.has(file)) {
+                const cycleStart = path.indexOf(file);
                 if (cycleStart < 0) return;
 
-                const chain = nodePath.slice(cycleStart);
-                const filePaths = await resolveFilePaths(chain);
-
-                if (filePaths.size <= 1) return;
-
+                const chain = path.slice(cycleStart);
                 const key = [...chain].sort().join(',');
                 if (seen.has(key)) return;
                 seen.add(key);
 
                 cycles.push({
                     chain,
-                    filePaths: [...filePaths],
+                    filePaths: chain,
                 });
                 return;
             }
 
-            if (visited.has(nodeId)) return;
+            if (visited.has(file)) return;
 
-            visited.add(nodeId);
-            inStack.add(nodeId);
+            visited.add(file);
+            inStack.add(file);
 
-            const neighbors = adjacency.get(nodeId) ?? [];
-            nodePath.push(nodeId);
+            const neighbors = fileGraph.get(file) ?? new Set();
+            path.push(file);
             for (const neighbor of neighbors) {
-                await dfs(neighbor, nodePath);
+                dfs(neighbor, path);
             }
-            nodePath.pop();
+            path.pop();
 
-            inStack.delete(nodeId);
+            inStack.delete(file);
         };
 
-        for (const nodeId of adjacency.keys()) {
-            if (!visited.has(nodeId)) {
-                await dfs(nodeId, []);
+        for (const file of fileGraph.keys()) {
+            if (!visited.has(file)) {
+                dfs(file, []);
             }
         }
 

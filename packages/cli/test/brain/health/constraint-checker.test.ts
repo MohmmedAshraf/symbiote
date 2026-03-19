@@ -15,6 +15,7 @@ describe('ConstraintChecker', () => {
     let repo: Repository;
     let intent: IntentStore;
     let checker: ConstraintChecker;
+    let allFilePaths: Set<string>;
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
@@ -22,7 +23,10 @@ describe('ConstraintChecker', () => {
         const scanner = new Scanner(repo);
         await scanner.scan(path.join(FIXTURES, 'src'));
         intent = new IntentStore(path.join(FIXTURES, '.brain'));
-        checker = new ConstraintChecker(repo, intent);
+        checker = new ConstraintChecker(intent);
+
+        const allNodes = await repo.getAllNodes();
+        allFilePaths = new Set(allNodes.map((n) => n.filePath));
     });
 
     afterEach(async () => {
@@ -30,7 +34,7 @@ describe('ConstraintChecker', () => {
     });
 
     it('detects violations for constraints with Tree-sitter patterns', async () => {
-        const result = await checker.check();
+        const result = await checker.check(allFilePaths);
         expect(result.violations.length).toBeGreaterThanOrEqual(1);
 
         const sqlViolations = result.violations.filter(
@@ -41,7 +45,7 @@ describe('ConstraintChecker', () => {
     });
 
     it('includes file path and line info in violations', async () => {
-        const result = await checker.check();
+        const result = await checker.check(allFilePaths);
         const violation = result.violations[0];
         expect(violation.filePath).toBeDefined();
         expect(violation.lineStart).toBeGreaterThan(0);
@@ -49,13 +53,13 @@ describe('ConstraintChecker', () => {
     });
 
     it('does not flag clean files', async () => {
-        const result = await checker.check();
+        const result = await checker.check(allFilePaths);
         const cleanViolations = result.violations.filter((v) => v.filePath.includes('clean'));
         expect(cleanViolations).toEqual([]);
     });
 
     it('separates pattern-based and descriptive constraints', async () => {
-        const result = await checker.check();
+        const result = await checker.check(allFilePaths);
         expect(result.descriptive).toBeDefined();
         expect(Array.isArray(result.descriptive)).toBe(true);
     });
@@ -80,8 +84,8 @@ describe('ConstraintChecker', () => {
         );
 
         const tmpIntent = new IntentStore(tmpBrain);
-        const tmpChecker = new ConstraintChecker(repo, tmpIntent);
-        const result = await tmpChecker.check();
+        const tmpChecker = new ConstraintChecker(tmpIntent);
+        const result = await tmpChecker.check(allFilePaths);
 
         expect(result.descriptive.length).toBe(1);
         expect(result.descriptive[0].constraintId).toBe('constraint-compose-wrappers');

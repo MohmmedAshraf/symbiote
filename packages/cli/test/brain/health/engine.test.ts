@@ -1,26 +1,29 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
 import { createDatabase, type SymbioteDB } from '#storage/db.js';
-import { Repository } from '#storage/repository.js';
-import { Scanner } from '#core/scanner.js';
 import { IntentStore } from '#brain/intent.js';
 import { HealthEngine } from '#brain/health/index.js';
+import { CortexRepository } from '#cortex/repository.js';
+import { CortexEngine } from '#cortex/engine.js';
 
 const FIXTURES = path.join(import.meta.dirname, '../../fixtures/brain-project');
 
 describe('HealthEngine', () => {
     let db: SymbioteDB;
-    let repo: Repository;
+    let cortexRepo: CortexRepository;
     let engine: HealthEngine;
 
     beforeEach(async () => {
         db = await createDatabase(':memory:');
-        repo = new Repository(db);
-        const scanner = new Scanner(repo);
-        await scanner.scan(path.join(FIXTURES, 'src'));
+        cortexRepo = new CortexRepository(db);
+        const cortexEngine = new CortexEngine(cortexRepo);
+        await cortexEngine.run({
+            rootDir: path.join(FIXTURES, 'src'),
+            force: true,
+        });
 
         const intent = new IntentStore(path.join(FIXTURES, '.brain'));
-        engine = new HealthEngine(repo, intent, db);
+        engine = new HealthEngine(cortexRepo, intent, db);
     });
 
     afterEach(async () => {
@@ -53,28 +56,64 @@ describe('HealthEngine', () => {
         expect(history[0].score).toBe(report.score);
     });
 
-    it('detects circular deps when manually added', async () => {
-        await repo.insertNodes([
+    it('detects circular deps when present in cortex', async () => {
+        await cortexRepo.insertFunctionNodes([
             {
                 id: 'fn:x.ts:a',
-                type: 'function',
                 name: 'a',
+                qualifiedName: 'a',
                 filePath: 'x.ts',
                 lineStart: 1,
                 lineEnd: 3,
+                isAsync: false,
+                isExported: true,
+                isEntryPoint: false,
+                entryPointScore: 0,
+                signature: null,
+                community: null,
+                pageRank: null,
+                betweenness: null,
             },
             {
                 id: 'fn:y.ts:b',
-                type: 'function',
                 name: 'b',
+                qualifiedName: 'b',
                 filePath: 'y.ts',
                 lineStart: 1,
                 lineEnd: 3,
+                isAsync: false,
+                isExported: true,
+                isEntryPoint: false,
+                entryPointScore: 0,
+                signature: null,
+                community: null,
+                pageRank: null,
+                betweenness: null,
             },
         ]);
-        await repo.insertEdges([
-            { sourceId: 'fn:x.ts:a', targetId: 'fn:y.ts:b', type: 'calls' },
-            { sourceId: 'fn:y.ts:b', targetId: 'fn:x.ts:a', type: 'calls' },
+        await cortexRepo.insertImportsEdges([
+            {
+                sourceId: 'fn:x.ts:a',
+                targetId: 'fn:y.ts:b',
+                line: 1,
+                kind: 'named',
+                originalName: 'b',
+                alias: null,
+                confidence: 1,
+                stage: 0,
+                reason: null,
+            },
+            {
+                sourceId: 'fn:y.ts:b',
+                targetId: 'fn:x.ts:a',
+                line: 1,
+                kind: 'named',
+                originalName: 'a',
+                alias: null,
+                confidence: 1,
+                stage: 0,
+                reason: null,
+            },
         ]);
 
         const report = await engine.analyze();
@@ -82,18 +121,23 @@ describe('HealthEngine', () => {
     });
 
     it('returns score between 0 and 100 even with many issues', async () => {
-        for (let i = 0; i < 50; i++) {
-            await repo.insertNodes([
-                {
-                    id: `fn:orphan${i}.ts:fn${i}`,
-                    type: 'function',
-                    name: `fn${i}`,
-                    filePath: `orphan${i}.ts`,
-                    lineStart: 1,
-                    lineEnd: 3,
-                },
-            ]);
-        }
+        const nodes = Array.from({ length: 50 }, (_, i) => ({
+            id: `fn:orphan${i}.ts:fn${i}`,
+            name: `fn${i}`,
+            qualifiedName: `fn${i}`,
+            filePath: `orphan${i}.ts`,
+            lineStart: 1,
+            lineEnd: 3,
+            isAsync: false,
+            isExported: true,
+            isEntryPoint: false,
+            entryPointScore: 0,
+            signature: null,
+            community: null,
+            pageRank: null,
+            betweenness: null,
+        }));
+        await cortexRepo.insertFunctionNodes(nodes);
 
         const report = await engine.analyze();
         expect(report.score).toBeGreaterThanOrEqual(0);
