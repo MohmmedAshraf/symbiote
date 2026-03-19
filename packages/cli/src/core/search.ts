@@ -48,6 +48,11 @@ export class HybridSearch {
         return this.embeddingService;
     }
 
+    async warm(): Promise<void> {
+        await this.ensureFts();
+        await this.getEmbeddingService();
+    }
+
     async textSearch(query: string, limit: number = 20): Promise<SearchResult[]> {
         await this.ensureFts();
 
