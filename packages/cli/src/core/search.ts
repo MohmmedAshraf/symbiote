@@ -56,17 +56,23 @@ export class HybridSearch {
     async textSearch(query: string, limit: number = 20): Promise<SearchResult[]> {
         await this.ensureFts();
 
-        const rows = await this.db.all<SearchRow>(
-            `SELECT node_id, MAX(score) as score FROM (
-                SELECT *, fts_main_nodes_fts.match_bm25(node_id, $1, fields := 'name') as score
-                FROM nodes_fts WHERE score IS NOT NULL
-                UNION ALL
-                SELECT *, fts_main_nodes_fts.match_bm25(node_id, $1, fields := 'file_path') as score
-                FROM nodes_fts WHERE score IS NOT NULL
-            ) GROUP BY node_id ORDER BY score DESC LIMIT $2`,
-            query,
-            limit,
-        );
+        let rows: SearchRow[];
+        try {
+            rows = await this.db.all<SearchRow>(
+                `SELECT node_id, MAX(score) as score FROM (
+                    SELECT *, fts_main_nodes_fts.match_bm25(node_id, $1, fields := 'name') as score
+                    FROM nodes_fts WHERE score IS NOT NULL
+                    UNION ALL
+                    SELECT *, fts_main_nodes_fts.match_bm25(node_id, $1, fields := 'file_path') as score
+                    FROM nodes_fts WHERE score IS NOT NULL
+                ) GROUP BY node_id ORDER BY score DESC LIMIT $2`,
+                query,
+                limit,
+            );
+        } catch {
+            this.ftsReady = false;
+            return this.fallback(query, limit);
+        }
 
         if (rows.length === 0) return this.fallback(query, limit);
 
