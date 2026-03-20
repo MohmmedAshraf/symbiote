@@ -210,6 +210,10 @@ export function ensureClaudeHooks(): { success: boolean; message: string } {
     return installGlobalClaudeHooks();
 }
 
+export function disconnectClaudeHooks(): { success: boolean; message: string } {
+    return removeGlobalClaudeHooks();
+}
+
 const HOOK_EVENTS = [
     'SessionStart',
     'UserPromptSubmit',

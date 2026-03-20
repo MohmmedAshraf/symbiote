@@ -107,26 +107,15 @@ export async function cmdHookPost(): Promise<void> {
 }
 
 export async function cmdHooksInstall(): Promise<void> {
-    const { execSync } = await import('node:child_process');
+    const { ensureClaudeHooks } = await import('#init/agent-connector.js');
 
     p.intro(pc.bold('Symbiote') + pc.dim(' — Installing Claude Code hooks'));
 
-    try {
-        execSync('claude hooks add pre_tool_use symbiote -- npx symbiote-cli hook pre', {
-            stdio: 'inherit',
-        });
-        p.log.success('Registered pre_tool_use hook');
-    } catch {
-        p.log.error('Failed to register pre_tool_use hook');
-    }
-
-    try {
-        execSync('claude hooks add post_tool_use symbiote -- npx symbiote-cli hook post', {
-            stdio: 'inherit',
-        });
-        p.log.success('Registered post_tool_use hook');
-    } catch {
-        p.log.error('Failed to register post_tool_use hook');
+    const result = ensureClaudeHooks();
+    if (result.success) {
+        p.log.success('Registered all hook events in ~/.claude/settings.json');
+    } else {
+        p.log.error(`Failed to install hooks: ${result.message}`);
     }
 
     p.outro('Hooks installed. Symbiote will inject context on every tool call.');
@@ -235,22 +224,15 @@ export async function cmdHookSessionStart(): Promise<void> {
 }
 
 export async function cmdHooksUninstall(): Promise<void> {
-    const { execSync } = await import('node:child_process');
+    const { disconnectClaudeHooks } = await import('#init/agent-connector.js');
 
     p.intro(pc.bold('Symbiote') + pc.dim(' — Uninstalling Claude Code hooks'));
 
-    try {
-        execSync('claude hooks remove pre_tool_use symbiote', { stdio: 'inherit' });
-        p.log.success('Removed pre_tool_use hook');
-    } catch {
-        p.log.error('Failed to remove pre_tool_use hook');
-    }
-
-    try {
-        execSync('claude hooks remove post_tool_use symbiote', { stdio: 'inherit' });
-        p.log.success('Removed post_tool_use hook');
-    } catch {
-        p.log.error('Failed to remove post_tool_use hook');
+    const result = disconnectClaudeHooks();
+    if (result.success) {
+        p.log.success('Removed all Symbiote hooks from ~/.claude/settings.json');
+    } else {
+        p.log.error(`Failed to remove hooks: ${result.message}`);
     }
 
     p.outro('Hooks uninstalled.');
