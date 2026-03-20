@@ -5,6 +5,7 @@ import type { ToolResponse } from '#cortex/types.js';
 import { wrapResponse, getMaxDepth } from '../tool-response.js';
 
 export interface ProjectOverviewOutput {
+    overview: string | null;
     totalNodes: number;
     totalEdges: number;
     totalFiles: number;
@@ -16,21 +17,54 @@ export interface ProjectOverviewOutput {
 export async function handleGetProjectOverview(
     ctx: ServerContext,
 ): Promise<ToolResponse<ProjectOverviewOutput>> {
-    const overview = await ctx.graph.getOverview();
-    const constraints = await ctx.intent.listEntries('constraint', {
-        status: 'active',
-    });
-    const decisions = await ctx.intent.listEntries('decision', {
-        status: 'active',
-    });
-    const depth = await getMaxDepth(ctx.cortexRepo);
+    const [stats, overview, constraints, decisions, depth] = await Promise.all([
+        ctx.cortexRepo.getStats(),
+        ctx.intent.getOverview(),
+        ctx.intent.listEntries('constraint', { status: 'active' }),
+        ctx.intent.listEntries('decision', { status: 'active' }),
+        getMaxDepth(ctx.cortexRepo),
+    ]);
+
+    const nodesByType: Record<string, number> = {};
+    const nodeKeys = [
+        'functions',
+        'classes',
+        'methods',
+        'interfaces',
+        'types',
+        'variables',
+        'modules',
+    ] as const;
+    for (const key of nodeKeys) {
+        if (stats[key] > 0) nodesByType[key] = stats[key];
+    }
+
+    const totalNodes =
+        stats.functions +
+        stats.classes +
+        stats.methods +
+        stats.interfaces +
+        stats.types +
+        stats.variables +
+        stats.modules;
+    const totalEdges =
+        stats.calls +
+        stats.imports +
+        stats.extends +
+        stats.implements +
+        stats.contains +
+        stats.flowsTo +
+        stats.reads +
+        stats.writes +
+        stats.returns;
 
     return wrapResponse(
         {
-            totalNodes: overview.totalNodes,
-            totalEdges: overview.totalEdges,
-            totalFiles: overview.totalFiles,
-            nodesByType: overview.nodesByType,
+            overview,
+            totalNodes,
+            totalEdges,
+            totalFiles: stats.files,
+            nodesByType,
             constraints,
             decisions,
         },

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { HttpHookResponse } from '#hooks/types.js';
 import type { SessionStore } from '#hooks/session-store.js';
 import type { DnaEngine } from '#dna/engine.js';
@@ -5,6 +7,7 @@ import type { ConstraintRef } from '#hooks/handlers/pre-tool-use.js';
 import type { HealthEngine, HealthReport } from '#brain/health/index.js';
 
 const HEALTH_CACHE_TTL_MS = 5 * 60 * 1000;
+const OVERVIEW_STALE_DAYS = 14;
 
 export interface SessionStartHandlerConfig {
     dnaEngine: DnaEngine;
@@ -12,6 +15,8 @@ export interface SessionStartHandlerConfig {
     constraints: ConstraintRef[];
     health: HealthEngine;
     cachedHealth: { report: HealthReport; timestamp: number } | null;
+    brainDir: string;
+    rootDir: string;
 }
 
 export class SessionStartHandler {
@@ -20,6 +25,8 @@ export class SessionStartHandler {
     private constraints: ConstraintRef[];
     private health: HealthEngine;
     private cachedHealth: { report: HealthReport; timestamp: number } | null;
+    private brainDir: string;
+    private rootDir: string;
 
     constructor(config: SessionStartHandlerConfig) {
         this.dnaEngine = config.dnaEngine;
@@ -27,6 +34,8 @@ export class SessionStartHandler {
         this.constraints = config.constraints;
         this.health = config.health;
         this.cachedHealth = config.cachedHealth;
+        this.brainDir = config.brainDir;
+        this.rootDir = config.rootDir;
     }
 
     async handle(input: { sessionId: string; source: string }): Promise<HttpHookResponse> {
@@ -82,6 +91,11 @@ export class SessionStartHandler {
             lines.push(healthAlerts);
         }
 
+        const overviewNudge = this.checkOverviewStaleness();
+        if (overviewNudge) {
+            lines.push(overviewNudge);
+        }
+
         lines.push(
             'Do not use your own memory system. Use Symbiote MCP tools to capture:\n' +
                 '  - record_instruction — developer corrections, style, preferences\n' +
@@ -128,6 +142,45 @@ export class SessionStartHandler {
                 additionalContext: lines.join('\n'),
             },
         };
+    }
+
+    private checkOverviewStaleness(): string | null {
+        try {
+            const overviewPath = path.join(this.brainDir, 'intent', 'overview.md');
+            if (!fs.existsSync(overviewPath)) {
+                return (
+                    'No project overview found. Write `.brain/intent/overview.md` with a concise ' +
+                    'summary of this project (tech stack, architecture, key patterns, entry points). ' +
+                    'Keep it under 40 lines.'
+                );
+            }
+
+            const overviewMtime = fs.statSync(overviewPath).mtimeMs;
+            const now = Date.now();
+            const ageDays = (now - overviewMtime) / (1000 * 60 * 60 * 24);
+
+            const pkgPath = path.join(this.rootDir, 'package.json');
+            if (fs.existsSync(pkgPath)) {
+                const pkgMtime = fs.statSync(pkgPath).mtimeMs;
+                if (pkgMtime > overviewMtime) {
+                    return (
+                        'Project dependencies changed since the overview was written. ' +
+                        'Update `.brain/intent/overview.md` if the tech stack or architecture shifted.'
+                    );
+                }
+            }
+
+            if (ageDays > OVERVIEW_STALE_DAYS) {
+                return (
+                    `Project overview is ${Math.round(ageDays)} days old. ` +
+                    'Consider updating `.brain/intent/overview.md` if the project has evolved.'
+                );
+            }
+
+            return null;
+        } catch {
+            return null;
+        }
     }
 
     private async getHealthAlerts(): Promise<string | null> {

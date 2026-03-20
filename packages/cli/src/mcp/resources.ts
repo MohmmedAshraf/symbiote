@@ -24,14 +24,20 @@ export function handleDnaResource(ctx: ServerContext): string {
 export async function handleProjectOverviewResource(ctx: ServerContext): Promise<string> {
     const { data: overview } = await handleGetProjectOverview(ctx);
 
-    const lines = [
-        'Project Overview',
+    const lines: string[] = [];
+
+    if (overview.overview) {
+        lines.push(overview.overview, '');
+    }
+
+    lines.push(
+        'Graph Stats',
         `Nodes: ${overview.totalNodes}`,
         `Edges: ${overview.totalEdges}`,
         `Files: ${overview.totalFiles}`,
         '',
         'Node Types:',
-    ];
+    );
 
     for (const [type, count] of Object.entries(overview.nodesByType)) {
         lines.push(`  ${type}: ${count}`);

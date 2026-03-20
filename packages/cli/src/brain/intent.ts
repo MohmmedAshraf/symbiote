@@ -90,6 +90,12 @@ export class IntentStore {
         fs.writeFileSync(filePath, serializeIntentEntry(entry));
     }
 
+    async getOverview(): Promise<string | null> {
+        const overviewPath = path.join(this.intentDir, 'overview.md');
+        if (!fs.existsSync(overviewPath)) return null;
+        return fsp.readFile(overviewPath, 'utf-8');
+    }
+
     private typeDir(type: IntentType): string {
         return path.join(this.intentDir, type === 'decision' ? 'decisions' : 'constraints');
     }

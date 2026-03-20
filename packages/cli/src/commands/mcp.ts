@@ -12,7 +12,12 @@ import {
 import { createMcpServer } from '#mcp/server.js';
 import { createProxyMcpServer } from '#mcp/proxy-server.js';
 import { createServerContext } from '#mcp/context.js';
-import { handleHttpRequest, isPortServing } from './shared.js';
+import {
+    handleHttpRequest,
+    getRunningServerHealth,
+    isServerVersionStale,
+    killProcessOnPort,
+} from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,9 +27,9 @@ export async function cmdMcp(): Promise<void> {
     const projectRoot = process.cwd();
     const port = getProjectPort(projectRoot);
 
-    const serverRunning = await isPortServing(port);
+    const health = await getRunningServerHealth(port);
 
-    if (serverRunning) {
+    if (health && !isServerVersionStale(health)) {
         const { server } = createProxyMcpServer(port);
         const transport = new StdioServerTransport();
         await server.connect(transport);
@@ -33,6 +38,13 @@ export async function cmdMcp(): Promise<void> {
             process.exit(0);
         });
         return;
+    }
+
+    if (health) {
+        process.stderr.write(
+            `[symbiote] Stale server detected (${health.version}), restarting...\n`,
+        );
+        await killProcessOnPort(port);
     }
 
     const http = await import('node:http');

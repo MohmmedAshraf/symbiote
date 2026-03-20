@@ -12,9 +12,10 @@ MCP server is already registered globally by `symbiote install`. This skill only
 ## Process
 
 1. Scan the codebase
-2. Build extraction lists from context
-3. Dispatch subagent to record everything
-4. Print one-line summary
+2. Write project overview
+3. Build extraction lists from context
+4. Dispatch subagent to record everything
+5. Print one-line summary
 
 ## Step 1: Scan
 
@@ -22,7 +23,51 @@ MCP server is already registered globally by `symbiote install`. This skill only
 npx symbiote-cli scan
 ```
 
-## Step 2: Build Extraction Lists
+## Step 2: Write Project Overview
+
+Write `.brain/intent/overview.md` — a concise project summary that gives AI tools instant context.
+
+Read the codebase context (CLAUDE.md, package.json, top-level structure, scan results) and write a markdown file with this exact structure:
+
+```markdown
+# {Project Name}
+
+{One sentence: what this project does and who it's for.}
+
+## Tech Stack
+
+- {Language/runtime} ({key detail})
+- {Framework} ({purpose})
+- {Database/storage} ({why chosen})
+- {Other significant deps}
+
+## Architecture
+
+- `{top-level-dir}/` — {what it contains}
+- `{top-level-dir}/` — {what it contains}
+- `{sub-dir}/` — {what it contains, if important}
+
+## Key Patterns
+
+- {How data flows, e.g. "Server actions → Zod validation → Drizzle ORM"}
+- {How modules connect, e.g. "MCP server exposes graph queries to AI tools"}
+- {Any non-obvious architectural pattern}
+
+## Entry Points
+
+- `{file}` — {what it does}
+- `{file}` — {what it does}
+```
+
+Rules:
+
+- Keep it under 40 lines total
+- No frontmatter — this is a plain markdown file, not an intent entry
+- Focus on WHAT and HOW, not rules or preferences (those go in constraints/decisions)
+- Be specific to THIS project, not generic descriptions
+- Use the project's actual directory names, tech choices, and patterns
+
+## Step 3: Build Extraction Lists
 
 Read your context (CLAUDE.md, memories, rule files) and build three separate lists:
 
@@ -69,7 +114,7 @@ Each entry must be:
 - Self-contained — understandable without context
 - Specific — not vague or overly broad
 
-## Step 3: Dispatch Subagent
+## Step 4: Dispatch Subagent
 
 Launch a single Agent to record everything. Pass it all three lists.
 
@@ -93,7 +138,7 @@ Record the following Symbiote entries using MCP tools. Call tools in parallel wh
 Return counts: { dna: N, constraints: N, decisions: N, failed: N }
 ```
 
-## Step 4: Output
+## Step 5: Output
 
 One line, nothing more:
 

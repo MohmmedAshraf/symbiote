@@ -1,5 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createDatabase } from '#storage/db.js';
 import {
@@ -14,6 +17,24 @@ import { handleMcpProxy } from '#mcp/proxy-handler.js';
 import type { createServerContext } from '#mcp/context.js';
 
 export type SymbioteDB = Awaited<ReturnType<typeof createDatabase>>;
+
+const __sharedDirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+function findPackageJson(dir: string): string {
+    const candidate = path.join(dir, 'package.json');
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) throw new Error('package.json not found');
+    return findPackageJson(parent);
+}
+
+const { version: SERVER_VERSION } = require(findPackageJson(__sharedDirname)) as {
+    version: string;
+};
+const SERVER_STARTED_AT = Date.now();
+
+export { SERVER_VERSION };
 
 const MIME_TYPES: Record<string, string> = {
     '.html': 'text/html',
@@ -127,23 +148,55 @@ export async function createDatabaseWithRetry(dbPath: string): Promise<SymbioteD
     }
 }
 
-export async function isPortServing(port: number): Promise<boolean> {
+export interface ServerHealthInfo {
+    status: string;
+    version?: string;
+    startedAt?: number;
+}
+
+export async function getRunningServerHealth(port: number): Promise<ServerHealthInfo | null> {
     const http = await import('node:http');
     return new Promise((resolve) => {
         const req = http.request(
             { hostname: '127.0.0.1', port, path: '/internal/health', timeout: 1000 },
             (res) => {
-                res.resume();
-                resolve(res.statusCode === 200);
+                if (res.statusCode !== 200) {
+                    res.resume();
+                    resolve(null);
+                    return;
+                }
+                let body = '';
+                res.on('data', (chunk: string) => {
+                    body += chunk;
+                });
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(body) as ServerHealthInfo);
+                    } catch {
+                        resolve({ status: 'ok' });
+                    }
+                });
             },
         );
-        req.on('error', () => resolve(false));
+        req.on('error', () => resolve(null));
         req.on('timeout', () => {
             req.destroy();
-            resolve(false);
+            resolve(null);
         });
         req.end();
     });
+}
+
+export async function isPortServing(port: number): Promise<boolean> {
+    const health = await getRunningServerHealth(port);
+    return health !== null;
+}
+
+export function isServerVersionStale(health: ServerHealthInfo): boolean {
+    if (health.version && health.version !== SERVER_VERSION) {
+        return true;
+    }
+    return false;
 }
 
 export async function handleHttpRequest(
@@ -156,7 +209,13 @@ export async function handleHttpRequest(
 ): Promise<void> {
     if (url.pathname === '/internal/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok' }));
+        res.end(
+            JSON.stringify({
+                status: 'ok',
+                version: SERVER_VERSION,
+                startedAt: SERVER_STARTED_AT,
+            }),
+        );
         return;
     }
 

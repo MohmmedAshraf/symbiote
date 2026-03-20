@@ -47,7 +47,7 @@ describe('Project Tools', () => {
             symbioteHome: tmpHome,
         });
 
-        const scanner = new Scanner(ctx.repo);
+        const scanner = new Scanner(ctx.repo, db);
         await scanner.scan(FIXTURES_SRC);
     });
 

@@ -728,6 +728,8 @@ export async function handleSessionStartRequest(
             constraints,
             health: ctx.health,
             cachedHealth: ctx.cachedHealth,
+            brainDir: path.join(ctx.rootDir, '.brain'),
+            rootDir: ctx.rootDir,
         });
 
         const result = await handler.handle({ sessionId, source });
