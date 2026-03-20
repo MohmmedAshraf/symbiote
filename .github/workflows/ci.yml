@@ -31,7 +31,7 @@ jobs:
         run: npx tsc --noEmit -p packages/cli/tsconfig.json
 
       - name: Run tests
-        run: cd packages/cli && npx vitest run
+        run: cd packages/cli && npx vitest run --fileParallelism=false
 
       - name: Build
         run: npm run build
