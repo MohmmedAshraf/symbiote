@@ -107,6 +107,12 @@ export class PostToolUseHandler {
                     );
                     if (dnaIssue) {
                         parts.push(dnaIssue);
+                        this.config.eventBus.emit(
+                            createEvent('dna:violation', {
+                                filePath: relativePath,
+                                metadata: { violation: dnaIssue },
+                            }),
+                        );
                     }
                 }
 
@@ -197,6 +203,11 @@ export class PostToolUseHandler {
         }
 
         this.config.attention.markDelivered(relativePath, `cluster:${cluster.communityId}`);
+        this.config.eventBus.emit(
+            createEvent('attention:cluster', {
+                metadata: { communityId: cluster.communityId },
+            }),
+        );
 
         const communityFiles: string[] = [];
         this.config.graph.forEachNode((nodeId: string, attrs: Record<string, unknown>) => {
