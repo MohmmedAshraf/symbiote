@@ -82,7 +82,12 @@ export class SessionStartHandler {
             lines.push(healthAlerts);
         }
 
-        lines.push('When the developer corrects you, call record_instruction so it persists.');
+        lines.push(
+            'Do not use your own memory system. Use Symbiote MCP tools to capture:\n' +
+                '  - record_instruction — developer corrections, style, preferences\n' +
+                '  - propose_decision — architectural decisions\n' +
+                '  - propose_constraint — project rules and constraints',
+        );
 
         return {
             hookSpecificOutput: {

@@ -7,10 +7,11 @@ const RELEVANCE_THRESHOLD = 0.3;
 const MAX_RESULTS = 3;
 
 const CORRECTION_NUDGE = [
-    'If this message contains a developer correction, preference, or instruction, capture it:',
-    '  - record_instruction — coding style, preferences, anti-patterns',
-    '  - propose_decision — architectural decisions',
-    '  - propose_constraint — project rules and constraints',
+    'If this message contains a developer correction, preference, or instruction,',
+    'use the Symbiote MCP tools (not your own memory) to capture it:',
+    '  - mcp__symbiote__record_instruction — coding style, preferences, anti-patterns',
+    '  - mcp__symbiote__propose_decision — architectural decisions',
+    '  - mcp__symbiote__propose_constraint — project rules and constraints',
 ].join('\n');
 
 export interface UserPromptSubmitConfig {

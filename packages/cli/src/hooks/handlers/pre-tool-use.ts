@@ -81,6 +81,24 @@ export class PreToolUseHandler {
             return {};
         }
 
+        if (
+            payload.tool_name === 'Write' &&
+            filePath.includes('/.claude/') &&
+            filePath.includes('/memory/')
+        ) {
+            return {
+                hookSpecificOutput: {
+                    hookEventName: 'PreToolUse',
+                    permissionDecision: 'deny',
+                    additionalContext:
+                        'Do not use your own memory. Use Symbiote MCP tools instead:\n' +
+                        '  - record_instruction — corrections, style, preferences\n' +
+                        '  - propose_decision — architectural decisions\n' +
+                        '  - propose_constraint — project rules and constraints',
+                },
+            };
+        }
+
         const relativePath = path.isAbsolute(filePath)
             ? path.relative(this.projectRoot, filePath)
             : filePath;

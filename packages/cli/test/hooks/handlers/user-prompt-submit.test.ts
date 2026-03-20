@@ -103,7 +103,7 @@ describe('UserPromptSubmitHandler', () => {
 
         const ctx = result.hookSpecificOutput?.additionalContext ?? '';
         expect(ctx).not.toContain('Relevant code context');
-        expect(ctx).toContain('record_instruction');
+        expect(ctx).toContain('mcp__symbiote__record_instruction');
     });
 
     it('limits to top 3 results', async () => {
@@ -130,9 +130,9 @@ describe('UserPromptSubmitHandler', () => {
         const result = await handler.handle(makePayload('refactor the auth module'));
 
         const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-        expect(ctx).toContain('record_instruction');
-        expect(ctx).toContain('propose_decision');
-        expect(ctx).toContain('propose_constraint');
+        expect(ctx).toContain('mcp__symbiote__record_instruction');
+        expect(ctx).toContain('mcp__symbiote__propose_decision');
+        expect(ctx).toContain('mcp__symbiote__propose_constraint');
     });
 
     it('includes both code context and nudge when search has results', async () => {
@@ -145,7 +145,7 @@ describe('UserPromptSubmitHandler', () => {
         const ctx = result.hookSpecificOutput?.additionalContext ?? '';
         expect(ctx).toContain('Relevant code context');
         expect(ctx).toContain('authModule');
-        expect(ctx).toContain('record_instruction');
+        expect(ctx).toContain('mcp__symbiote__record_instruction');
     });
 
     it('handles search errors gracefully', async () => {
