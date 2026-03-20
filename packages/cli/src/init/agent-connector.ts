@@ -283,6 +283,10 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
                         type: 'http',
                         url: `${base}/user-prompt-submit`,
                     },
+                    {
+                        type: 'prompt',
+                        prompt: "Does the following user message contain a correction, style preference, or coding instruction directed at the AI assistant? Only answer yes if the user is explicitly correcting the assistant's behavior or stating how code should be written. Message: $ARGUMENTS. Answer only yes or no.",
+                    },
                 ],
             },
         ];
