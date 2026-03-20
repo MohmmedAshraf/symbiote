@@ -6,6 +6,13 @@ const MIN_PROMPT_LENGTH = 10;
 const RELEVANCE_THRESHOLD = 0.3;
 const MAX_RESULTS = 3;
 
+const CORRECTION_NUDGE = [
+    'If this message contains a developer correction, preference, or instruction, capture it:',
+    '  - record_instruction — coding style, preferences, anti-patterns',
+    '  - propose_decision — architectural decisions',
+    '  - propose_constraint — project rules and constraints',
+].join('\n');
+
 export interface UserPromptSubmitConfig {
     search: Pick<HybridSearch, 'search'>;
     graph: Pick<GraphQuery, 'getDependents'>;
@@ -25,32 +32,35 @@ export class UserPromptSubmitHandler {
             const prompt = payload.prompt?.trim() ?? '';
             if (prompt.length < MIN_PROMPT_LENGTH) return {};
 
+            const sections: string[] = [];
+
             const results = await this.search.search(prompt, { limit: 5 });
             const relevant = results.filter((r) => r.score >= RELEVANCE_THRESHOLD);
-            if (relevant.length === 0) return {};
-
-            const lines: string[] = ['Relevant code context:'];
             const top = relevant.slice(0, MAX_RESULTS);
 
-            for (const r of top) {
-                const node = r.node;
-                if (!node) continue;
+            if (top.length > 0) {
+                const lines: string[] = ['Relevant code context:'];
+                for (const r of top) {
+                    const node = r.node;
+                    if (!node) continue;
 
-                let line = `  - ${node.name} (${node.type}, ${node.filePath}:${node.lineStart})`;
+                    let line = `  - ${node.name} (${node.type}, ${node.filePath}:${node.lineStart})`;
 
-                const dependents = await this.graph.getDependents(node.name);
-                if (dependents.length > 0) {
-                    line += ` — ${dependents.length} dependents`;
+                    const dependents = await this.graph.getDependents(node.name);
+                    if (dependents.length > 0) {
+                        line += ` — ${dependents.length} dependents`;
+                    }
+                    lines.push(line);
                 }
-                lines.push(line);
+                if (lines.length > 1) sections.push(lines.join('\n'));
             }
 
-            if (lines.length <= 1) return {};
+            sections.push(CORRECTION_NUDGE);
 
             return {
                 hookSpecificOutput: {
                     hookEventName: 'UserPromptSubmit',
-                    additionalContext: lines.join('\n'),
+                    additionalContext: sections.join('\n\n'),
                 },
             };
         } catch {

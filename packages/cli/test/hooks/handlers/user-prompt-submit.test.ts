@@ -94,14 +94,16 @@ describe('UserPromptSubmitHandler', () => {
         expect(ctx).toContain('2 dependents');
     });
 
-    it('returns empty when no results pass threshold', async () => {
+    it('returns nudge only when no results pass threshold', async () => {
         const handler = makeHandler({
             searchResults: [makeSearchResult('unrelated', 'src/utils.ts', 0.1)],
         });
 
         const result = await handler.handle(makePayload('what is the meaning of life'));
 
-        expect(result).toEqual({});
+        const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+        expect(ctx).not.toContain('Relevant code context');
+        expect(ctx).toContain('record_instruction');
     });
 
     it('limits to top 3 results', async () => {
@@ -121,6 +123,29 @@ describe('UserPromptSubmitHandler', () => {
         expect(ctx).toContain('b');
         expect(ctx).toContain('c');
         expect(ctx).not.toContain('src/d.ts');
+    });
+
+    it('always includes correction nudge for valid prompts', async () => {
+        const handler = makeHandler();
+        const result = await handler.handle(makePayload('refactor the auth module'));
+
+        const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+        expect(ctx).toContain('record_instruction');
+        expect(ctx).toContain('propose_decision');
+        expect(ctx).toContain('propose_constraint');
+    });
+
+    it('includes both code context and nudge when search has results', async () => {
+        const handler = makeHandler({
+            searchResults: [makeSearchResult('authModule', 'src/auth.ts', 0.8)],
+        });
+
+        const result = await handler.handle(makePayload('refactor the auth module'));
+
+        const ctx = result.hookSpecificOutput?.additionalContext ?? '';
+        expect(ctx).toContain('Relevant code context');
+        expect(ctx).toContain('authModule');
+        expect(ctx).toContain('record_instruction');
     });
 
     it('handles search errors gracefully', async () => {
