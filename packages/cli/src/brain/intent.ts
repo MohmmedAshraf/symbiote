@@ -6,6 +6,8 @@ import { parseYamlBlock } from '#dna/types.js';
 export type IntentType = 'decision' | 'constraint';
 export type IntentStatus = 'active' | 'proposed' | 'rejected' | 'superseded';
 
+export type IntentEnforcement = 'strict' | 'warn';
+
 export interface IntentFrontmatter {
     id: string;
     type: IntentType;
@@ -14,6 +16,7 @@ export interface IntentFrontmatter {
     author: string;
     createdAt: string;
     pattern?: string;
+    enforcement?: IntentEnforcement;
 }
 
 export interface IntentEntry {

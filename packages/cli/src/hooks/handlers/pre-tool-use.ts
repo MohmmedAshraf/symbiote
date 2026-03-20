@@ -4,10 +4,14 @@ import type { GraphInstance } from '#core/types.js';
 import type { AttentionSet } from '#hooks/attention.js';
 import type { DnaEngine } from '#dna/engine.js';
 import type { SymbolCache } from '#hooks/symbol-cache.js';
+import type { EventBus } from '#events/bus.js';
+import { createEvent } from '#events/types.js';
 
 export interface ConstraintRef {
     scope: string;
     content: string;
+    pattern?: string;
+    enforcement?: 'strict' | 'warn';
 }
 
 type SymbolSnapshot = { name: string; kind: string; lineStart: number; lineEnd: number };
@@ -20,6 +24,7 @@ export interface PreToolUseHandlerConfig {
     dnaEngine: DnaEngine;
     symbolCache?: SymbolCache;
     preEditSymbols?: Map<string, SymbolSnapshot[]>;
+    eventBus?: EventBus;
 }
 
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write']);
@@ -33,6 +38,7 @@ export class PreToolUseHandler {
     private dnaEngine: DnaEngine;
     private symbolCache?: SymbolCache;
     private preEditSymbols?: Map<string, SymbolSnapshot[]>;
+    private eventBus?: EventBus;
 
     constructor(config: PreToolUseHandlerConfig) {
         this.graph = config.graph;
@@ -42,6 +48,7 @@ export class PreToolUseHandler {
         this.dnaEngine = config.dnaEngine;
         this.symbolCache = config.symbolCache;
         this.preEditSymbols = config.preEditSymbols;
+        this.eventBus = config.eventBus;
     }
 
     handle(payload: PreToolUsePayload): HttpHookResponse {
@@ -153,6 +160,38 @@ export class PreToolUseHandler {
 
         if (payload.tool_name === 'Edit' || payload.tool_name === 'Write') {
             this.stashPreEditSymbols(relativePath, symbols);
+
+            const newContent = String(payload.tool_input?.new_string ?? '');
+            if (newContent) {
+                const violation = this.checkConstraintViolation(newContent, matchingConstraints);
+                if (violation) {
+                    if (violation.enforcement === 'strict') {
+                        this.eventBus?.emit(
+                            createEvent('constraint:blocked', {
+                                filePath: relativePath,
+                                metadata: { constraint: violation.content },
+                            }),
+                        );
+                        return {
+                            hookSpecificOutput: {
+                                hookEventName: 'PreToolUse',
+                                permissionDecision: 'deny',
+                                additionalContext: [
+                                    ...lines,
+                                    '',
+                                    `Blocked: This edit violates constraint "${violation.content}"`,
+                                    `  Scope: ${violation.scope}`,
+                                    '  Review the constraint and adjust your approach.',
+                                ].join('\n'),
+                            },
+                        };
+                    }
+                    lines.push(
+                        '',
+                        `Warning: This edit may violate constraint "${violation.content}"`,
+                    );
+                }
+            }
 
             if (dependents.length >= 10) {
                 const topDeps = dependents
@@ -408,6 +447,24 @@ export class PreToolUseHandler {
         }
 
         return [...dependents];
+    }
+
+    private checkConstraintViolation(
+        content: string,
+        constraints: ConstraintRef[],
+    ): ConstraintRef | null {
+        for (const constraint of constraints) {
+            if (!constraint.pattern) continue;
+            try {
+                const regex = new RegExp(constraint.pattern);
+                if (regex.test(content)) {
+                    return constraint;
+                }
+            } catch {
+                continue;
+            }
+        }
+        return null;
     }
 
     private findMatchingConstraints(relativePath: string): ConstraintRef[] {

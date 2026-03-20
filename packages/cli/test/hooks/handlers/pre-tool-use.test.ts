@@ -662,4 +662,119 @@ describe('PreToolUseHandler (handlers/)', () => {
             expect(attention.getFile('src/new.ts')).toBeDefined();
         });
     });
+
+    describe('constraint violation blocking', () => {
+        it('blocks edit when strict constraint pattern matches', () => {
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [
+                    {
+                        scope: 'src/',
+                        content: 'No console.log in production code',
+                        enforcement: 'strict',
+                        pattern: 'console\\.log',
+                    },
+                ],
+                attention,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/project/src/auth.ts',
+                    new_string: 'console.log("debug");',
+                },
+            });
+
+            expect(result.hookSpecificOutput?.permissionDecision).toBe('deny');
+            expect(result.hookSpecificOutput?.additionalContext).toContain('Blocked');
+        });
+
+        it('warns but does not block for warn-level constraints', () => {
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [
+                    {
+                        scope: 'src/',
+                        content: 'No console.log in production code',
+                        enforcement: 'warn',
+                        pattern: 'console\\.log',
+                    },
+                ],
+                attention,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/project/src/auth.ts',
+                    new_string: 'console.log("debug");',
+                },
+            });
+
+            expect(result.hookSpecificOutput?.permissionDecision).toBeUndefined();
+            expect(result.hookSpecificOutput?.additionalContext).toContain('Warning');
+        });
+
+        it('does not block when pattern does not match', () => {
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [
+                    {
+                        scope: 'src/',
+                        content: 'No console.log in production code',
+                        enforcement: 'strict',
+                        pattern: 'console\\.log',
+                    },
+                ],
+                attention,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/project/src/auth.ts',
+                    new_string: 'const x = 1;',
+                },
+            });
+
+            expect(result.hookSpecificOutput?.permissionDecision).toBeUndefined();
+            expect(result.hookSpecificOutput?.additionalContext).not.toContain('Blocked');
+        });
+
+        it('ignores constraints without pattern', () => {
+            const h = new PreToolUseHandler({
+                graph,
+                projectRoot: '/project',
+                constraints: [
+                    {
+                        scope: 'src/',
+                        content: 'Must validate JWT tokens',
+                    },
+                ],
+                attention,
+                dnaEngine,
+            });
+
+            const result = h.handle({
+                type: 'pre_tool_use',
+                tool_name: 'Edit',
+                tool_input: {
+                    file_path: '/project/src/auth.ts',
+                    new_string: 'console.log("debug");',
+                },
+            });
+
+            expect(result.hookSpecificOutput?.permissionDecision).toBeUndefined();
+        });
+    });
 });

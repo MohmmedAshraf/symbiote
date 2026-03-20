@@ -591,9 +591,21 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
     });
 }
 
-async function getConstraints(ctx: ServerContext): Promise<{ scope: string; content: string }[]> {
+async function getConstraints(ctx: ServerContext): Promise<
+    {
+        scope: string;
+        content: string;
+        pattern?: string;
+        enforcement?: 'strict' | 'warn';
+    }[]
+> {
     const entries = await ctx.intent.listEntries('constraint', { status: 'active' });
-    return entries.map((e) => ({ scope: e.frontmatter.scope as string, content: e.content }));
+    return entries.map((e) => ({
+        scope: e.frontmatter.scope as string,
+        content: e.content,
+        pattern: e.frontmatter.pattern,
+        enforcement: e.frontmatter.enforcement,
+    }));
 }
 
 function sendJson(res: ServerResponse, data: unknown): void {
@@ -622,6 +634,7 @@ export async function handleHookRequest(
                 dnaEngine: ctx.dnaEngine,
                 symbolCache: ctx.symbolCache,
                 preEditSymbols: ctx.preEditSymbols,
+                eventBus: ctx.eventBus,
             });
             result = handler.handle(body as unknown as PreToolUsePayload);
         } else if (pathname === '/internal/hooks/post-tool-use') {
