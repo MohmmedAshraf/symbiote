@@ -50,11 +50,13 @@ describe('exportProfile', () => {
     });
 
     it('strips session_id from origin', () => {
-        storage.writeEntry(makeEntry({
-            id: 'style-semi',
-            rule: 'Use semicolons',
-            origin: { session_id: 'sess-abc-123', file: '/home/user/project/src/app.ts' },
-        }));
+        storage.writeEntry(
+            makeEntry({
+                id: 'style-semi',
+                rule: 'Use semicolons',
+                origin: { session_id: 'sess-abc-123', file: '/home/user/project/src/app.ts' },
+            }),
+        );
 
         const exported = exportProfile(storage);
         const entry = exported.entries.find((e) => e.id === 'style-semi');
@@ -64,11 +66,13 @@ describe('exportProfile', () => {
     });
 
     it('truncates file paths to filename only', () => {
-        storage.writeEntry(makeEntry({
-            id: 'style-tabs',
-            rule: 'Use tabs',
-            origin: { file: '/home/user/project/src/deep/nested/component.tsx' },
-        }));
+        storage.writeEntry(
+            makeEntry({
+                id: 'style-tabs',
+                rule: 'Use tabs',
+                origin: { file: '/home/user/project/src/deep/nested/component.tsx' },
+            }),
+        );
 
         const exported = exportProfile(storage);
         const entry = exported.entries.find((e) => e.id === 'style-tabs');
@@ -77,27 +81,29 @@ describe('exportProfile', () => {
     });
 
     it('preserves all entry data except sensitive fields', () => {
-        storage.writeEntry(makeEntry({
-            id: 'style-returns',
-            rule: 'Prefer early returns',
-            reason: 'Reduces nesting',
-            category: 'style',
-            applies_to: ['typescript'],
-            source: 'correction',
-            status: 'approved',
-            confidence: 0.85,
-            evidence: {
-                first_seen: '2026-01-15',
-                last_seen: '2026-03-21',
-                occurrences: 12,
-                sessions: 4,
-            },
-            origin: {
-                session_id: 'sess-secret',
-                file: '/Users/me/project/utils.ts',
-                context: 'refactoring pass',
-            },
-        }));
+        storage.writeEntry(
+            makeEntry({
+                id: 'style-returns',
+                rule: 'Prefer early returns',
+                reason: 'Reduces nesting',
+                category: 'style',
+                applies_to: ['typescript'],
+                source: 'correction',
+                status: 'approved',
+                confidence: 0.85,
+                evidence: {
+                    first_seen: '2026-01-15',
+                    last_seen: '2026-03-21',
+                    occurrences: 12,
+                    sessions: 4,
+                },
+                origin: {
+                    session_id: 'sess-secret',
+                    file: '/Users/me/project/utils.ts',
+                    context: 'refactoring pass',
+                },
+            }),
+        );
 
         const exported = exportProfile(storage);
         const entry = exported.entries.find((e) => e.id === 'style-returns')!;
@@ -117,11 +123,13 @@ describe('exportProfile', () => {
     });
 
     it('returns a deep clone that does not mutate the original', () => {
-        storage.writeEntry(makeEntry({
-            id: 'style-x',
-            rule: 'Rule X',
-            origin: { session_id: 'sess-1', file: '/a/b/c.ts' },
-        }));
+        storage.writeEntry(
+            makeEntry({
+                id: 'style-x',
+                rule: 'Rule X',
+                origin: { session_id: 'sess-1', file: '/a/b/c.ts' },
+            }),
+        );
 
         const exported = exportProfile(storage);
         const original = storage.readActiveProfile();
@@ -224,10 +232,13 @@ describe('importFromUrl', () => {
             },
         });
 
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-            ok: true,
-            text: () => Promise.resolve(JSON.stringify(profile)),
-        }));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: true,
+                text: () => Promise.resolve(JSON.stringify(profile)),
+            }),
+        );
 
         const result = await importFromUrl(storage, 'https://example.com/profile.dna.json');
 
@@ -236,14 +247,17 @@ describe('importFromUrl', () => {
     });
 
     it('throws when fetch fails', async () => {
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-            ok: false,
-            status: 404,
-            statusText: 'Not Found',
-        }));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: false,
+                status: 404,
+                statusText: 'Not Found',
+            }),
+        );
 
-        await expect(
-            importFromUrl(storage, 'https://example.com/missing.json'),
-        ).rejects.toThrow(/failed to fetch/i);
+        await expect(importFromUrl(storage, 'https://example.com/missing.json')).rejects.toThrow(
+            /failed to fetch/i,
+        );
     });
 });

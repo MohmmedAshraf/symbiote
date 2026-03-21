@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DnaEntry, DnaProfile, DnaProfileStats } from './schema.js';
+import {
+    DnaProfileSchema,
+    type DnaEntry,
+    type DnaProfile,
+    type DnaProfileStats,
+} from './schema.js';
 
 interface Config {
     active_profile: string;
@@ -100,7 +105,8 @@ export class ProfileStorage {
         if (!fs.existsSync(filePath)) return null;
 
         const raw = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(raw) as DnaProfile;
+        const parsed = JSON.parse(raw);
+        return DnaProfileSchema.parse(parsed);
     }
 
     readActiveProfile(): DnaProfile {
@@ -127,27 +133,6 @@ export class ProfileStorage {
             profile.entries[idx] = entry;
         } else {
             profile.entries.push(entry);
-        }
-
-        profile.profile.updated = today();
-        profile.stats = computeStats(profile.entries);
-        this.saveProfile(name, profile);
-    }
-
-    reinforceEntry(id: string, sessionId: string): void {
-        const name = this.getActiveProfileName();
-        const profile = this.readProfile(name);
-        if (!profile) return;
-
-        const entry = profile.entries.find((e) => e.id === id);
-        if (!entry) return;
-
-        entry.evidence.occurrences += 1;
-        entry.evidence.last_seen = today();
-
-        const isSameSession = entry.origin?.session_id === sessionId;
-        if (!isSameSession) {
-            entry.evidence.sessions += 1;
         }
 
         profile.profile.updated = today();
@@ -212,6 +197,10 @@ export class ProfileStorage {
     }
 
     private profilePath(name: string): string {
-        return path.join(this.profilesDir, `${name}.json`);
+        const resolved = path.resolve(this.profilesDir, `${name}.json`);
+        if (!resolved.startsWith(this.profilesDir)) {
+            throw new Error('Invalid profile name');
+        }
+        return resolved;
     }
 }

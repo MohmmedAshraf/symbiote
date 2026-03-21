@@ -81,14 +81,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         'get_developer_dna',
         "Get the developer's coding style and preferences. Call when unsure about conventions.",
         {
-            category: z
-                .string()
-                .optional()
-                .describe('Filter by category'),
-            taskContext: z
-                .string()
-                .optional()
-                .describe('Description of the current task for relevance filtering'),
+            category: z.string().optional().describe('Filter by category'),
         },
         async (input) => ({
             content: [textResult(handleGetDeveloperDna(ctx, input))],
@@ -99,13 +92,8 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         'record_instruction',
         'When the developer corrects your style or preferences, call this so it persists across sessions.',
         {
-            rule: z
-                .string()
-                .describe('The coding rule or preference'),
-            reason: z
-                .string()
-                .optional()
-                .describe('Why this rule matters'),
+            rule: z.string().describe('The coding rule or preference'),
+            reason: z.string().optional().describe('Why this rule matters'),
             category: z
                 .string()
                 .optional()
@@ -114,27 +102,15 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
                 .array(z.string())
                 .optional()
                 .describe('Languages/frameworks this applies to'),
-            not_for: z
-                .array(z.string())
-                .optional()
-                .describe('Languages/frameworks to exclude'),
+            not_for: z.array(z.string()).optional().describe('Languages/frameworks to exclude'),
             source: z
                 .enum(['explicit', 'correction', 'observed'])
                 .optional()
                 .default('explicit')
                 .describe('How this rule was captured'),
-            sessionId: z
-                .string()
-                .optional()
-                .describe('Current session identifier'),
-            file: z
-                .string()
-                .optional()
-                .describe('File being worked on when captured'),
-            context: z
-                .string()
-                .optional()
-                .describe('What triggered this instruction'),
+            sessionId: z.string().optional().describe('Current session identifier'),
+            file: z.string().optional().describe('File being worked on when captured'),
+            context: z.string().optional().describe('What triggered this instruction'),
         },
         async (input) => {
             const result = handleRecordInstruction(ctx, {
@@ -381,11 +357,6 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         {
             symbol: z.string().describe('Symbol name or ID to rename'),
             new_name: z.string().describe('New name for the symbol'),
-            scope: z
-                .enum(['file', 'project'])
-                .optional()
-                .default('project')
-                .describe('Scope of rename: file or project (default: project)'),
         },
         async (input) => {
             const { new_name: newName, ...rest } = input;

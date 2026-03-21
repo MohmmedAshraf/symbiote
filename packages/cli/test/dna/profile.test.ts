@@ -210,65 +210,6 @@ describe('ProfileStorage', () => {
         });
     });
 
-    describe('reinforceEntry', () => {
-        it('increments occurrences and sessions for a new session', () => {
-            storage.ensurePersonalProfile('Test User', 'testuser');
-
-            const entry = makeEntry({
-                id: 'style-semicolons',
-                rule: 'Always use semicolons',
-                origin: { session_id: 'sess-1' },
-            });
-            storage.writeEntry(entry);
-
-            storage.reinforceEntry('style-semicolons', 'sess-2');
-
-            const reinforced = storage.readEntry('style-semicolons');
-            expect(reinforced).not.toBeNull();
-            expect(reinforced!.evidence.occurrences).toBe(2);
-            expect(reinforced!.evidence.sessions).toBe(1);
-        });
-
-        it('increments occurrences but not sessions for the same session', () => {
-            storage.ensurePersonalProfile('Test User', 'testuser');
-
-            const entry = makeEntry({
-                id: 'style-semicolons',
-                rule: 'Always use semicolons',
-                origin: { session_id: 'sess-1' },
-            });
-            storage.writeEntry(entry);
-
-            storage.reinforceEntry('style-semicolons', 'sess-1');
-
-            const reinforced = storage.readEntry('style-semicolons');
-            expect(reinforced).not.toBeNull();
-            expect(reinforced!.evidence.occurrences).toBe(2);
-            expect(reinforced!.evidence.sessions).toBe(0);
-        });
-
-        it('updates last_seen date', () => {
-            storage.ensurePersonalProfile('Test User', 'testuser');
-
-            const entry = makeEntry({
-                id: 'style-semicolons',
-                rule: 'Always use semicolons',
-                evidence: {
-                    first_seen: '2026-01-01',
-                    last_seen: '2026-01-01',
-                    occurrences: 5,
-                    sessions: 2,
-                },
-            });
-            storage.writeEntry(entry);
-
-            storage.reinforceEntry('style-semicolons', 'sess-new');
-
-            const reinforced = storage.readEntry('style-semicolons');
-            expect(reinforced!.evidence.last_seen).not.toBe('2026-01-01');
-        });
-    });
-
     describe('readActiveProfile fallback', () => {
         it('falls back to personal when active profile is missing', () => {
             storage.ensurePersonalProfile('Test User', 'testuser');

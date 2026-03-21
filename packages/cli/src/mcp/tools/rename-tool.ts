@@ -12,7 +12,6 @@ export interface RenameToolContext {
 export interface RenameSymbolInput {
     symbol: string;
     newName: string;
-    scope?: 'file' | 'project';
 }
 
 export interface RenameChange {
@@ -99,11 +98,14 @@ function addCallerChanges(
         const lineText = lines[caller.line - 1];
         if (!lineText || !lineText.includes(oldName)) continue;
 
+        const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(`\\b${escaped}\\b`, 'g');
+        const newText = lineText.replace(pattern, newName);
         changes.push({
             file: filePath,
             line: caller.line,
             oldText: lineText,
-            newText: lineText.replaceAll(oldName, newName),
+            newText,
         });
     }
 }
@@ -134,11 +136,14 @@ function addImportChanges(
         const lineText = lines[imp.line - 1];
         if (!lineText || !lineText.includes(oldName)) continue;
 
+        const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(`\\b${escaped}\\b`, 'g');
+        const newText = lineText.replace(pattern, newName);
         changes.push({
             file: filePath,
             line: imp.line,
             oldText: lineText,
-            newText: lineText.replaceAll(oldName, newName),
+            newText,
         });
     }
 }

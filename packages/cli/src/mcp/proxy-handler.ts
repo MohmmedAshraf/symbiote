@@ -108,10 +108,9 @@ async function dispatch(
         case 'rename_symbol': {
             const symbol = input.symbol as string;
             const newName = input.new_name as string;
-            const scope = (input.scope as 'file' | 'project') ?? 'project';
             return handleRenameSymbol(
                 { cortexRepo: ctx.cortexRepo, rootDir: ctx.rootDir },
-                { symbol, newName, scope },
+                { symbol, newName },
             );
         }
         case 'get_constraints':
@@ -189,15 +188,22 @@ export async function handleMcpProxy(
     }
 
     try {
-        const { tool, input } = JSON.parse(body) as {
-            tool: string;
-            input: Record<string, unknown>;
-        };
-        const result = await dispatch(ctx, tool, input ?? {});
+        const parsed = JSON.parse(body);
+        if (typeof parsed?.tool !== 'string') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing or invalid tool name' }));
+            return;
+        }
+        const input = parsed.input && typeof parsed.input === 'object' ? parsed.input : {};
+        const result = await dispatch(ctx, parsed.tool, input);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
     } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: String(err) }));
+        res.end(
+            JSON.stringify({
+                error: err instanceof Error ? err.message : 'Internal server error',
+            }),
+        );
     }
 }

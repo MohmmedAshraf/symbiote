@@ -92,12 +92,12 @@ export async function handleGetContextForFile(
 ): Promise<ToolResponse<FileContextOutput>> {
     const fileCtx = await ctx.graph.getFileContext(input.filePath);
 
-    const allConstraints = await ctx.intent.listEntries('constraint');
+    const allConstraints = await ctx.intent.listEntries('constraint', { status: 'active' });
     const constraints = allConstraints.filter(
         (c) => c.frontmatter.scope === 'global' || input.filePath.startsWith(c.frontmatter.scope),
     );
 
-    const allDecisions = await ctx.intent.listEntries('decision');
+    const allDecisions = await ctx.intent.listEntries('decision', { status: 'active' });
     const decisions = allDecisions.filter(
         (d) => d.frontmatter.scope === 'global' || input.filePath.startsWith(d.frontmatter.scope),
     );
