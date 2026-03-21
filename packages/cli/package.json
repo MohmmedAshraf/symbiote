@@ -1,6 +1,6 @@
 {
     "name": "symbiote-cli",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "description": "Symbiote bonds with your AI tools — giving them memory, context, and your coding DNA.",
     "type": "module",
     "imports": {
