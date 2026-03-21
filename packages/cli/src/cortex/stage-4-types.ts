@@ -520,11 +520,6 @@ async function propagateTypes(
         }
     }
 
-    for (const v of variables) {
-        const calls = await repo.getCallsFrom(v.id);
-        if (calls.length > 0) continue;
-    }
-
     for (const fn of [...functions, ...methods]) {
         const calls = await repo.getCallsFrom(fn.id);
         for (const call of calls) {

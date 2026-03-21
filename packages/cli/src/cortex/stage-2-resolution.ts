@@ -140,7 +140,7 @@ export async function runStage2(
             }
         }
 
-        resolveReExportChains(symbolTable, rootDir, new Set());
+        resolveReExportChains(symbolTable, rootDir);
 
         if (edges.length > 0) {
             await repo.insertImportsEdges(edges);
@@ -339,17 +339,13 @@ function isDirectory(p: string): boolean {
     }
 }
 
-function resolveReExportChains(
-    symbolTable: SymbolTable,
-    rootDir: string,
-    visited: Set<string>,
-): void {
+function resolveReExportChains(symbolTable: SymbolTable, rootDir: string): void {
     for (const [key, entry] of symbolTable) {
         const trueSource = followReExports(
             entry.originalName,
             entry.resolvedSourcePath,
             rootDir,
-            visited,
+            new Set<string>(),
         );
         if (trueSource && trueSource !== entry.resolvedSourcePath) {
             symbolTable.set(key, { ...entry, resolvedSourcePath: trueSource });

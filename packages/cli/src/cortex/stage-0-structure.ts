@@ -78,12 +78,10 @@ export async function runStage0(
 
         const dir = path.dirname(relPath);
         const moduleId = `module:${dir === '.' ? relPath : dir}`;
+        const barrel =
+            language === 'typescript' || language === 'javascript' ? isBarrelFile(content) : false;
 
         if (dir === '.') {
-            const barrel =
-                language === 'typescript' || language === 'javascript'
-                    ? isBarrelFile(content)
-                    : false;
             if (!moduleNodes.has(moduleId)) {
                 moduleNodes.set(moduleId, {
                     id: `module:${relPath}`,
@@ -100,8 +98,10 @@ export async function runStage0(
                 moduleNodes.set(moduleId, {
                     id: moduleId,
                     path: dir,
-                    isBarrel: false,
+                    isBarrel: barrel,
                 });
+            } else if (barrel) {
+                moduleNodes.get(moduleId)!.isBarrel = true;
             }
         }
 

@@ -14,14 +14,11 @@ export function wrapResponse<T>(
     return response;
 }
 
-export async function getMaxDepth(repo: CortexRepository): Promise<number> {
+export async function getMinDepthLevel(repo: CortexRepository): Promise<number> {
     const files = await repo.getAllFileNodes();
     if (files.length === 0) return 0;
-    return Math.min(...files.map((f) => f.depthLevel));
+    return files.reduce((min, f) => Math.min(min, f.depthLevel), Infinity);
 }
 
-export async function getDepthForFile(repo: CortexRepository, filePath: string): Promise<number> {
-    const fileId = `file:${filePath}`;
-    const file = await repo.getFileNode(fileId);
-    return file?.depthLevel ?? 0;
-}
+/** @deprecated Use getMinDepthLevel instead */
+export const getMaxDepth = getMinDepthLevel;

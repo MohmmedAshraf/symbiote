@@ -101,6 +101,7 @@ export class RealTimeEnrichment {
         }
         for (const nodeId of toDelete) {
             this.weights.delete(nodeId);
+            this.editBoostActive.delete(nodeId);
         }
     }
 

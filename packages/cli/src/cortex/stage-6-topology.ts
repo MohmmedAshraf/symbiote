@@ -200,7 +200,6 @@ export function traceExecutionFlows(
         const visited = new Set<string>();
         const nodeIds: string[] = [];
         let hasAsync = false;
-        let hasErrorPath = false;
 
         const queue: Array<{ id: string; depth: number }> = [{ id: entry.id, depth: 0 }];
         visited.add(entry.id);
@@ -232,12 +231,12 @@ export function traceExecutionFlows(
         if (nodeIds.length > 0) {
             const name = entry.id.split(':').pop() ?? entry.id;
             flows.push({
-                id: `flow:${name}`,
+                id: `flow:${entry.id}`,
                 name,
                 entryPointId: entry.id,
                 nodeIds,
                 hasAsync,
-                hasErrorPath,
+                hasErrorPath: false,
             });
         }
     }

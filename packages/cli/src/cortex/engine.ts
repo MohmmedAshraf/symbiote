@@ -87,9 +87,10 @@ export class CortexEngine {
         for (const id of changedFileIds) {
             visited.delete(id);
         }
-        for (const fileId of visited) {
-            const file = await this.repo.getFileNode(fileId);
-            if (file && file.depthLevel > 1) {
+        const cascadedIds = [...visited];
+        const fileNodes = await this.repo.getFileNodesByIds(cascadedIds);
+        for (const file of fileNodes) {
+            if (file.depthLevel > 1) {
                 await this.repo.upsertFileNode({
                     ...file,
                     depthLevel: 1,

@@ -39,7 +39,9 @@ export async function collectFindings(repo: CortexRepository): Promise<Finding[]
     const classes = await repo.getAllClasses();
     const methods = await repo.getAllMethods();
     const classMetrics = classes.map((cls) => {
-        const classMethods = methods.filter((m) => m.className === cls.name);
+        const classMethods = methods.filter(
+            (m) => m.className === cls.name && m.filePath === cls.filePath,
+        );
         return {
             nodeId: cls.id,
             name: cls.name,

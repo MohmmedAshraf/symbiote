@@ -243,8 +243,9 @@ function reverseTopologicalSort(graph: Map<string, CallGraphEntry>): string[] {
     }
 
     const sorted: string[] = [];
-    while (queue.length > 0) {
-        const node = queue.shift()!;
+    let qi = 0;
+    while (qi < queue.length) {
+        const node = queue[qi++];
         sorted.push(node);
         for (const neighbor of adjacency.get(node) ?? []) {
             const newDeg = (inDegree.get(neighbor) ?? 1) - 1;
@@ -253,8 +254,9 @@ function reverseTopologicalSort(graph: Map<string, CallGraphEntry>): string[] {
         }
     }
 
+    const sortedSet = new Set(sorted);
     for (const [id] of graph) {
-        if (!sorted.includes(id)) sorted.push(id);
+        if (!sortedSet.has(id)) sorted.push(id);
     }
 
     return sorted.reverse();
@@ -267,9 +269,10 @@ async function processFile(
     callGraph: Map<string, CallGraphEntry>,
     ctx: FlowContext,
 ): Promise<void> {
+    if (!file.language) return;
     const absPath = resolve(rootDir, file.path);
     const content = readFileSync(absPath, 'utf-8');
-    const grammar = getGrammar(file.language!);
+    const grammar = getGrammar(file.language);
     if (!grammar) return;
 
     const parser = new Parser();
