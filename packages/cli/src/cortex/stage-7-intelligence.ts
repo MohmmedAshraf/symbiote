@@ -8,7 +8,7 @@ import {
 } from './patterns.js';
 import type { Finding, TemporalSnapshot } from './topology-types.js';
 import type { StageResult, StageError } from './types.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 
 interface NodePattern {
     nodeId: string;
@@ -245,7 +245,7 @@ export function detectStyleDeviations(
     nodePatterns: NodePattern[],
 ): Finding[] {
     const activeStyleEntries = dnaEntries.filter(
-        (e) => e.frontmatter.status !== 'rejected' && e.frontmatter.category === 'style',
+        (e) => e.status !== 'rejected' && e.category === 'style',
     );
 
     if (activeStyleEntries.length === 0) return [];
@@ -253,8 +253,8 @@ export function detectStyleDeviations(
     const findings: Finding[] = [];
     const hasAsyncAwaitRule = activeStyleEntries.some(
         (e) =>
-            e.content.toLowerCase().includes('async/await') ||
-            e.content.toLowerCase().includes('async await'),
+            e.rule.toLowerCase().includes('async/await') ||
+            e.rule.toLowerCase().includes('async await'),
     );
 
     if (hasAsyncAwaitRule) {
@@ -284,7 +284,7 @@ export function detectDecisionContradictions(
     observedPatterns: ObservedPattern[],
 ): Finding[] {
     const activeDecisions = dnaEntries.filter(
-        (e) => e.frontmatter.status === 'approved' && e.frontmatter.category === 'decisions',
+        (e) => e.status === 'approved' && e.category === 'decisions',
     );
 
     if (activeDecisions.length === 0) return [];
@@ -293,7 +293,7 @@ export function detectDecisionContradictions(
 
     for (const pattern of observedPatterns) {
         for (const decision of activeDecisions) {
-            const content = decision.content.toLowerCase();
+            const content = decision.rule.toLowerCase();
             const patternDesc = pattern.description.toLowerCase();
             const patternName = pattern.pattern.toLowerCase().replace(/_/g, ' ');
 
@@ -305,12 +305,12 @@ export function detectDecisionContradictions(
                 findings.push({
                     kind: 'decision_contradiction',
                     severity: 'warning',
-                    message: `${pattern.nodeId} contradicts decision: ${decision.content}`,
+                    message: `${pattern.nodeId} contradicts decision: ${decision.rule}`,
                     nodeIds: [pattern.nodeId],
                     filePaths: [pattern.filePath],
                     metadata: {
-                        decisionId: decision.frontmatter.id,
-                        decisionContent: decision.content,
+                        decisionId: decision.id,
+                        decisionContent: decision.rule,
                         observedPattern: pattern.pattern,
                     },
                 });

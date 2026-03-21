@@ -190,14 +190,13 @@ export async function cmdHookSessionStart(): Promise<void> {
     }
 
     try {
-        const { DnaStorage } = await import('#dna/storage.js');
-        const dnaDir = path.join(SYMBIOTE_HOME, 'dna');
-        const dnaStorage = new DnaStorage(dnaDir);
-        const entries = dnaStorage
-            .listEntries()
-            .filter((e) => e.frontmatter.status !== 'rejected')
+        const { ProfileStorage } = await import('#dna/profile.js');
+        const profileStorage = new ProfileStorage(SYMBIOTE_HOME);
+        const profile = profileStorage.readActiveProfile();
+        const entries = profile.entries
+            .filter((e) => e.status !== 'rejected')
             .slice(0, 5);
-        const dnaRules = entries.map((e) => e.content).join(', ');
+        const dnaRules = entries.map((e) => e.rule).join(', ');
 
         const projectName = path.basename(projectRoot);
         const lines: string[] = [`[Symbiote] Project: ${projectName}`];
