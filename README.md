@@ -74,7 +74,7 @@ sequenceDiagram
     participant DNA as ~/.symbiote/<br>Developer DNA
 
     Brain->>Sym: project structure, dependencies, health
-    DNA->>Sym: style traits, preferences, anti-patterns
+    DNA->>Sym: coding rules, reasons, scoping
 
     loop Every interaction
         Sym->>AI: injects context (MCP + hooks)
@@ -88,17 +88,20 @@ sequenceDiagram
 
 ### Developer DNA — Your Coding Identity
 
-Lives at `~/.symbiote/dna/`. Follows you across every project.
+Lives at `~/.symbiote/profiles/`. Follows you across every project. **Shareable.**
 
-When you correct your AI — _"no, use early returns"_ — Symbiote captures it. Same correction across three sessions? Auto-promoted from suggestion to approved trait. Explicit instruction? Approved immediately.
+When you correct your AI — _"no, use early returns"_ — Symbiote captures it with the rule, the reason why, and which languages it applies to. Same correction across three sessions? Auto-promoted. Explicit instruction? Approved immediately at full confidence.
 
-Your DNA is human-readable markdown. Review it, edit it, or ignore it:
+Your DNA is a single JSON profile — portable, exportable, switchable:
 
 ```bash
-symbiote dna              # Summary: 34 traits, 2 pending review
-symbiote dna list         # All traits with confidence scores
-symbiote dna approve <id> # Promote a suggestion
+symbiote dna              # Active profile summary
+symbiote dna export       # Export to .dna.json — share it anywhere
+symbiote dna import <file|url>  # Load someone else's DNA
+symbiote dna switch <name>      # Swap profiles instantly
 ```
+
+Import a senior developer's DNA and your AI immediately codes in their style. Switch back to yours anytime. Your DNA is never lost.
 
 ### Project Brain — Your Codebase's Nervous System
 
@@ -214,7 +217,7 @@ Open the URL printed in your terminal. Your project's brain — a 3D neural grap
 | ---------------- | ------------------------------------------------ |
 | **Brain Graph**  | 3D neural visualization — the hero, always alive |
 | **Health Pulse** | Code health score (0-100) with actionable issues |
-| **DNA Lab**      | Your traits — approve, reject, edit              |
+| **DNA Lab**      | Your profiles — rules, reasons, export, switch   |
 
 ---
 
@@ -321,20 +324,21 @@ Every issue links to a file and line number. The Health Pulse view in the web UI
 
 ```
 ~/.symbiote/                 # Global — your coding identity
-├── config.json
-└── dna/
-    ├── style/               # "Use early returns, not nested else"
-    ├── preferences/         # "Drizzle over Prisma"
-    ├── anti-patterns/       # "No nested ternaries"
-    └── decisions/           # "Composition over inheritance"
+├── config.json              # { "active_profile": "personal" }
+└── profiles/
+    ├── personal.json        # Your DNA — always exists
+    ├── theprime.json        # Imported from someone else
+    └── kent-react.json      # Another imported profile
 
 your-project/.brain/         # Per-project — the brain
 ├── symbiote.db              # Code graph + embeddings (gitignored)
 └── intent/                  # Committed to git — shared with team
-    ├── overview.md          # Auto-generated project summary
+    ├── overview.md          # AI-generated project summary
     ├── decisions/           # "Why we chose X over Y"
     └── constraints/         # "No raw SQL in application code"
 ```
+
+Each DNA profile is a single `.dna.json` file containing rich entries — rule, reason, category, language scoping, and evidence. Export yours, share it on Twitter, import someone else's with one command.
 
 The intent layer is committed to git. New team member runs `/symbiote-init` — they get the full project brain plus their personal DNA on top. Same project understanding, individual style.
 
@@ -364,16 +368,21 @@ Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship w
 
 ## CLI Reference
 
-| Command                 | What it does                                   |
-| ----------------------- | ---------------------------------------------- |
-| `symbiote install`      | One-time global setup for all detected editors |
-| `symbiote scan`         | Rescan codebase (incremental)                  |
-| `symbiote scan --force` | Full rescan, ignore cache                      |
-| `symbiote serve`        | MCP server + web UI (port auto-assigned)       |
-| `symbiote mcp`          | MCP server only (stdio, for editors)           |
-| `symbiote dna`          | View and manage developer DNA                  |
-| `symbiote impact`       | Analyze impact of working changes              |
-| `symbiote unbond`       | Detach from all AI hosts                       |
+| Command                      | What it does                                   |
+| ---------------------------- | ---------------------------------------------- |
+| `symbiote install`           | One-time global setup for all detected editors |
+| `symbiote scan`              | Rescan codebase (incremental)                  |
+| `symbiote scan --force`      | Full rescan, ignore cache                      |
+| `symbiote serve`             | MCP server + web UI (port auto-assigned)       |
+| `symbiote mcp`               | MCP server only (stdio, for editors)           |
+| `symbiote dna`               | Active profile summary                         |
+| `symbiote dna list`          | List all DNA profiles                          |
+| `symbiote dna switch <name>` | Switch active profile                          |
+| `symbiote dna export`        | Export profile to `.dna.json`                  |
+| `symbiote dna import <file>` | Import a shared profile                        |
+| `symbiote dna diff <name>`   | Compare two profiles                           |
+| `symbiote impact`            | Analyze impact of working changes              |
+| `symbiote unbond`            | Detach from all AI hosts                       |
 
 ---
 
@@ -390,7 +399,7 @@ Symbiote uses Tree-sitter for precise code parsing. **Bundled** languages ship w
 | **Graph**      | Graphology (Louvain, PageRank, betweenness)                  |
 | **Web UI**     | Vite + React 19 + react-three-fiber + Three.js + custom GLSL |
 | **Styling**    | Tailwind CSS v4 (dark theme)                                 |
-| **Testing**    | Vitest (799 tests across 85 files)                           |
+| **Testing**    | Vitest (842 tests across 86 files)                           |
 
 ---
 
