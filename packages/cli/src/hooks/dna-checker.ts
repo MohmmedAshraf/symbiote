@@ -1,4 +1,4 @@
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 
 function basename(filePath: string): string {
     const slash = filePath.lastIndexOf('/');
@@ -11,16 +11,18 @@ export function checkDnaViolations(
     dnaEntries: DnaEntry[],
 ): string | null {
     for (const entry of dnaEntries) {
-        const pattern = entry.frontmatter.pattern;
-        if (!pattern) continue;
+        if (entry.category !== 'anti-patterns') continue;
 
-        try {
-            const regex = new RegExp(pattern, 'm');
-            if (regex.test(newContent)) {
-                return `DNA violation in ${basename(filePath)}: ${entry.content}`;
-            }
-        } catch {
-            // invalid regex in DNA entry — skip
+        const keywords = entry.rule
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w) => w.length > 3);
+        if (keywords.length === 0) continue;
+
+        const lowerContent = newContent.toLowerCase();
+        const matched = keywords.some((kw) => lowerContent.includes(kw));
+        if (matched) {
+            return `DNA violation in ${basename(filePath)}: ${entry.rule}`;
         }
     }
 

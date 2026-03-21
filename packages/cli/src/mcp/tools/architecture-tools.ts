@@ -1,11 +1,5 @@
 import type { CortexRepository } from '#cortex/repository.js';
-import type {
-    Finding,
-    FindingKind,
-    FindingSeverity,
-    ArchitectureOverview,
-    ToolResponse,
-} from '#cortex/types.js';
+import type { Finding, FindingKind, FindingSeverity, ToolResponse } from '#cortex/types.js';
 
 export interface FindPatternsInput {
     scope: string;
@@ -57,11 +51,22 @@ export async function handleFindPatterns(
     };
 }
 
+export interface ArchitectureSummary {
+    layers: Array<{ layer: string; nodeCount: number }>;
+    boundaries: Array<{ fromLayer: string; toLayer: string; edgeCount: number }>;
+    violations: Finding[];
+    communityCount: number;
+    topHubs: Array<{ nodeId: string; name: string; pageRank: number; betweenness: number }>;
+}
+
 export async function handleGetArchitecture(
     repo: CortexRepository,
-): Promise<ToolResponse<ArchitectureOverview>> {
+): Promise<ToolResponse<ArchitectureSummary>> {
     const layersRaw = await repo.getMeta('layers');
-    const layers = layersRaw ? JSON.parse(layersRaw) : [];
+    const rawLayers: Array<{ layer: string; nodeCount: number; nodeIds?: string[] }> = layersRaw
+        ? JSON.parse(layersRaw)
+        : [];
+    const layers = rawLayers.map(({ layer, nodeCount }) => ({ layer, nodeCount }));
 
     const boundariesRaw = await repo.getMeta('layer_boundaries');
     const boundaries = boundariesRaw ? JSON.parse(boundariesRaw) : [];

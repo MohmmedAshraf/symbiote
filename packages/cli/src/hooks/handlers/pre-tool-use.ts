@@ -303,7 +303,7 @@ export class PreToolUseHandler {
         const activeEntries = this.dnaEngine
             .getActiveEntries()
             .slice(0, 10)
-            .map((e) => `[${e.frontmatter.category}] ${e.content}`);
+            .map((e) => `[${e.category}] ${e.rule}`);
 
         if (activeEntries.length > 0) {
             lines.push('Developer DNA (active):');

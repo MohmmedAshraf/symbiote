@@ -63,19 +63,31 @@ export class SessionStartHandler {
         const lines: string[] = [];
 
         lines.push(
-            'Symbiote is active. Hook responses on file operations include\n' +
-                'dependency analysis and impact previews — read and follow them.',
-        );
-
-        lines.push(
-            'When you need to understand code relationships, search for Symbiote MCP tools\n' +
-                '(get_impact, get_context_for_symbol, semantic_search, rename_symbol).',
+            'Symbiote is active. ALWAYS use Symbiote MCP tools instead of manual search:\n' +
+                '  Context:\n' +
+                '    get_project_overview — project summary, stats, constraints, decisions\n' +
+                '    get_context_for_file — nodes, dependencies, dependents for a file\n' +
+                '    get_context_for_symbol — symbol relationships and references\n' +
+                '    get_developer_dna — coding style and preferences\n' +
+                '  Analysis:\n' +
+                '    get_impact — ripple effects of changing a file or symbol\n' +
+                '    get_architecture — layers, communities, hubs, violations\n' +
+                '    get_health — constraint violations, circular deps, dead code, coupling\n' +
+                '    detect_changes — what changed since last scan\n' +
+                '  Search:\n' +
+                '    semantic_search — find code by meaning\n' +
+                '    query_graph — search nodes, dependencies, dependents, hubs\n' +
+                '    find_patterns — code smells, style deviations, architectural issues\n' +
+                '  Actions:\n' +
+                '    rename_symbol — safe cross-file renames\n' +
+                '    get_constraints / get_decisions — list project rules and choices\n' +
+                'Hook responses on file operations include dependency analysis — read and follow them.',
         );
 
         const activeEntries = this.dnaEngine.getActiveEntries();
         if (activeEntries.length > 0) {
-            const prose = activeEntries.map((e) => e.content).join(', ');
-            lines.push(`Developer style: ${prose}`);
+            const dnaLines = activeEntries.slice(0, 10).map((e) => `  - [${e.category}] ${e.rule}`);
+            lines.push(`Developer DNA (active):\n${dnaLines.join('\n')}`);
         }
 
         const activeConstraints = this.constraints.filter(
@@ -98,9 +110,9 @@ export class SessionStartHandler {
 
         lines.push(
             'Do not use your own memory system. Use Symbiote MCP tools to capture:\n' +
-                '  - record_instruction — developer corrections, style, preferences\n' +
-                '  - propose_decision — architectural decisions\n' +
-                '  - propose_constraint — project rules and constraints',
+                '  record_instruction — developer corrections, style, preferences\n' +
+                '  propose_decision — architectural decisions\n' +
+                '  propose_constraint — project rules and constraints',
         );
 
         return {

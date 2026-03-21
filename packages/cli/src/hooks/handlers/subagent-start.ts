@@ -37,7 +37,7 @@ export class SubagentStartHandler {
         const dnaRules = this.config.dnaEngine
             .getActiveEntries()
             .slice(0, 5)
-            .map((e) => e.content);
+            .map((e) => e.rule);
 
         const constraintLines = this.config.constraints
             .filter((c) => c.scope === '*' || c.scope === 'global')

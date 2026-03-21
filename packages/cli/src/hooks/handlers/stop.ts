@@ -52,11 +52,11 @@ export class StopHandler {
         }
 
         for (const filePath of hotspots) {
-            this.dnaEngine.captureInstruction(
-                `Frequently editing ${filePath}`,
+            this.dnaEngine.captureInstruction({
+                rule: `Frequently editing ${filePath}`,
+                source: 'observed',
                 sessionId,
-                'pattern',
-            );
+            });
         }
     }
 }

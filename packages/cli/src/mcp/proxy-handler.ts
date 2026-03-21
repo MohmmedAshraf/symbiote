@@ -49,12 +49,16 @@ async function dispatch(
         case 'get_developer_dna':
             return handleGetDeveloperDna(ctx, input);
         case 'record_instruction': {
-            const sid = (input.sessionId as string) || `session-${Date.now()}`;
             return handleRecordInstruction(ctx, {
-                instruction: input.instruction as string,
-                sessionId: sid,
-                isExplicit: (input.isExplicit as boolean) ?? false,
+                rule: (input.rule as string) ?? (input.instruction as string),
+                reason: input.reason as string | undefined,
                 category: input.category as string | undefined,
+                applies_to: input.applies_to as string[] | undefined,
+                not_for: input.not_for as string[] | undefined,
+                source: (input.source as 'explicit' | 'correction' | 'observed') ?? 'explicit',
+                sessionId: (input.sessionId as string) || `session-${Date.now()}`,
+                file: input.file as string | undefined,
+                context: input.context as string | undefined,
             });
         }
         case 'get_project_overview':
