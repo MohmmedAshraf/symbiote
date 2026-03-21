@@ -266,15 +266,17 @@ async function handleGetHealthApi(ctx: ServerContext, res: ServerResponse): Prom
 
 function handleListDna(ctx: ServerContext, res: ServerResponse): boolean {
     const entries = ctx.dnaEngine.getActiveEntries().map((e) => ({
-        id: e.frontmatter.id,
-        category: e.frontmatter.category,
-        confidence: e.frontmatter.confidence,
-        source: e.frontmatter.source,
-        status: e.frontmatter.status,
-        firstSeen: e.frontmatter.firstSeen,
-        lastSeen: e.frontmatter.lastSeen,
-        occurrences: e.frontmatter.occurrences,
-        content: e.content,
+        id: e.id,
+        category: e.category,
+        confidence: e.confidence,
+        source: e.source,
+        status: e.status,
+        firstSeen: e.evidence.first_seen,
+        lastSeen: e.evidence.last_seen,
+        occurrences: e.evidence.occurrences,
+        rule: e.rule,
+        reason: e.reason,
+        applies_to: e.applies_to,
     }));
     return json(res, entries);
 }
@@ -317,8 +319,20 @@ function handleUpdateDna(
                     } else {
                         json(res, entry);
                     }
-                } else if (typeof data.content === 'string') {
-                    const entry = ctx.dnaEngine.editEntry(entryId, data.content);
+                } else if (
+                    typeof data.content === 'string' ||
+                    typeof data.rule === 'string' ||
+                    typeof data.reason === 'string' ||
+                    Array.isArray(data.applies_to)
+                ) {
+                    const updates: { rule?: string; reason?: string; applies_to?: string[] } = {};
+                    if (typeof data.content === 'string') updates.rule = data.content;
+                    if (typeof data.rule === 'string') updates.rule = data.rule;
+                    if (typeof data.reason === 'string') updates.reason = data.reason;
+                    if (Array.isArray(data.applies_to)) {
+                        updates.applies_to = data.applies_to as string[];
+                    }
+                    const entry = ctx.dnaEngine.editEntry(entryId, updates);
                     if (!entry) {
                         json(res, { error: 'Entry not found' }, 404);
                     } else {
@@ -414,7 +428,7 @@ export async function handleHookContext(
         const dna = ctx.dnaEngine
             .getActiveEntries()
             .slice(0, 10)
-            .map((e) => `[${e.frontmatter.category}] ${e.content}`);
+            .map((e) => `[${e.category}] ${e.rule}`);
 
         const lines: string[] = [];
         lines.push(`File context for ${relativePath}:`);
