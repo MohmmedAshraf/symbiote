@@ -1,3 +1,6 @@
+// Legacy types — kept for backward compatibility during v2 migration.
+// New code should import from '#dna/schema.js' instead.
+
 export const DNA_CATEGORIES = ['style', 'preferences', 'anti-patterns', 'decisions'] as const;
 
 export type DnaCategory = (typeof DNA_CATEGORIES)[number];

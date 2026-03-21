@@ -5,6 +5,7 @@ import {
     DNA_STATUSES,
     parseFrontmatter,
     serializeEntry,
+    parseYamlBlock,
 } from '#dna/types.js';
 
 describe('DNA_CATEGORIES', () => {
@@ -92,5 +93,32 @@ describe('serializeEntry', () => {
         expect(reparsed).toBeDefined();
         expect(reparsed!.frontmatter.id).toBe('style-early-returns');
         expect(reparsed!.content).toBe(entry.content);
+    });
+});
+
+describe('parseYamlBlock', () => {
+    it('parses key-value pairs', () => {
+        const result = parseYamlBlock('id: style-early-returns\nconfidence: 0.95');
+        expect(result).toEqual({ id: 'style-early-returns', confidence: 0.95 });
+    });
+
+    it('parses arrays', () => {
+        const block = 'sessionIds:\n  - "session-1"\n  - "session-2"';
+        const result = parseYamlBlock(block);
+        expect(result).toEqual({ sessionIds: ['session-1', 'session-2'] });
+    });
+
+    it('parses empty arrays', () => {
+        const result = parseYamlBlock('tags: []');
+        expect(result).toEqual({ tags: [] });
+    });
+
+    it('strips quotes from date values', () => {
+        const result = parseYamlBlock('firstSeen: "2026-03-10"');
+        expect(result).toEqual({ firstSeen: '2026-03-10' });
+    });
+
+    it('returns null for empty input', () => {
+        expect(parseYamlBlock('')).toBeNull();
     });
 });
