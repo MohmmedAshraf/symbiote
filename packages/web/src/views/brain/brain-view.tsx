@@ -156,10 +156,6 @@ export function BrainView() {
                     )}
                 </button>
             </div>
-
-            <style>{`
-                @keyframes spin { to { transform: rotate(360deg); } }
-            `}</style>
         </div>
     );
 }

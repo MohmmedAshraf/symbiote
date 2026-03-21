@@ -2,7 +2,7 @@ import type { SymbioteDB } from '#storage/db.js';
 import type { CortexRepository } from '#cortex/repository.js';
 import type { ToolResponse } from '#cortex/types.js';
 import { executePgqQuery } from '#cortex/pgq-queries.js';
-import { wrapResponse, getMaxDepth } from '../tool-response.js';
+import { wrapResponse, getMinDepthLevel } from '../tool-response.js';
 
 export interface GraphToolContext {
     db: SymbioteDB;
@@ -42,7 +42,7 @@ export async function handleQueryGraphV2(
     input: QueryGraphV2Input,
 ): Promise<ToolResponse<Record<string, unknown>[]>> {
     const rows = await executePgqQuery(ctx.db, input.query);
-    const depth = await getMaxDepth(ctx.cortexRepo);
+    const depth = await getMinDepthLevel(ctx.cortexRepo);
     return wrapResponse(rows, depth, false);
 }
 
@@ -50,7 +50,7 @@ export async function handleGetContextForSymbol(
     ctx: GraphToolContext,
     input: GetContextForSymbolInput,
 ): Promise<ToolResponse<SymbolContext | { error: string }>> {
-    const depth = await getMaxDepth(ctx.cortexRepo);
+    const depth = await getMinDepthLevel(ctx.cortexRepo);
     const matches = await ctx.cortexRepo.getSymbolByName(input.symbol);
 
     if (matches.length === 0) {

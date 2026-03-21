@@ -73,11 +73,15 @@ export class BrainRenderer {
     private velocity = 0;
     private targetVelocity = 0;
     private smoothedVelocity = 0;
-    private consciousness = 0;
     private totalEvents = 0;
 
     private animationId = 0;
     private isPlaying = true;
+    private stateUpdateCounter = 0;
+    private pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+    private readonly tmpCurrentPos = new THREE.Vector3();
+    private readonly tmpNeuronPos = new THREE.Vector3();
 
     private onStateUpdate: (state: BrainState) => void;
 
@@ -445,39 +449,46 @@ export class BrainRenderer {
         }
     }
 
+    private handleMouseDown = (): void => {
+        this.isDragging = true;
+    };
+
+    private handleMouseUp = (): void => {
+        this.isDragging = false;
+    };
+
+    private handleMouseMove = (e: MouseEvent): void => {
+        if (this.isDragging) {
+            this.world.rotation.y += e.movementX * 0.003;
+            this.world.rotation.x += e.movementY * 0.003;
+        }
+    };
+
+    private handleWheel = (e: WheelEvent): void => {
+        e.preventDefault();
+        this.targetZoom = Math.max(10, Math.min(3000, this.targetZoom + e.deltaY * 0.8));
+    };
+
+    private handleKeydown = (e: KeyboardEvent): void => {
+        if (e.key === '+' || e.key === '=') this.targetZoom = Math.max(10, this.targetZoom - 50);
+        if (e.key === '-') this.targetZoom = Math.min(3000, this.targetZoom + 50);
+        if (e.key === '0') this.targetZoom = 580;
+    };
+
+    private handleResize = (): void => {
+        this.resize();
+    };
+
     private bindInteraction(): void {
         const canvas = this.renderer.domElement;
 
-        canvas.addEventListener('mousedown', () => {
-            this.isDragging = true;
-        });
-        canvas.addEventListener('mouseup', () => {
-            this.isDragging = false;
-        });
-        canvas.addEventListener('mousemove', (e: MouseEvent) => {
-            if (this.isDragging) {
-                this.world.rotation.y += e.movementX * 0.003;
-                this.world.rotation.x += e.movementY * 0.003;
-            }
-        });
+        canvas.addEventListener('mousedown', this.handleMouseDown);
+        canvas.addEventListener('mouseup', this.handleMouseUp);
+        canvas.addEventListener('mousemove', this.handleMouseMove);
+        canvas.addEventListener('wheel', this.handleWheel, { passive: false });
 
-        canvas.addEventListener(
-            'wheel',
-            (e: WheelEvent) => {
-                e.preventDefault();
-                this.targetZoom = Math.max(10, Math.min(3000, this.targetZoom + e.deltaY * 0.8));
-            },
-            { passive: false },
-        );
-
-        window.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key === '+' || e.key === '=')
-                this.targetZoom = Math.max(10, this.targetZoom - 50);
-            if (e.key === '-') this.targetZoom = Math.min(3000, this.targetZoom + 50);
-            if (e.key === '0') this.targetZoom = 580;
-        });
-
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('keydown', this.handleKeydown);
+        window.addEventListener('resize', this.handleResize);
     }
 
     processEvent(event: SymbioteEvent): FeedItem | null {
@@ -508,7 +519,7 @@ export class BrainRenderer {
             if (reflIdx !== lobe.index) {
                 const reflLobe = this.lobes[reflIdx];
                 if (reflLobe) {
-                    setTimeout(
+                    const tid = setTimeout(
                         () => {
                             this.fireRipple(reflLobe, reflLobe.color);
                             this.lobeHypertrophy[reflLobe.index] = Math.min(
@@ -518,6 +529,7 @@ export class BrainRenderer {
                         },
                         150 + Math.random() * 250,
                     );
+                    this.pendingTimeouts.push(tid);
                 }
             }
         }
@@ -681,23 +693,19 @@ export class BrainRenderer {
                 continue;
             }
 
-            const currentPos = new THREE.Vector3().lerpVectors(
-                wave.startPos,
-                wave.targetLobe.position,
-                wave.progress,
-            );
+            this.tmpCurrentPos.lerpVectors(wave.startPos, wave.targetLobe.position, wave.progress);
 
             const sampleSize = Math.max(1, Math.floor(INNER_COUNT / 3000));
             for (let i = 0; i < Math.min(INNER_COUNT, 5000); i += sampleSize) {
-                const neuronPos = new THREE.Vector3(
+                this.tmpNeuronPos.set(
                     this.innerPositions[i * 3],
                     this.innerPositions[i * 3 + 1],
                     this.innerPositions[i * 3 + 2],
                 );
-                const dist = neuronPos.distanceTo(currentPos);
+                const dist = this.tmpNeuronPos.distanceTo(this.tmpCurrentPos);
                 if (dist < 20 && this.activeNeuronCount < MAX_ACTIVE_NEURONS) {
                     const strength = 1.0 - dist / 20;
-                    this.activeNeuronPositions[this.activeNeuronCount].copy(neuronPos);
+                    this.activeNeuronPositions[this.activeNeuronCount].copy(this.tmpNeuronPos);
                     this.activeNeuronColors[this.activeNeuronCount].copy(wave.color);
                     this.activeNeuronStrength[this.activeNeuronCount] = strength * 0.9;
                     this.activeNeuronCount++;
@@ -718,9 +726,8 @@ export class BrainRenderer {
             this.world.rotation.y += 0.00025;
         }
 
-        const totalHypertrophy = Array.from(this.lobeHypertrophy).reduce((a, b) => a + b, 0);
-        const evolutionZoom =
-            580 + totalHypertrophy * 25 + this.smoothedVelocity * 3 + this.consciousness * 100;
+        const totalHypertrophy = this.lobeHypertrophy.reduce((a: number, b: number) => a + b, 0);
+        const evolutionZoom = 580 + totalHypertrophy * 25 + this.smoothedVelocity * 3;
         if (Math.abs(this.targetZoom - 580) < 10) {
             this.targetZoom = evolutionZoom;
         }
@@ -735,12 +742,12 @@ export class BrainRenderer {
 
         this.outerMaterial.uniforms.uTime.value = globalTime;
         this.outerMaterial.uniforms.uStress.value = currentStress;
-        this.outerMaterial.uniforms.uConsciousness.value = this.consciousness;
+        this.outerMaterial.uniforms.uConsciousness.value = 0;
         this.outerMaterial.uniforms.uMoodInfluence.value = this.smoothedVelocity / 150;
 
         this.innerMaterial.uniforms.uTime.value = globalTime;
         this.innerMaterial.uniforms.uStress.value = currentStress;
-        this.innerMaterial.uniforms.uConsciousness.value = this.consciousness;
+        this.innerMaterial.uniforms.uConsciousness.value = 0;
         this.innerMaterial.uniforms.uDreaming.value = 0;
         this.innerMaterial.uniforms.uMoodInfluence.value = this.smoothedVelocity / 150;
         this.innerMaterial.uniforms.uActiveCount.value = this.activeNeuronCount;
@@ -797,17 +804,21 @@ export class BrainRenderer {
         this.updateSignalWaves();
         this.velocity = Math.round(this.smoothedVelocity);
 
-        this.onStateUpdate({
-            velocity: this.velocity,
-            eventCount: this.totalEvents,
-            consciousness: this.consciousness,
-            lobeActivity: Array.from(this.lobeActivity),
-            activeLobe: this.signalWaves[0]?.targetLobe.name ?? null,
-            activeSignal: this.signalWaves[0] ? `→ ${this.signalWaves[0].targetLobe.name}` : null,
-            signalProgress: this.signalWaves[0]
-                ? Math.round(this.signalWaves[0].progress * 100)
-                : 0,
-        });
+        if (++this.stateUpdateCounter % 6 === 0) {
+            this.onStateUpdate({
+                velocity: this.velocity,
+                eventCount: this.totalEvents,
+                consciousness: 0,
+                lobeActivity: Array.from(this.lobeActivity),
+                activeLobe: this.signalWaves[0]?.targetLobe.name ?? null,
+                activeSignal: this.signalWaves[0]
+                    ? `→ ${this.signalWaves[0].targetLobe.name}`
+                    : null,
+                signalProgress: this.signalWaves[0]
+                    ? Math.round(this.signalWaves[0].progress * 100)
+                    : 0,
+            });
+        }
 
         this.renderer.render(this.scene, this.camera);
     };
@@ -834,9 +845,37 @@ export class BrainRenderer {
 
     dispose(): void {
         cancelAnimationFrame(this.animationId);
+
+        for (const tid of this.pendingTimeouts) clearTimeout(tid);
+        this.pendingTimeouts.length = 0;
+
+        const canvas = this.renderer.domElement;
+        canvas.removeEventListener('mousedown', this.handleMouseDown);
+        canvas.removeEventListener('mouseup', this.handleMouseUp);
+        canvas.removeEventListener('mousemove', this.handleMouseMove);
+        canvas.removeEventListener('wheel', this.handleWheel);
+        window.removeEventListener('keydown', this.handleKeydown);
+        window.removeEventListener('resize', this.handleResize);
+
+        this.scene.traverse((obj) => {
+            if (
+                obj instanceof THREE.Mesh ||
+                obj instanceof THREE.Points ||
+                obj instanceof THREE.Line
+            ) {
+                obj.geometry?.dispose();
+                const mat = obj.material;
+                if (Array.isArray(mat)) {
+                    mat.forEach((m) => m.dispose());
+                } else {
+                    mat?.dispose();
+                }
+            }
+        });
+
         this.renderer.dispose();
-        if (this.container.contains(this.renderer.domElement)) {
-            this.container.removeChild(this.renderer.domElement);
+        if (this.container.contains(canvas)) {
+            this.container.removeChild(canvas);
         }
     }
 }

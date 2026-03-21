@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, SymbioteDB } from '#storage/db.js';
 import { createCortexSchema } from '#cortex/schema.js';
 import { CortexRepository } from '#cortex/repository.js';
-import { wrapResponse, getMaxDepth, getDepthForFile } from '#mcp/tool-response.js';
+import { wrapResponse, getMinDepthLevel } from '#mcp/tool-response.js';
 
 describe('ToolResponse', () => {
     let db: SymbioteDB;
@@ -42,12 +42,12 @@ describe('ToolResponse', () => {
         expect(result).not.toHaveProperty('stale_since');
     });
 
-    it('getMaxDepth returns 0 for empty db', async () => {
-        const depth = await getMaxDepth(repo);
+    it('getMinDepthLevel returns 0 for empty db', async () => {
+        const depth = await getMinDepthLevel(repo);
         expect(depth).toBe(0);
     });
 
-    it('getMaxDepth returns min depth across files', async () => {
+    it('getMinDepthLevel returns min depth across files', async () => {
         await repo.upsertFileNode({
             id: 'file:a.ts',
             path: 'a.ts',
@@ -64,11 +64,11 @@ describe('ToolResponse', () => {
             depthLevel: 3,
             lastIndexed: null,
         });
-        const depth = await getMaxDepth(repo);
+        const depth = await getMinDepthLevel(repo);
         expect(depth).toBe(3);
     });
 
-    it('getMaxDepth returns max when all files at same depth', async () => {
+    it('getMinDepthLevel returns max when all files at same depth', async () => {
         await repo.upsertFileNode({
             id: 'file:a.ts',
             path: 'a.ts',
@@ -85,12 +85,7 @@ describe('ToolResponse', () => {
             depthLevel: 7,
             lastIndexed: null,
         });
-        const depth = await getMaxDepth(repo);
+        const depth = await getMinDepthLevel(repo);
         expect(depth).toBe(7);
-    });
-
-    it('getDepthForFile returns 0 for nonexistent file', async () => {
-        const depth = await getDepthForFile(repo, 'does/not/exist.ts');
-        expect(depth).toBe(0);
     });
 });

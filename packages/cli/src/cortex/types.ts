@@ -226,13 +226,6 @@ export interface FlowPoint {
     line: number;
 }
 
-export type TaintLabel = string;
-
-export interface TaintConfig {
-    sources: string[];
-    sinks: string[];
-}
-
 export interface FlowsToEdge {
     sourceId: string;
     targetId: string;

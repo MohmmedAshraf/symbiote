@@ -1,30 +1,3 @@
-export interface LayoutNode {
-    id: string;
-    x: number;
-    y: number;
-    z: number;
-    cluster: number;
-    pagerank: number;
-    centrality: number;
-    type: string;
-    name: string;
-    filePath: string;
-}
-
-export interface LayoutEdge {
-    sourceId: string;
-    targetId: string;
-    type: string;
-    sourcePos: [number, number, number];
-    targetPos: [number, number, number];
-}
-
-export interface BrainLayoutResult {
-    nodes: LayoutNode[];
-    edges: LayoutEdge[];
-    clusterCount: number;
-}
-
 export interface GraphNode {
     id: string;
     type: string;

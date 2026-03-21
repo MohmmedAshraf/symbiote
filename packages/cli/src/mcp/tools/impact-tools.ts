@@ -5,7 +5,7 @@ import type { GitImpactResult } from '#core/git-impact.js';
 import type { GraphInstance } from '#core/types.js';
 import type { CortexRepository } from '#cortex/repository.js';
 import type { ToolResponse } from '#cortex/types.js';
-import { wrapResponse, getMaxDepth } from '../tool-response.js';
+import { wrapResponse, getMinDepthLevel } from '../tool-response.js';
 
 export interface ImpactToolContext {
     graph: GraphInstance;
@@ -23,7 +23,7 @@ export async function handleGetImpact(
     input: GetImpactInput,
 ): Promise<ToolResponse<ImpactResult>> {
     const maxDepth = input.maxDepth ?? 3;
-    const depth = await getMaxDepth(ctx.cortexRepo);
+    const depth = await getMinDepthLevel(ctx.cortexRepo);
 
     if (!ctx.graph.hasNode(input.target)) {
         return wrapResponse(
@@ -52,6 +52,6 @@ export async function handleDetectChanges(
 ): Promise<ToolResponse<GitImpactResult>> {
     const gitImpact = new GitImpactAnalyzer(ctx.graph);
     const result = await gitImpact.analyzeWorkingChanges(input.cwd);
-    const depth = await getMaxDepth(ctx.cortexRepo);
+    const depth = await getMinDepthLevel(ctx.cortexRepo);
     return wrapResponse(result, depth, false);
 }

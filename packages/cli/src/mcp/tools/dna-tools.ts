@@ -6,7 +6,6 @@ import { wrapResponse } from '../tool-response.js';
 
 export interface GetDeveloperDnaInput {
     category?: string;
-    taskContext?: string;
 }
 
 export interface GetDeveloperDnaOutput {
