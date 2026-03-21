@@ -2,10 +2,16 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it responsibly by emailing [cupo.ashraf@gmail.com](mailto:cupo.ashraf@gmail.com).
+If you discover a security vulnerability, please report it responsibly:
 
-Do not open a public issue for security vulnerabilities.
+**Email:** cupo.ashraf@gmail.com
+
+Please do NOT open a public GitHub issue for security vulnerabilities.
 
 ## Scope
 
-Symbiote runs entirely locally. It does not make network requests or transmit data externally. The MCP server and web UI bind to `localhost` only.
+This policy applies to the `symbiote-cli` npm package and the code in this repository.
+
+## Response
+
+We will acknowledge receipt within 48 hours and provide a detailed response within 7 days.

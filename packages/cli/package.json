@@ -98,5 +98,8 @@
         "type": "git",
         "url": "git+https://github.com/MohmmedAshraf/symbiote.git"
     },
+    "bugs": {
+        "url": "https://github.com/MohmmedAshraf/symbiote/issues"
+    },
     "homepage": "https://github.com/MohmmedAshraf/symbiote"
 }
