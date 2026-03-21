@@ -84,7 +84,7 @@ export const api = {
 
     dna: {
         list: () => request<DnaEntry[]>('/dna'),
-        update: (id: string, data: { status?: string; content?: string }) =>
+        update: (id: string, data: { status?: string; rule?: string; reason?: string }) =>
             request<DnaEntry>(`/dna/${encodeURIComponent(id)}`, {
                 method: 'PATCH',
                 body: JSON.stringify(data),

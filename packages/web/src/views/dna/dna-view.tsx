@@ -4,13 +4,6 @@ import type { DnaEntry } from '@/lib/types';
 
 type Filter = 'all' | 'suggested' | 'approved' | 'rejected';
 
-const CATEGORY_ICONS: Record<string, string> = {
-    style: '\u2728',
-    preferences: '\u2699',
-    'anti-patterns': '\u26A0',
-    decisions: '\u2696',
-};
-
 export function DnaView() {
     const [entries, setEntries] = useState<DnaEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,8 +34,8 @@ export function DnaView() {
     );
 
     const handleUpdate = useCallback(
-        async (id: string, content: string) => {
-            await api.dna.update(id, { content });
+        async (id: string, rule: string, reason: string) => {
+            await api.dna.update(id, { rule, reason });
             fetchEntries();
         },
         [fetchEntries],
@@ -160,10 +153,11 @@ function EntryCard({
 }: {
     entry: DnaEntry;
     onAction: (id: string, action: 'approve' | 'reject') => void;
-    onUpdate: (id: string, content: string) => void;
+    onUpdate: (id: string, rule: string, reason: string) => void;
 }) {
     const [editing, setEditing] = useState(false);
-    const [editContent, setEditContent] = useState(entry.content);
+    const [editRule, setEditRule] = useState(entry.rule);
+    const [editReason, setEditReason] = useState(entry.reason);
 
     const statusStyle: Record<string, string> = {
         suggested: 'border-yellow-500/25 bg-yellow-500/5 text-yellow-400',
@@ -171,13 +165,12 @@ function EntryCard({
         rejected: 'border-red-500/25 bg-red-500/5 text-red-400',
     };
 
-    const categoryIcon = CATEGORY_ICONS[entry.category] ?? '\u25CB';
-
     function handleSave(e: FormEvent) {
         e.preventDefault();
-        const trimmed = editContent.trim();
-        if (trimmed) {
-            onUpdate(entry.id, trimmed);
+        const trimmedRule = editRule.trim();
+        const trimmedReason = editReason.trim();
+        if (trimmedRule) {
+            onUpdate(entry.id, trimmedRule, trimmedReason);
             setEditing(false);
         }
     }
@@ -190,9 +183,7 @@ function EntryCard({
                 >
                     {entry.status}
                 </span>
-                <span className="text-[10px] text-slate-500">
-                    {categoryIcon} {entry.category}
-                </span>
+                <span className="text-[10px] text-slate-500">{entry.category}</span>
                 <span className="ml-auto text-[9px] font-semibold tabular-nums text-slate-500">
                     {Math.round(entry.confidence * 100)}%
                 </span>
@@ -201,10 +192,18 @@ function EntryCard({
             {editing ? (
                 <form onSubmit={handleSave}>
                     <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        rows={3}
+                        value={editRule}
+                        onChange={(e) => setEditRule(e.target.value)}
+                        rows={2}
+                        placeholder="Rule"
                         className="w-full resize-y rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none transition-colors focus:border-blue-500"
+                    />
+                    <textarea
+                        value={editReason}
+                        onChange={(e) => setEditReason(e.target.value)}
+                        rows={2}
+                        placeholder="Reason"
+                        className="mt-2 w-full resize-y rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-400 outline-none transition-colors focus:border-blue-500"
                     />
                     <div className="mt-2 flex gap-2">
                         <button
@@ -223,17 +222,46 @@ function EntryCard({
                     </div>
                 </form>
             ) : (
-                <p className="text-[13px] leading-relaxed text-slate-200/90">{entry.content}</p>
+                <div>
+                    <p className="text-[13px] leading-relaxed text-slate-200/90">{entry.rule}</p>
+                    {entry.reason && (
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                            {entry.reason}
+                        </p>
+                    )}
+                    {entry.applies_to.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                            {entry.applies_to.map((lang) => (
+                                <span
+                                    key={lang}
+                                    className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[9px] text-slate-400"
+                                >
+                                    {lang}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
 
             <div className="mt-3 flex items-center gap-3 text-[9px] text-slate-500">
                 <span>
-                    Seen <span className="tabular-nums text-slate-400">{entry.occurrences}x</span>
+                    Seen{' '}
+                    <span className="tabular-nums text-slate-400">
+                        {entry.evidence.occurrences}x
+                    </span>
+                </span>
+                <span className="text-slate-700">{'\u2022'}</span>
+                <span>
+                    <span className="tabular-nums text-slate-400">
+                        {entry.evidence.sessions}
+                    </span>{' '}
+                    sessions
                 </span>
                 <span className="text-slate-700">{'\u2022'}</span>
                 <span>Source: {entry.source}</span>
                 <span className="text-slate-700">{'\u2022'}</span>
-                <span>Last: {entry.lastSeen}</span>
+                <span>Last: {entry.evidence.last_seen}</span>
             </div>
 
             {!editing && (
@@ -256,7 +284,8 @@ function EntryCard({
                     )}
                     <button
                         onClick={() => {
-                            setEditContent(entry.content);
+                            setEditRule(entry.rule);
+                            setEditReason(entry.reason);
                             setEditing(true);
                         }}
                         className="cursor-pointer rounded-md px-2.5 py-1 text-[10px] font-medium text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"

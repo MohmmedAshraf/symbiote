@@ -103,14 +103,24 @@ export interface HealthIssue {
 
 export interface DnaEntry {
     id: string;
-    category: 'style' | 'preferences' | 'anti-patterns' | 'decisions';
-    confidence: number;
-    source: 'correction' | 'instruction' | 'pattern';
+    rule: string;
+    reason: string;
+    category: string;
+    applies_to: string[];
+    not_for?: string[];
+    source: 'explicit' | 'correction' | 'observed';
     status: 'suggested' | 'approved' | 'rejected';
-    firstSeen: string;
-    lastSeen: string;
-    occurrences: number;
-    content: string;
+    confidence: number;
+    evidence: {
+        first_seen: string;
+        last_seen: string;
+        occurrences: number;
+        sessions: number;
+    };
+    origin?: {
+        file?: string;
+        context?: string;
+    };
 }
 
 export type {
