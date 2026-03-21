@@ -49,15 +49,13 @@ async function cmdDnaShow(storage: ProfileStorage): Promise<void> {
         p.log.warn('Pending review:');
         for (const entry of suggested) {
             console.log(
-                `  ${pc.yellow('[?]')} ${entry.id} ` +
-                    pc.dim(`(confidence: ${entry.confidence})`),
+                `  ${pc.yellow('[?]')} ${entry.id} ` + pc.dim(`(confidence: ${entry.confidence})`),
             );
         }
         console.log();
         console.log(
             pc.dim(
-                "  Run 'symbiote dna approve <id>' or " +
-                    "'symbiote dna reject <id>' to review.",
+                "  Run 'symbiote dna approve <id>' or " + "'symbiote dna reject <id>' to review.",
             ),
         );
     }
@@ -80,9 +78,7 @@ function cmdDnaList(storage: ProfileStorage): void {
         const profile = storage.readProfile(name);
         const count = profile?.entries.length ?? 0;
         const marker = name === active ? pc.green(' *') : '  ';
-        console.log(
-            `${marker} ${pc.bold(name)} ${pc.dim(`(${count} entries)`)}`,
-        );
+        console.log(`${marker} ${pc.bold(name)} ${pc.dim(`(${count} entries)`)}`);
     }
     console.log();
 }
@@ -95,33 +91,23 @@ function cmdDnaSwitch(storage: ProfileStorage, name: string): void {
         p.log.error(`Profile "${name}" does not exist.`);
         const profiles = storage.listProfiles();
         if (profiles.length > 0) {
-            console.log(
-                pc.dim(`  Available: ${profiles.join(', ')}`),
-            );
+            console.log(pc.dim(`  Available: ${profiles.join(', ')}`));
         }
         process.exit(1);
     }
 }
 
-function cmdDnaExport(
-    storage: ProfileStorage,
-    outputPath: string | undefined,
-): void {
+function cmdDnaExport(storage: ProfileStorage, outputPath: string | undefined): void {
     const profile = exportProfile(storage);
     const handle = profile.profile.handle || 'profile';
     const filename = outputPath ?? `${handle}.dna.json`;
     const resolved = path.resolve(filename);
 
     fs.writeFileSync(resolved, JSON.stringify(profile, null, 4) + '\n');
-    p.log.success(
-        `Exported ${profile.entries.length} entries to ${pc.bold(resolved)}`,
-    );
+    p.log.success(`Exported ${profile.entries.length} entries to ${pc.bold(resolved)}`);
 }
 
-async function cmdDnaImport(
-    storage: ProfileStorage,
-    target: string,
-): Promise<void> {
+async function cmdDnaImport(storage: ProfileStorage, target: string): Promise<void> {
     try {
         let result: { name: string; entryCount: number };
 
@@ -139,8 +125,7 @@ async function cmdDnaImport(
         }
 
         p.log.success(
-            `Imported profile ${pc.bold(result.name)} ` +
-                `with ${result.entryCount} entries`,
+            `Imported profile ${pc.bold(result.name)} ` + `with ${result.entryCount} entries`,
         );
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -158,9 +143,7 @@ function cmdDnaDiff(storage: ProfileStorage, otherName: string): void {
         p.log.error(`Profile "${otherName}" not found.`);
         const profiles = storage.listProfiles();
         if (profiles.length > 0) {
-            console.log(
-                pc.dim(`  Available: ${profiles.join(', ')}`),
-            );
+            console.log(pc.dim(`  Available: ${profiles.join(', ')}`));
         }
         process.exit(1);
     }
@@ -188,8 +171,7 @@ function cmdDnaDiff(storage: ProfileStorage, otherName: string): void {
     }
 
     console.log(
-        `\n${pc.bold('DNA Diff:')} ` +
-            `${pc.green(activeName)} vs ${pc.cyan(otherName)}\n`,
+        `\n${pc.bold('DNA Diff:')} ` + `${pc.green(activeName)} vs ${pc.cyan(otherName)}\n`,
     );
 
     if (onlyActive.length === 0 && onlyOther.length === 0 && diverged.length === 0) {
@@ -226,10 +208,7 @@ function cmdDnaDiff(storage: ProfileStorage, otherName: string): void {
     }
 }
 
-function cmdDnaEntryList(
-    storage: ProfileStorage,
-    flags: Record<string, string | boolean>,
-): void {
+function cmdDnaEntryList(storage: ProfileStorage, flags: Record<string, string | boolean>): void {
     const profile = storage.readActiveProfile();
     let entries = profile.entries;
 
@@ -245,9 +224,7 @@ function cmdDnaEntryList(
         return;
     }
 
-    console.log(
-        `\n${pc.bold('Developer DNA')} ${pc.dim(`\u2014 ${entries.length} entries`)}\n`,
-    );
+    console.log(`\n${pc.bold('Developer DNA')} ${pc.dim(`\u2014 ${entries.length} entries`)}\n`);
     console.log(pc.dim('\u2500'.repeat(70)));
 
     for (const entry of entries) {
@@ -345,9 +322,7 @@ export async function cmdDna(
     }
 
     if (subcommand === 'export') {
-        const outputPath = typeof flags.output === 'string'
-            ? flags.output
-            : undefined;
+        const outputPath = typeof flags.output === 'string' ? flags.output : undefined;
         cmdDnaExport(storage, outputPath);
         return;
     }

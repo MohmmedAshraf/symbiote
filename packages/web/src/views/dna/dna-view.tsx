@@ -25,18 +25,26 @@ export function DnaView() {
 
     const handleAction = useCallback(
         async (id: string, action: 'approve' | 'reject') => {
-            await api.dna.update(id, {
-                status: action === 'approve' ? 'approved' : 'rejected',
-            });
-            fetchEntries();
+            try {
+                await api.dna.update(id, {
+                    status: action === 'approve' ? 'approved' : 'rejected',
+                });
+                fetchEntries();
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to update entry');
+            }
         },
         [fetchEntries],
     );
 
     const handleUpdate = useCallback(
         async (id: string, rule: string, reason: string) => {
-            await api.dna.update(id, { rule, reason });
-            fetchEntries();
+            try {
+                await api.dna.update(id, { rule, reason });
+                fetchEntries();
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to update entry');
+            }
         },
         [fetchEntries],
     );
@@ -253,9 +261,7 @@ function EntryCard({
                 </span>
                 <span className="text-slate-700">{'\u2022'}</span>
                 <span>
-                    <span className="tabular-nums text-slate-400">
-                        {entry.evidence.sessions}
-                    </span>{' '}
+                    <span className="tabular-nums text-slate-400">{entry.evidence.sessions}</span>{' '}
                     sessions
                 </span>
                 <span className="text-slate-700">{'\u2022'}</span>

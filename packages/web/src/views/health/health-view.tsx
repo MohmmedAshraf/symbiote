@@ -232,8 +232,11 @@ function FileGroup({
 
             {(expanded || issues.length <= 3) && (
                 <div>
-                    {shown.map((issue, i) => (
-                        <IssueRow key={i} issue={issue} />
+                    {shown.map((issue) => (
+                        <IssueRow
+                            key={`${issue.filePath ?? issue.category}-${issue.message}`}
+                            issue={issue}
+                        />
                     ))}
                     {hasMore && (
                         <button

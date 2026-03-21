@@ -27,9 +27,7 @@ export function importProfile(
     raw: string,
 ): { name: string; entryCount: number } {
     if (raw.length > MAX_IMPORT_SIZE) {
-        throw new Error(
-            `Profile exceeds maximum size of ${MAX_IMPORT_SIZE} bytes`,
-        );
+        throw new Error(`Profile exceeds maximum size of ${MAX_IMPORT_SIZE} bytes`);
     }
 
     const parsed = JSON.parse(raw);
@@ -53,9 +51,7 @@ export async function importFromUrl(
     const response = await fetch(url);
 
     if (!response.ok) {
-        throw new Error(
-            `Failed to fetch profile: ${response.status} ${response.statusText}`,
-        );
+        throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
     }
 
     const raw = await response.text();
