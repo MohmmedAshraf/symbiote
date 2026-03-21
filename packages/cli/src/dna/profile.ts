@@ -111,7 +111,8 @@ export class ProfileStorage {
         const fallback = this.readProfile('personal');
         if (fallback) return fallback;
 
-        throw new Error('No active profile found and personal profile is missing');
+        this.ensurePersonalProfile('Developer', 'developer');
+        return this.readProfile('personal')!;
     }
 
     writeEntry(entry: DnaEntry): void {

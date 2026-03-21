@@ -57,7 +57,14 @@ function showHelp(): void {
     console.log(
         `  ${pc.bold('$')} ${pc.cyan('symbiote mcp')}           MCP server only (for editors)`,
     );
-    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna')}           View your developer DNA`);
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna')}           Active profile summary`);
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna list')}      List all DNA profiles`);
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna switch')}    Switch active profile`);
+    console.log(
+        `  ${pc.bold('$')} ${pc.cyan('symbiote dna export')}    Export profile to .dna.json`,
+    );
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna import')}    Import a shared profile`);
+    console.log(`  ${pc.bold('$')} ${pc.cyan('symbiote dna diff')}      Compare two profiles`);
     console.log(
         `  ${pc.bold('$')} ${pc.cyan('symbiote impact')}        Analyze impact of working changes`,
     );

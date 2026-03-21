@@ -120,22 +120,37 @@ Launch a single Agent to record everything. Pass it all three lists.
 
 **Agent prompt template:**
 
-```
+````
 Record the following Symbiote entries using MCP tools. Call tools in parallel where possible.
 
-**DNA entries** — use `record_instruction` with `isExplicit: true` for each:
-1. [instruction]
-2. [instruction]
+**DNA entries** — use `record_instruction` for each. Example call:
+```json
+{
+  "rule": "Use 4-space indentation everywhere, never tabs",
+  "reason": "Better readability in nested callbacks and PR reviews",
+  "category": "formatting",
+  "applies_to": ["typescript", "javascript"],
+  "source": "explicit"
+}
+````
+
+Required: `rule`, `source`. Optional: `reason`, `category`, `applies_to`, `not_for`.
+
+1. [entry]
+2. [entry]
 
 **Constraints** — use `propose_constraint` for each with `scope: "global"` and a slugified `id`:
+
 1. [constraint]
 2. [constraint]
 
 **Decisions** — use `propose_decision` for each with `scope: "global"` and a slugified `id`:
+
 1. [decision]
 2. [decision]
 
 Return counts: { dna: N, constraints: N, decisions: N, failed: N }
+
 ```
 
 ## Step 5: Output
@@ -143,7 +158,10 @@ Return counts: { dna: N, constraints: N, decisions: N, failed: N }
 One line, nothing more:
 
 ```
+
 Symbiote initialized — scanned 350 files, recorded 18 DNA entries, 5 constraints, 3 decisions.
+
 ```
 
 Do NOT render tables, lists, or per-entry details.
+```

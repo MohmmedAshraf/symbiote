@@ -271,12 +271,11 @@ function handleListDna(ctx: ServerContext, res: ServerResponse): boolean {
         confidence: e.confidence,
         source: e.source,
         status: e.status,
-        firstSeen: e.evidence.first_seen,
-        lastSeen: e.evidence.last_seen,
-        occurrences: e.evidence.occurrences,
         rule: e.rule,
         reason: e.reason,
         applies_to: e.applies_to,
+        evidence: e.evidence,
+        origin: e.origin,
     }));
     return json(res, entries);
 }
