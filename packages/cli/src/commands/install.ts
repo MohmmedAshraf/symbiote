@@ -12,29 +12,32 @@ const CLAUDE_SKILLS_DIR = path.join(
     'skills',
 );
 
-function getSkillSourceDir(): string {
-    return path.resolve(__dirname, '../../../skills/symbiote-init');
-}
+const SKILL_NAMES = ['symbiote-init', 'symbiote-scan', 'symbiote-impact', 'symbiote-dna'];
 
-function installSkill(): { success: boolean; message: string } {
-    try {
-        const skillSource = path.join(getSkillSourceDir(), 'SKILL.md');
+function installSkills(): { installed: string[]; failed: string[] } {
+    const installed: string[] = [];
+    const failed: string[] = [];
 
-        if (!fs.existsSync(skillSource)) {
-            return { success: false, message: 'Skill source not found' };
+    for (const name of SKILL_NAMES) {
+        const sourceDir = path.resolve(__dirname, `../../../skills/${name}`);
+        const sourcePath = path.join(sourceDir, 'SKILL.md');
+
+        if (!fs.existsSync(sourcePath)) {
+            failed.push(name);
+            continue;
         }
 
-        const destDir = path.join(CLAUDE_SKILLS_DIR, 'symbiote-init');
-        fs.mkdirSync(destDir, { recursive: true });
-        fs.copyFileSync(skillSource, path.join(destDir, 'SKILL.md'));
-
-        return { success: true, message: 'Skill installed' };
-    } catch (err) {
-        return {
-            success: false,
-            message: err instanceof Error ? err.message : 'Skill install failed',
-        };
+        try {
+            const destDir = path.join(CLAUDE_SKILLS_DIR, name);
+            fs.mkdirSync(destDir, { recursive: true });
+            fs.copyFileSync(sourcePath, path.join(destDir, 'SKILL.md'));
+            installed.push(name);
+        } catch {
+            failed.push(name);
+        }
     }
+
+    return { installed, failed };
 }
 
 export async function cmdInstall(): Promise<void> {
@@ -66,11 +69,13 @@ export async function cmdInstall(): Promise<void> {
             p.log.error(`Claude Code hooks failed: ${hooksResult.message}`);
         }
 
-        const skillResult = installSkill();
-        if (skillResult.success) {
-            p.log.success('Claude Code: skill /symbiote-init installed');
-        } else {
-            p.log.error(`Skill failed: ${skillResult.message}`);
+        const skillResult = installSkills();
+        if (skillResult.installed.length > 0) {
+            const names = skillResult.installed.map((n) => `/${n}`).join(', ');
+            p.log.success(`Claude Code: skills installed (${names})`);
+        }
+        if (skillResult.failed.length > 0) {
+            p.log.error(`Skills failed: ${skillResult.failed.join(', ')}`);
         }
     }
 
