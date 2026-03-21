@@ -40,12 +40,23 @@ They're complementary. Use CLAUDE.md for explicit instructions your AI should al
 
 ## Quick Start
 
+### As a Claude Code Plugin
+
+```
+/plugin marketplace add MohmmedAshraf/synapse
+/plugin install symbiote@symbiote-plugins
+```
+
+No setup required — the plugin auto-installs the CLI, registers the MCP server, hooks, skills, and agents.
+
+### Manual Install (all editors)
+
 ```bash
 npm install -g symbiote-cli
 symbiote install
 ```
 
-One command. Auto-detects your installed editors (Claude Code, Cursor, Windsurf, Copilot, OpenCode), registers the MCP server globally for each, and sets up 9 Claude Code hooks + the `/symbiote-init` skill. Run it once.
+Auto-detects your installed editors (Claude Code, Cursor, Windsurf, Copilot, OpenCode), registers the MCP server globally for each, and sets up 9 Claude Code hooks + skills. Run it once.
 
 Then in any project, open Claude Code and run:
 
@@ -278,28 +289,28 @@ claude mcp add symbiote -- npx -y symbiote-cli mcp
 
 When bonded, your AI gains 20 tools via MCP:
 
-| Tool                     | Purpose                                                        |
-| ------------------------ | -------------------------------------------------------------- |
-| `get_developer_dna`      | Your style and preferences, filtered by relevance              |
-| `get_project_overview`   | Tech stack, structure, modules, health summary                 |
-| `get_context_for_file`   | Dependencies, dependents, constraints for any file             |
-| `get_context_for_symbol` | Full context for a specific symbol                             |
-| `query_graph`            | Symbol search, call chains, dependency tracing                 |
-| `semantic_search`        | Natural language search over the codebase                      |
-| `get_constraints`        | Active project rules, scoped to file or module                 |
-| `get_decisions`          | Architectural decisions with rationale                         |
-| `get_health`             | Dead code, cycles, coupling, violations                        |
-| `get_impact`             | Blast radius analysis with confidence scores                   |
-| `get_architecture`       | Module boundaries, layering, entry points                      |
-| `find_patterns`          | Recurring code patterns across the codebase                    |
-| `detect_changes`         | Git diff mapped to affected graph nodes                        |
-| `rename_symbol`          | Graph-aware multi-file rename preview                          |
-| `trace_flow`             | Follow execution from entry points through call chains         |
-| `trace_data`             | Track how data moves through the codebase from a symbol        |
-| `find_implementations`   | Find all classes implementing an interface or base class        |
-| `propose_decision`       | AI writes back a discovered decision                           |
-| `propose_constraint`     | AI writes back an inferred constraint                          |
-| `record_instruction`     | Captures your corrections for DNA learning                     |
+| Tool                     | Purpose                                                  |
+| ------------------------ | -------------------------------------------------------- |
+| `get_developer_dna`      | Your style and preferences, filtered by relevance        |
+| `get_project_overview`   | Tech stack, structure, modules, health summary           |
+| `get_context_for_file`   | Dependencies, dependents, constraints for any file       |
+| `get_context_for_symbol` | Full context for a specific symbol                       |
+| `query_graph`            | Symbol search, call chains, dependency tracing           |
+| `semantic_search`        | Natural language search over the codebase                |
+| `get_constraints`        | Active project rules, scoped to file or module           |
+| `get_decisions`          | Architectural decisions with rationale                   |
+| `get_health`             | Dead code, cycles, coupling, violations                  |
+| `get_impact`             | Blast radius analysis with confidence scores             |
+| `get_architecture`       | Module boundaries, layering, entry points                |
+| `find_patterns`          | Recurring code patterns across the codebase              |
+| `detect_changes`         | Git diff mapped to affected graph nodes                  |
+| `rename_symbol`          | Graph-aware multi-file rename preview                    |
+| `trace_flow`             | Follow execution from entry points through call chains   |
+| `trace_data`             | Track how data moves through the codebase from a symbol  |
+| `find_implementations`   | Find all classes implementing an interface or base class |
+| `propose_decision`       | AI writes back a discovered decision                     |
+| `propose_constraint`     | AI writes back an inferred constraint                    |
+| `record_instruction`     | Captures your corrections for DNA learning               |
 
 Plus 3 MCP resources: `symbiote://dna`, `symbiote://project/overview`, `symbiote://project/health`
 

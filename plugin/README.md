@@ -13,15 +13,16 @@ AI coding companion with persistent memory. Gives Claude Code a code knowledge g
 ## Installation
 
 ```bash
-claude plugin add /path/to/synapse/plugin
+/plugin marketplace add MohmmedAshraf/synapse
+/plugin install symbiote@symbiote-plugins
 ```
 
 No other setup required. The plugin auto-installs `symbiote-cli` from npm on first use via `npx -y`. The MCP server, hooks, and CLI are all bootstrapped automatically.
 
 ## Getting Started
 
-1. Add the plugin (see above)
-2. Start a Claude Code session
+1. Install the plugin (see above)
+2. Run `/reload-plugins` to activate
 3. Run `/symbiote-init` to scan your project and extract your coding DNA
 
 The plugin will scan your codebase, learn your coding preferences, and start injecting context into every interaction.
