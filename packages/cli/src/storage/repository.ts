@@ -166,6 +166,10 @@ export class Repository {
                 'DELETE FROM edges WHERE source_id IN (SELECT id FROM nodes WHERE file_path = $1)',
                 filePath,
             );
+            await this.db.run(
+                'DELETE FROM edges WHERE target_id IN (SELECT id FROM nodes WHERE file_path = $1)',
+                filePath,
+            );
             await this.db.run('DELETE FROM nodes WHERE file_path = $1', filePath);
 
             if (nodes.length > 0) {

@@ -26,11 +26,16 @@ export async function cmdImpact(): Promise<void> {
     let result;
     try {
         result = await gitImpact.analyzeWorkingChanges(projectRoot);
-    } catch {
-        s2.stop('No git changes detected');
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('no changes') || msg.includes('clean')) {
+            s2.stop('No git changes detected');
+            await db.close();
+            p.outro('Working tree is clean.');
+            return;
+        }
         await db.close();
-        p.outro('Working tree is clean.');
-        return;
+        throw err;
     }
 
     s2.stop('Analysis complete');

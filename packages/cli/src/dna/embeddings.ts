@@ -13,6 +13,8 @@ type Extractor = (
 ) => Promise<{ data: Float32Array }>;
 
 export function cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length) return 0;
+
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;

@@ -29,6 +29,11 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
     const port =
         typeof flags.port === 'string' ? parseInt(flags.port, 10) : getProjectPort(projectRoot);
 
+    if (isNaN(port)) {
+        p.log.error('Invalid port number');
+        process.exit(1);
+    }
+
     const noOpen = !!flags['no-open'];
 
     const alreadyRunning = await isPortServing(port);
@@ -66,6 +71,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
             const transport = new SSEServerTransport('/messages', res);
             const { server } = createMcpServer(ctx);
             sessions.set(transport.sessionId, { transport, server });
+            res.on('close', () => sessions.delete(transport.sessionId));
             server.connect(transport).catch((err) => {
                 sessions.delete(transport.sessionId);
                 if (!res.headersSent) {
@@ -88,7 +94,7 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
             return;
         }
 
-        handleHttpRequest(ctx, webDistDir, port, url, req, res).catch((err) => {
+        handleHttpRequest(ctx, webDistDir, url, req, res).catch((err) => {
             if (!res.headersSent) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: String(err) }));
@@ -109,10 +115,10 @@ export async function cmdServe(flags: Record<string, string | boolean>): Promise
         if (!noOpen) openBrowser(url);
     });
 
-    process.on('SIGINT', () => {
+    process.on('SIGINT', async () => {
         clearPortFile(projectRoot);
         httpServer.close();
-        db.close();
+        await db.close();
         process.exit(0);
     });
 }

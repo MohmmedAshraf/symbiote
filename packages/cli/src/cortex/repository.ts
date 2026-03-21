@@ -278,6 +278,16 @@ export class CortexRepository {
         return rows.map((r) => this.mapFileNodeRow(r));
     }
 
+    async getFileNodesByIds(ids: string[]): Promise<FileNode[]> {
+        if (ids.length === 0) return [];
+        const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+        const rows = await this.db.all<FileNodeRow>(
+            `SELECT * FROM nodes_file WHERE id IN (${placeholders})`,
+            ...ids,
+        );
+        return rows.map((r) => this.mapFileNodeRow(r));
+    }
+
     async isFileChanged(id: string, hash: string): Promise<boolean> {
         const node = await this.getFileNode(id);
         if (!node) return true;
@@ -1554,8 +1564,16 @@ export class CortexRepository {
     }
 
     async updateNodeMetricsBatch(updates: NodeMetricsUpdate[]): Promise<void> {
-        for (const update of updates) {
-            await this.updateNodeMetrics(update.nodeId, update);
+        if (updates.length === 0) return;
+        await this.db.exec('BEGIN TRANSACTION');
+        try {
+            for (const update of updates) {
+                await this.updateNodeMetrics(update.nodeId, update);
+            }
+            await this.db.exec('COMMIT');
+        } catch (err) {
+            await this.db.exec('ROLLBACK');
+            throw err;
         }
     }
 
@@ -1627,7 +1645,7 @@ export class CortexRepository {
         if (nodeId.startsWith('fn:')) return 'nodes_function';
         if (nodeId.startsWith('class:')) return 'nodes_class';
         if (nodeId.startsWith('method:')) return 'nodes_method';
-        if (nodeId.startsWith('iface:')) return 'nodes_interface';
+        if (nodeId.startsWith('interface:')) return 'nodes_interface';
         if (nodeId.startsWith('type:')) return 'nodes_type';
         if (nodeId.startsWith('var:')) return 'nodes_variable';
         if (nodeId.startsWith('file:')) return 'nodes_file';

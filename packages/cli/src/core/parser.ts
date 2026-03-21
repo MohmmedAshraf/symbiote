@@ -448,6 +448,31 @@ function extractImports(
     for (const child of root.children) {
         if (!config.importTypes.has(child.type)) continue;
 
+        if (language === 'go' && child.type === 'import_declaration') {
+            const specs: SyntaxNode[] = [];
+            for (const c of child.children) {
+                if (c.type === 'import_spec') {
+                    specs.push(c);
+                } else if (c.type === 'import_spec_list') {
+                    for (const s of c.children) {
+                        if (s.type === 'import_spec') specs.push(s);
+                    }
+                }
+            }
+            for (const spec of specs) {
+                const pathNode = spec.childForFieldName('path');
+                if (pathNode) {
+                    const importPath = pathNode.text.replace(/"/g, '');
+                    edges.push({
+                        sourceId: `file:${filePath}`,
+                        targetId: `file:${resolveImportPath(filePath, importPath, config)}`,
+                        type: 'imports',
+                    });
+                }
+            }
+            continue;
+        }
+
         const importPath = extractImportPath(child, language, config);
         if (importPath) {
             edges.push({
@@ -819,6 +844,8 @@ function resolveImportPath(fromFile: string, importPath: string, config: Languag
     const cacheKey = `${fromFile}:${importPath}`;
     const cached = resolveCache.get(cacheKey);
     if (cached) return cached;
+
+    if (resolveCache.size >= 10000) resolveCache.clear();
 
     const dir = path.dirname(fromFile);
     const resolved = path.resolve(dir, importPath);

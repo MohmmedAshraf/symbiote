@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { homedir } from 'node:os';
-import { getProjectPort } from '#utils/config.js';
 
 export interface AgentInfo {
     name: string;
@@ -254,7 +253,9 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
                         !h.hooks?.some(
                             (hh) =>
                                 hh.command?.includes('symbiote') ||
+                                hh.command?.includes('/internal/hooks/') ||
                                 hh.url?.includes('localhost') ||
+                                hh.url?.includes('127.0.0.1') ||
                                 hh.url?.includes('/internal/hooks/'),
                         ),
                 );
@@ -264,8 +265,8 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
             }
         }
 
-        const port = getProjectPort(process.cwd());
-        const base = `http://localhost:${port}/internal/hooks`;
+        const curlCmd = (endpoint: string): string =>
+            `curl -s -X POST http://127.0.0.1:$(cat "$CLAUDE_PROJECT_DIR/.brain/port")/internal/hooks/${endpoint} -H 'Content-Type: application/json' -d @-`;
 
         hooks['SessionStart'] = [
             {
@@ -284,34 +285,44 @@ function installGlobalClaudeHooks(): { success: boolean; message: string } {
             {
                 hooks: [
                     {
-                        type: 'http',
-                        url: `${base}/user-prompt-submit`,
+                        type: 'command',
+                        command: curlCmd('user-prompt-submit'),
                     },
                 ],
             },
         ];
 
         hooks['PreToolUse'] = [
-            { matcher: '*', hooks: [{ type: 'http', url: `${base}/pre-tool-use` }] },
+            {
+                matcher: '*',
+                hooks: [{ type: 'command', command: curlCmd('pre-tool-use') }],
+            },
         ];
         hooks['PostToolUse'] = [
-            { matcher: '*', hooks: [{ type: 'http', url: `${base}/post-tool-use` }] },
+            {
+                matcher: '*',
+                hooks: [{ type: 'command', command: curlCmd('post-tool-use') }],
+            },
         ];
         hooks['PostToolUseFailure'] = [
             {
                 matcher: '*',
-                hooks: [{ type: 'http', url: `${base}/post-tool-use-failure` }],
+                hooks: [{ type: 'command', command: curlCmd('post-tool-use-failure') }],
             },
         ];
-        hooks['SubagentStart'] = [{ hooks: [{ type: 'http', url: `${base}/subagent-start` }] }];
+        hooks['SubagentStart'] = [
+            {
+                hooks: [{ type: 'command', command: curlCmd('subagent-start') }],
+            },
+        ];
         hooks['PreCompact'] = [
             {
                 matcher: 'manual|auto',
-                hooks: [{ type: 'http', url: `${base}/pre-compact` }],
+                hooks: [{ type: 'command', command: curlCmd('pre-compact') }],
             },
         ];
-        hooks['Stop'] = [{ hooks: [{ type: 'http', url: `${base}/stop` }] }];
-        hooks['SessionEnd'] = [{ hooks: [{ type: 'http', url: `${base}/session-end` }] }];
+        hooks['Stop'] = [{ hooks: [{ type: 'command', command: curlCmd('stop') }] }];
+        hooks['SessionEnd'] = [{ hooks: [{ type: 'command', command: curlCmd('session-end') }] }];
 
         settings.hooks = hooks;
         const tmpSettings = CLAUDE_SETTINGS_PATH + '.tmp';
@@ -358,7 +369,9 @@ function removeGlobalClaudeHooks(): { success: boolean; message: string } {
                     delete settings.hooks;
                 }
 
-                fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 4) + '\n');
+                const tmpSettings = CLAUDE_SETTINGS_PATH + '.tmp';
+                fs.writeFileSync(tmpSettings, JSON.stringify(settings, null, 4) + '\n');
+                fs.renameSync(tmpSettings, CLAUDE_SETTINGS_PATH);
             }
         }
 

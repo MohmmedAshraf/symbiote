@@ -80,7 +80,7 @@ export class SymbioteDB {
         } else if (typeof value === 'boolean') {
             prepared.bindBoolean(index, value);
         } else {
-            prepared.bindVarchar(index, String(value));
+            prepared.bindVarchar(index, JSON.stringify(value));
         }
     }
 }

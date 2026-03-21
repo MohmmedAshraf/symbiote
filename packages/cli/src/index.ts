@@ -67,4 +67,4 @@ export {
     type ServerContextOptions,
 } from '#mcp/index.js';
 
-export const VERSION = '0.1.0';
+export { SERVER_VERSION as VERSION } from '#commands/shared.js';

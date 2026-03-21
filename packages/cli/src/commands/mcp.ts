@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDatabase } from '#storage/db.js';
 import {
     ensureBrainDir,
     ensureSymbioteHome,
@@ -13,6 +12,7 @@ import { createMcpServer } from '#mcp/server.js';
 import { createProxyMcpServer } from '#mcp/proxy-server.js';
 import { createServerContext } from '#mcp/context.js';
 import {
+    createDatabaseWithRetry,
     handleHttpRequest,
     getRunningServerHealth,
     isServerVersionStale,
@@ -52,7 +52,7 @@ export async function cmdMcp(): Promise<void> {
     const symbioteHome = ensureSymbioteHome();
     const dbPath = getBrainDbPath(projectRoot);
 
-    const db = await createDatabase(dbPath);
+    const db = await createDatabaseWithRetry(dbPath);
 
     const ctx = await createServerContext({
         db,
@@ -68,7 +68,7 @@ export async function cmdMcp(): Promise<void> {
     const webDistDir = path.resolve(__dirname, '../../../../web/dist');
     const httpServer = http.createServer((req, res) => {
         const url = new URL(req.url ?? '/', `http://localhost:${port}`);
-        handleHttpRequest(ctx, webDistDir, port, url, req, res).catch((err) => {
+        handleHttpRequest(ctx, webDistDir, url, req, res).catch((err) => {
             if (!res.headersSent) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: String(err) }));
@@ -85,10 +85,10 @@ export async function cmdMcp(): Promise<void> {
         // Port already in use — skip HTTP server silently
     });
 
-    process.on('SIGINT', () => {
+    process.on('SIGINT', async () => {
         clearPortFile(projectRoot);
         httpServer.close();
-        db.close();
+        await db.close();
         process.exit(0);
     });
 }

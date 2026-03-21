@@ -19,13 +19,17 @@ export async function cmdScan(flags: Record<string, string | boolean>): Promise<
 
     const s = p.spinner();
     s.start('Scanning codebase (cortex pipeline)...');
-    const result = await engine.run({
-        rootDir: projectRoot,
-        force: flags.force === true,
-    });
+    let result;
+    try {
+        result = await engine.run({
+            rootDir: projectRoot,
+            force: flags.force === true,
+        });
 
-    await refreshSymbolsTable(db);
-    await db.close();
+        await refreshSymbolsTable(db);
+    } finally {
+        await db.close();
+    }
 
     const stageNames = [
         'Structure',

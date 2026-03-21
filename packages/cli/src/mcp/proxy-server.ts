@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { SERVER_VERSION } from '#commands/shared.js';
 
 function callProxy(port: number, tool: string, input: Record<string, unknown>): Promise<unknown> {
     const payload = JSON.stringify({ tool, input });
@@ -46,7 +47,7 @@ function textResult(data: unknown): { type: 'text'; text: string } {
 }
 
 export function createProxyMcpServer(port: number): { server: McpServer } {
-    const server = new McpServer({ name: 'symbiote', version: '0.1.1' });
+    const server = new McpServer({ name: 'symbiote', version: SERVER_VERSION });
 
     const proxy = (tool: string) => async (input: Record<string, unknown>) => ({
         content: [textResult(await callProxy(port, tool, input))],

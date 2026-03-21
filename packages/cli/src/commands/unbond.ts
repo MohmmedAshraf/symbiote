@@ -30,6 +30,9 @@ export async function cmdUnbond(targetId?: string): Promise<void> {
         } else {
             p.log.error(`Failed to detach from ${agent.name}: ${result.mcp.message}`);
         }
+        if (!result.hooks.success) {
+            p.log.warn(`Hook removal failed for ${agent.name}: ${result.hooks.message}`);
+        }
     }
 
     p.outro('Symbiote detached.');

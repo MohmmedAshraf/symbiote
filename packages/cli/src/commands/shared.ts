@@ -202,7 +202,6 @@ export function isServerVersionStale(health: ServerHealthInfo): boolean {
 export async function handleHttpRequest(
     ctx: Awaited<ReturnType<typeof createServerContext>>,
     webDistDir: string,
-    _port: number,
     url: URL,
     req: IncomingMessage,
     res: ServerResponse,
