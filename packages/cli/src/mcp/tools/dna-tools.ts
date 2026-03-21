@@ -6,10 +6,22 @@ import { wrapResponse } from '../tool-response.js';
 
 export interface GetDeveloperDnaInput {
     category?: string;
+    limit?: number;
+    verbose?: boolean;
+}
+
+interface CompactDnaEntry {
+    rule: string;
+    category: string;
+    confidence: number;
+    applies_to: string[];
+    not_for?: string[];
 }
 
 export interface GetDeveloperDnaOutput {
-    entries: DnaEntry[];
+    entries: CompactDnaEntry[] | DnaEntry[];
+    total: number;
+    truncated: boolean;
 }
 
 export function handleGetDeveloperDna(
@@ -24,7 +36,29 @@ export function handleGetDeveloperDna(
 
     entries.sort((a, b) => b.confidence - a.confidence);
 
-    return wrapResponse({ entries }, 7, false);
+    const total = entries.length;
+    const limit = input.limit ?? 30;
+    const truncated = entries.length > limit;
+    entries = entries.slice(0, limit);
+
+    if (input.verbose) {
+        return wrapResponse({ entries, total, truncated }, 7, false);
+    }
+
+    const compact: CompactDnaEntry[] = entries.map((e) => {
+        const entry: CompactDnaEntry = {
+            rule: e.rule,
+            category: e.category,
+            confidence: e.confidence,
+            applies_to: e.applies_to,
+        };
+        if (e.not_for?.length) {
+            entry.not_for = e.not_for;
+        }
+        return entry;
+    });
+
+    return wrapResponse({ entries: compact, total, truncated }, 7, false);
 }
 
 export type RecordInstructionInput = CaptureInput;

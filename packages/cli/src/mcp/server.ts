@@ -82,6 +82,15 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         "Get the developer's coding style and preferences. Call when unsure about conventions.",
         {
             category: z.string().optional().describe('Filter by category'),
+            limit: z
+                .number()
+                .int()
+                .optional()
+                .describe('Max entries to return (default 30, sorted by confidence)'),
+            verbose: z
+                .boolean()
+                .optional()
+                .describe('Return full entries with evidence/origin (default false)'),
         },
         async (input) => ({
             content: [textResult(handleGetDeveloperDna(ctx, input))],

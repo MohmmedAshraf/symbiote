@@ -8,12 +8,21 @@ export function handleDnaResource(ctx: ServerContext): string {
         return 'No developer DNA entries found. DNA is learned from your corrections and instructions to AI tools.';
     }
 
-    const lines = [`Developer DNA — ${entries.length} active entries\n`];
+    entries.sort((a, b) => b.confidence - a.confidence);
+    const top = entries.slice(0, 30);
+    const truncated = entries.length > 30;
 
-    for (const entry of entries) {
-        const statusLabel = entry.status === 'approved' ? 'APPROVED' : 'SUGGESTED';
+    const lines = [
+        `Developer DNA — showing top ${top.length} of ${entries.length} entries (by confidence)\n`,
+    ];
+
+    for (const entry of top) {
+        lines.push(`[${entry.category}] ${entry.rule} (${entry.confidence})`);
+    }
+
+    if (truncated) {
         lines.push(
-            `[${statusLabel}] ${entry.category}/${entry.id} (confidence: ${entry.confidence})\n  ${entry.rule}\n`,
+            `\n... ${entries.length - 30} more entries. Use get_developer_dna tool with category filter for details.`,
         );
     }
 
