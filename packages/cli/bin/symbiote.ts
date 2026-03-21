@@ -76,7 +76,7 @@ function showHelp(): void {
     console.log();
 }
 
-const VALUE_FLAGS = new Set(['port', 'status', 'category']);
+const VALUE_FLAGS = new Set(['port', 'status', 'category', 'output']);
 
 function parseArgs(argv: string[]): {
     command: string;
@@ -121,6 +121,7 @@ function parseArgs(argv: string[]): {
                 p: 'port',
                 s: 'status',
                 c: 'category',
+                o: 'output',
                 h: 'help',
                 v: 'version',
             };
