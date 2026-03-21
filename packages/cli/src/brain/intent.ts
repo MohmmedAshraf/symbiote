@@ -101,7 +101,8 @@ export class IntentStore {
     }
 
     private idToFileName(id: string): string {
-        return id.replace(/^(decision-|constraint-)/, '') + '.md';
+        const safe = id.replace(/^(decision-|constraint-)/, '').replace(/[\/\\]/g, '_') + '.md';
+        return safe;
     }
 }
 
@@ -141,6 +142,10 @@ export function parseIntentFrontmatter(raw: string): IntentEntry | null {
             pattern: fields.pattern
                 ? stripQuotes(String(fields.pattern)).replace(/\\"/g, '"')
                 : undefined,
+            enforcement:
+                fields.enforcement === 'strict' || fields.enforcement === 'warn'
+                    ? (fields.enforcement as IntentEnforcement)
+                    : undefined,
         },
         content,
     };
@@ -159,6 +164,9 @@ export function serializeIntentEntry(entry: IntentEntry): string {
     ];
     if (fm.pattern) {
         lines.push(`pattern: "${fm.pattern}"`);
+    }
+    if (fm.enforcement) {
+        lines.push(`enforcement: ${fm.enforcement}`);
     }
     lines.push('---', '', entry.content, '');
     return lines.join('\n');

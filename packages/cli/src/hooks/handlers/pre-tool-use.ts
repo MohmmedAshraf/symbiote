@@ -52,27 +52,31 @@ export class PreToolUseHandler {
     }
 
     handle(payload: PreToolUsePayload): HttpHookResponse {
-        if (PASSTHROUGH_TOOLS.has(payload.tool_name)) {
+        try {
+            if (PASSTHROUGH_TOOLS.has(payload.tool_name)) {
+                return {};
+            }
+
+            if (payload.tool_name === 'Grep') {
+                return this.handleGrepTool(payload);
+            }
+
+            if (payload.tool_name === 'Agent') {
+                return this.handleAgentTool();
+            }
+
+            if (payload.tool_name === 'Bash') {
+                return this.handleBashTool(payload);
+            }
+
+            if (FILE_TOOLS.has(payload.tool_name)) {
+                return this.handleFileTool(payload);
+            }
+
+            return {};
+        } catch {
             return {};
         }
-
-        if (payload.tool_name === 'Grep') {
-            return this.handleGrepTool(payload);
-        }
-
-        if (payload.tool_name === 'Agent') {
-            return this.handleAgentTool();
-        }
-
-        if (payload.tool_name === 'Bash') {
-            return this.handleBashTool(payload);
-        }
-
-        if (FILE_TOOLS.has(payload.tool_name)) {
-            return this.handleFileTool(payload);
-        }
-
-        return {};
     }
 
     private handleFileTool(payload: PreToolUsePayload): HttpHookResponse {

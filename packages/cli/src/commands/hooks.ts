@@ -54,8 +54,9 @@ export async function cmdHookPre(): Promise<void> {
                 },
             );
 
+            const decision = response.decision === 'block' ? 'block' : 'allow';
             writeResponse({
-                decision: response.decision as 'allow' | 'block',
+                decision,
                 additionalContext: response.additionalContext,
             });
         } catch {
