@@ -11,10 +11,9 @@ export function handleDnaResource(ctx: ServerContext): string {
     const lines = [`Developer DNA — ${entries.length} active entries\n`];
 
     for (const entry of entries) {
-        const fm = entry.frontmatter;
-        const statusLabel = fm.status === 'approved' ? 'APPROVED' : 'SUGGESTED';
+        const statusLabel = entry.status === 'approved' ? 'APPROVED' : 'SUGGESTED';
         lines.push(
-            `[${statusLabel}] ${fm.category}/${fm.id} (confidence: ${fm.confidence})\n  ${entry.content}\n`,
+            `[${statusLabel}] ${entry.category}/${entry.id} (confidence: ${entry.confidence})\n  ${entry.rule}\n`,
         );
     }
 

@@ -6,7 +6,7 @@ import { buildGraphFromDb } from '#core/graph-builder.js';
 import { IntentStore } from '#brain/intent.js';
 import { HealthEngine } from '#brain/health/index.js';
 import type { HealthReport } from '#brain/health/index.js';
-import { DnaStorage } from '#dna/storage.js';
+import { ProfileStorage } from '#dna/profile.js';
 import { DnaEngine } from '#dna/engine.js';
 import { EventBus } from '#events/bus.js';
 import { SessionTracker } from '#events/session.js';
@@ -38,7 +38,7 @@ export interface ServerContext {
     search: HybridSearch;
     intent: IntentStore;
     health: HealthEngine;
-    dnaStorage: DnaStorage;
+    profileStorage: ProfileStorage;
     dnaEngine: DnaEngine;
     eventBus: EventBus;
     sessionTracker: SessionTracker;
@@ -83,9 +83,8 @@ export async function createServerContext(options: ServerContextOptions): Promis
     const intent = new IntentStore(options.brainDir);
     const health = new HealthEngine(cortexRepo, intent, options.db);
 
-    const dnaDir = path.join(options.symbioteHome, 'dna');
-    const dnaStorage = new DnaStorage(dnaDir);
-    const dnaEngine = new DnaEngine(dnaStorage);
+    const profileStorage = new ProfileStorage(options.symbioteHome);
+    const dnaEngine = new DnaEngine(profileStorage);
     const eventBus = new EventBus();
     const sessionTracker = new SessionTracker();
     const sessionStore = new SessionStore(options.db);
@@ -268,7 +267,7 @@ export async function createServerContext(options: ServerContextOptions): Promis
         search,
         intent,
         health,
-        dnaStorage,
+        profileStorage,
         dnaEngine,
         eventBus,
         sessionTracker,

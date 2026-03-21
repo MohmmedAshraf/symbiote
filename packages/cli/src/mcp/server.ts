@@ -84,7 +84,7 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
             category: z
                 .string()
                 .optional()
-                .describe('Filter by category: style, preferences, anti-patterns, decisions'),
+                .describe('Filter by category'),
             taskContext: z
                 .string()
                 .optional()
@@ -99,37 +99,54 @@ export function createMcpServer(ctx: ServerContext): { server: McpServer } {
         'record_instruction',
         'When the developer corrects your style or preferences, call this so it persists across sessions.',
         {
-            instruction: z
+            rule: z
                 .string()
-                .describe(
-                    'The correction or preference to record (e.g., "Use early returns instead of nested else blocks")',
-                ),
+                .describe('The coding rule or preference'),
+            reason: z
+                .string()
+                .optional()
+                .describe('Why this rule matters'),
+            category: z
+                .string()
+                .optional()
+                .describe('Category like formatting, patterns, architecture'),
+            applies_to: z
+                .array(z.string())
+                .optional()
+                .describe('Languages/frameworks this applies to'),
+            not_for: z
+                .array(z.string())
+                .optional()
+                .describe('Languages/frameworks to exclude'),
+            source: z
+                .enum(['explicit', 'correction', 'observed'])
+                .optional()
+                .default('explicit')
+                .describe('How this rule was captured'),
             sessionId: z
                 .string()
                 .optional()
-                .default('')
-                .describe('Current session identifier (auto-generated if empty)'),
-            isExplicit: z
-                .boolean()
+                .describe('Current session identifier'),
+            file: z
+                .string()
                 .optional()
-                .default(false)
-                .describe(
-                    'True if the developer explicitly asked to record this, false if inferred from a correction',
-                ),
-            category: z
-                .enum(['style', 'preferences', 'anti-patterns', 'decisions'])
+                .describe('File being worked on when captured'),
+            context: z
+                .string()
                 .optional()
-                .describe(
-                    'Category for this instruction. Provide this so Symbiote does not have to guess.',
-                ),
+                .describe('What triggered this instruction'),
         },
         async (input) => {
-            const sid = input.sessionId || `session-${Date.now()}`;
             const result = handleRecordInstruction(ctx, {
-                instruction: input.instruction,
-                sessionId: sid,
-                isExplicit: input.isExplicit,
+                rule: input.rule,
+                reason: input.reason,
                 category: input.category,
+                applies_to: input.applies_to,
+                not_for: input.not_for,
+                source: input.source,
+                sessionId: input.sessionId ?? `session-${Date.now()}`,
+                file: input.file,
+                context: input.context,
             });
             return { content: [textResult(result)] };
         },
