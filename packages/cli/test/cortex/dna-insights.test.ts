@@ -4,25 +4,27 @@ import {
     detectDecisionContradictions,
     predictImpact,
 } from '#cortex/stage-7-intelligence.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 
 describe('DNA-Informed Insights', () => {
     describe('detectStyleDeviations', () => {
         it('flags nodes that violate DNA style patterns', () => {
             const dnaEntries: DnaEntry[] = [
                 {
-                    frontmatter: {
-                        id: 'dna-001',
-                        confidence: 0.9,
-                        source: 'explicit',
-                        status: 'approved',
-                        category: 'style',
-                        firstSeen: '2026-01-01',
-                        lastSeen: '2026-03-17',
+                    id: 'dna-001',
+                    rule: 'Use async/await instead of .then() chains',
+                    reason: '',
+                    category: 'style',
+                    applies_to: [],
+                    source: 'explicit' as const,
+                    status: 'approved' as const,
+                    confidence: 0.9,
+                    evidence: {
+                        first_seen: '2026-01-01',
+                        last_seen: '2026-03-17',
                         occurrences: 50,
-                        sessionIds: [],
+                        sessions: 1,
                     },
-                    content: 'Use async/await instead of .then() chains',
                 },
             ];
 
@@ -43,18 +45,20 @@ describe('DNA-Informed Insights', () => {
         it('ignores rejected DNA entries', () => {
             const dnaEntries: DnaEntry[] = [
                 {
-                    frontmatter: {
-                        id: 'dna-002',
-                        confidence: 0.9,
-                        source: 'explicit',
-                        status: 'rejected',
-                        category: 'style',
-                        firstSeen: '2026-01-01',
-                        lastSeen: '2026-03-17',
+                    id: 'dna-002',
+                    rule: 'Some rejected style rule',
+                    reason: '',
+                    category: 'style',
+                    applies_to: [],
+                    source: 'explicit' as const,
+                    status: 'rejected' as const,
+                    confidence: 0.9,
+                    evidence: {
+                        first_seen: '2026-01-01',
+                        last_seen: '2026-03-17',
                         occurrences: 50,
-                        sessionIds: [],
+                        sessions: 1,
                     },
-                    content: 'Some rejected style rule',
                 },
             ];
 
@@ -76,18 +80,20 @@ describe('DNA-Informed Insights', () => {
         it('flags patterns that contradict approved decisions', () => {
             const dnaEntries: DnaEntry[] = [
                 {
-                    frontmatter: {
-                        id: 'dec-001',
-                        confidence: 0.95,
-                        source: 'explicit',
-                        status: 'approved',
-                        category: 'decisions',
-                        firstSeen: '2026-01-01',
-                        lastSeen: '2026-03-17',
+                    id: 'dec-001',
+                    rule: 'Use repository pattern for all database access',
+                    reason: '',
+                    category: 'decisions',
+                    applies_to: [],
+                    source: 'explicit' as const,
+                    status: 'approved' as const,
+                    confidence: 0.95,
+                    evidence: {
+                        first_seen: '2026-01-01',
+                        last_seen: '2026-03-17',
                         occurrences: 1,
-                        sessionIds: [],
+                        sessions: 1,
                     },
-                    content: 'Use repository pattern for all database access',
                 },
             ];
 

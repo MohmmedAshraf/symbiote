@@ -1,42 +1,37 @@
 import { describe, it, expect } from 'vitest';
 import { checkDnaViolations } from '#hooks/dna-checker.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 
-function makeDnaEntry(content: string, pattern?: string): DnaEntry {
+function makeDnaEntry(rule: string, category = 'anti-patterns'): DnaEntry {
     return {
-        frontmatter: {
-            id: content.slice(0, 10),
-            confidence: 0.8,
-            source: 'explicit',
-            status: 'approved',
-            category: 'style',
-            firstSeen: '2026-01-01',
-            lastSeen: '2026-01-01',
+        id: rule.slice(0, 20).replace(/\s/g, '-'),
+        rule,
+        reason: '',
+        category,
+        applies_to: [],
+        source: 'explicit' as const,
+        status: 'approved' as const,
+        confidence: 0.8,
+        evidence: {
+            first_seen: '2026-01-01',
+            last_seen: '2026-01-01',
             occurrences: 1,
-            sessionIds: [],
-            pattern,
+            sessions: 1,
         },
-        content,
     };
 }
 
 describe('checkDnaViolations', () => {
-    it('detects violations when pattern matches', () => {
-        const entries = [makeDnaEntry('No console.log in production code', 'console\\.log')];
+    it('detects violations when keyword matches', () => {
+        const entries = [makeDnaEntry('No console.log in production code')];
         const result = checkDnaViolations('console.log("debug");', 'server.ts', entries);
         expect(result).toContain('DNA violation');
-        expect(result).toContain('No console.log');
+        expect(result).toContain('console.log');
     });
 
-    it('returns null when pattern does not match', () => {
-        const entries = [makeDnaEntry('No console.log in production code', 'console\\.log')];
+    it('returns null when keywords do not match', () => {
+        const entries = [makeDnaEntry('No console.log in production code')];
         const result = checkDnaViolations('logger.info("debug");', 'server.ts', entries);
-        expect(result).toBeNull();
-    });
-
-    it('returns null when no entries have patterns', () => {
-        const entries = [makeDnaEntry('Use 4-space indentation')];
-        const result = checkDnaViolations('\tconst x = 1;', 'server.ts', entries);
         expect(result).toBeNull();
     });
 
@@ -47,42 +42,35 @@ describe('checkDnaViolations', () => {
 
     it('checks multiple entries and returns first violation', () => {
         const entries = [
-            makeDnaEntry('No var usage', '\\bvar\\s+'),
-            makeDnaEntry('No console.log', 'console\\.log'),
+            makeDnaEntry('Never use setTimeout directly'),
+            makeDnaEntry('No console.log usage'),
         ];
-        const result = checkDnaViolations('var x = 1;', 'server.ts', entries);
-        expect(result).toContain('No var usage');
+        const result = checkDnaViolations('setTimeout(() => {}, 100);', 'server.ts', entries);
+        expect(result).toContain('Never use setTimeout directly');
     });
 
-    it('detects tab indentation with pattern', () => {
-        const entries = [makeDnaEntry('Use space indentation, not tabs', '^\\t')];
+    it('skips entries that are not anti-patterns category', () => {
+        const entries = [makeDnaEntry('Use space indentation, not tabs', 'style')];
         const result = checkDnaViolations('\tconst x = 1;', 'server.ts', entries);
-        expect(result).toContain('DNA violation');
-        expect(result).toContain('tabs');
-    });
-
-    it('detects default exports with pattern', () => {
-        const entries = [makeDnaEntry('No default exports', 'export\\s+default')];
-        const result = checkDnaViolations('export default function foo() {}', 'mod.ts', entries);
-        expect(result).toContain('No default exports');
-    });
-
-    it('includes filename in violation message', () => {
-        const entries = [makeDnaEntry('No any type', ':\\s*any\\b')];
-        const result = checkDnaViolations('const x: any = 1;', 'src/utils/helper.ts', entries);
-        expect(result).toContain('helper.ts');
-    });
-
-    it('skips entries with invalid regex patterns', () => {
-        const entries = [makeDnaEntry('Bad pattern', '[invalid')];
-        const result = checkDnaViolations('anything', 'file.ts', entries);
         expect(result).toBeNull();
     });
 
-    it('skips entries without patterns', () => {
+    it('includes filename in violation message', () => {
+        const entries = [makeDnaEntry('Never use eval function calls')];
+        const result = checkDnaViolations('eval("alert(1)")', 'src/utils/helper.ts', entries);
+        expect(result).toContain('helper.ts');
+    });
+
+    it('skips entries with only short words in rule', () => {
+        const entries = [makeDnaEntry('No if or do')];
+        const result = checkDnaViolations('if (true) do_something();', 'file.ts', entries);
+        expect(result).toBeNull();
+    });
+
+    it('skips non-anti-patterns entries even with matching keywords', () => {
         const entries = [
-            makeDnaEntry('Prefer const over let'),
-            makeDnaEntry('No var usage', '\\bvar\\s+'),
+            makeDnaEntry('Prefer const over let', 'style'),
+            makeDnaEntry('Never use var keyword'),
         ];
         const result = checkDnaViolations('const x = 1;', 'file.ts', entries);
         expect(result).toBeNull();

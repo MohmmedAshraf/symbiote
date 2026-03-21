@@ -99,16 +99,16 @@ describe('StopHandler', () => {
             }
 
             expect(dnaEngine.captureInstruction).toHaveBeenCalledTimes(2);
-            expect(dnaEngine.captureInstruction).toHaveBeenCalledWith(
-                'Frequently editing src/auth.ts',
-                'sess-1',
-                'pattern',
-            );
-            expect(dnaEngine.captureInstruction).toHaveBeenCalledWith(
-                'Frequently editing src/db.ts',
-                'sess-1',
-                'pattern',
-            );
+            expect(dnaEngine.captureInstruction).toHaveBeenCalledWith({
+                rule: 'Frequently editing src/auth.ts',
+                source: 'observed',
+                sessionId: 'sess-1',
+            });
+            expect(dnaEngine.captureInstruction).toHaveBeenCalledWith({
+                rule: 'Frequently editing src/db.ts',
+                source: 'observed',
+                sessionId: 'sess-1',
+            });
         });
 
         it('does not capture DNA entries when no hotspots found', async () => {

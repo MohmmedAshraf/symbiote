@@ -13,7 +13,7 @@ import { StopHandler } from '#hooks/handlers/stop.js';
 import { PreCompactHandler } from '#hooks/handlers/pre-compact.js';
 import { SessionEndHandler } from '#hooks/handlers/session-end.js';
 import type { DnaEngine } from '#dna/engine.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 import type {
     PostToolUsePayload,
     PostToolUseFailurePayload,
@@ -26,20 +26,23 @@ import type {
 const SESSION_ID = 'integration-session-1';
 const PROJECT_ROOT = '/project';
 
-function makeDnaEntry(content: string): DnaEntry {
+function makeDnaEntry(rule: string): DnaEntry {
     return {
-        frontmatter: {
-            id: content.slice(0, 20).replace(/\s/g, '-'),
-            confidence: 0.9,
-            source: 'explicit',
-            status: 'approved',
-            category: 'style',
-            firstSeen: '2026-01-01',
-            lastSeen: '2026-01-01',
+        id: rule.slice(0, 20).replace(/\s/g, '-'),
+        rule,
+        reason: '',
+        category: 'style',
+        applies_to: [],
+        source: 'explicit' as const,
+        status: 'approved' as const,
+        confidence: 0.9,
+        evidence: {
+            first_seen: '2026-01-01',
+            last_seen: '2026-01-01',
             occurrences: 3,
-            sessionIds: [SESSION_ID],
+            sessions: 1,
         },
-        content,
+        origin: { session_id: SESSION_ID },
     };
 }
 

@@ -14,18 +14,20 @@ function makeDnaEngine(
             entries
                 .filter((e) => (e.status ?? 'approved') !== 'rejected')
                 .map((e) => ({
-                    frontmatter: {
-                        id: e.content,
-                        category: e.category as never,
-                        confidence: 1,
-                        source: 'explicit' as const,
-                        status: (e.status ?? 'approved') as never,
-                        firstSeen: '2024-01-01',
-                        lastSeen: '2024-01-01',
+                    id: e.content,
+                    rule: e.content,
+                    reason: '',
+                    category: e.category,
+                    applies_to: [],
+                    source: 'explicit' as const,
+                    status: (e.status ?? 'approved') as 'approved' | 'suggested',
+                    confidence: 1,
+                    evidence: {
+                        first_seen: '2024-01-01',
+                        last_seen: '2024-01-01',
                         occurrences: 1,
-                        sessionIds: [],
+                        sessions: 1,
                     },
-                    content: e.content,
                 })),
     } as unknown as DnaEngine;
 }

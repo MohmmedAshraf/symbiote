@@ -7,7 +7,7 @@ import { createDatabase, type SymbioteDB } from '#storage/db.js';
 import { SessionStore } from '#hooks/session-store.js';
 import type { PostToolUsePayload } from '#hooks/types.js';
 import type { SymbioteEvent } from '#events/types.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 
 function buildGraph(): InstanceType<typeof Graph> {
     const graph = new Graph({ multi: true, type: 'directed' });
@@ -487,25 +487,26 @@ describe('PostToolUseHandler (handlers/)', () => {
     });
 
     describe('DNA violation detection', () => {
-        function makeDnaEntry(content: string, pattern?: string): DnaEntry {
+        function makeDnaEntry(rule: string, category = 'anti-patterns'): DnaEntry {
             return {
-                frontmatter: {
-                    id: content.slice(0, 10),
-                    confidence: 0.8,
-                    source: 'explicit',
-                    status: 'approved',
-                    category: 'style',
-                    firstSeen: '2026-01-01',
-                    lastSeen: '2026-01-01',
+                id: rule.slice(0, 10),
+                rule,
+                reason: '',
+                category,
+                applies_to: [],
+                source: 'explicit' as const,
+                status: 'approved' as const,
+                confidence: 0.8,
+                evidence: {
+                    first_seen: '2026-01-01',
+                    last_seen: '2026-01-01',
                     occurrences: 1,
-                    sessionIds: [],
-                    pattern,
+                    sessions: 1,
                 },
-                content,
             };
         }
 
-        it('detects DNA violations when pattern matches edit content', async () => {
+        it('detects DNA violations when keyword matches edit content', async () => {
             const h = new PostToolUseHandler({
                 projectRoot: '/projects/my-app',
                 onReindexFile: async () => {},
@@ -515,7 +516,7 @@ describe('PostToolUseHandler (handlers/)', () => {
                 eventBus,
                 graph,
                 sessionId: SESSION_ID,
-                dnaEntries: [makeDnaEntry('No console.log in production', 'console\\.log')],
+                dnaEntries: [makeDnaEntry('No console.log in production')],
             });
 
             const result = await h.handle({
@@ -547,7 +548,7 @@ describe('PostToolUseHandler (handlers/)', () => {
             expect(result).toEqual({});
         });
 
-        it('returns empty when no patterns match', async () => {
+        it('returns empty when no keywords match', async () => {
             const h = new PostToolUseHandler({
                 projectRoot: '/projects/my-app',
                 onReindexFile: async () => {},
@@ -557,7 +558,7 @@ describe('PostToolUseHandler (handlers/)', () => {
                 eventBus,
                 graph,
                 sessionId: SESSION_ID,
-                dnaEntries: [makeDnaEntry('No console.log', 'console\\.log')],
+                dnaEntries: [makeDnaEntry('No console.log usage')],
             });
 
             const result = await h.handle({
@@ -573,7 +574,7 @@ describe('PostToolUseHandler (handlers/)', () => {
             expect(result).toEqual({});
         });
 
-        it('skips entries without patterns', async () => {
+        it('skips entries that are not anti-patterns category', async () => {
             const h = new PostToolUseHandler({
                 projectRoot: '/projects/my-app',
                 onReindexFile: async () => {},
@@ -583,7 +584,7 @@ describe('PostToolUseHandler (handlers/)', () => {
                 eventBus,
                 graph,
                 sessionId: SESSION_ID,
-                dnaEntries: [makeDnaEntry('Prefer const over let')],
+                dnaEntries: [makeDnaEntry('Prefer const over let', 'style')],
             });
 
             const result = await h.handle({

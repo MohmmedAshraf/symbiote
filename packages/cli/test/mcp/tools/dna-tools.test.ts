@@ -16,22 +16,35 @@ describe('DNA Tools', () => {
         db = await createDatabase(':memory:');
         tmpHome = path.join(os.tmpdir(), `symbiote-mcp-dna-${Date.now()}`);
         tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-brain-${Date.now()}`);
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'preferences'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'anti-patterns'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'decisions'), {
-            recursive: true,
-        });
+
+        fs.mkdirSync(path.join(tmpHome, 'profiles'), { recursive: true });
+        const profile = {
+            version: 1,
+            profile: {
+                name: 'Test User',
+                handle: 'test',
+                bio: '',
+                created: '2026-01-01',
+                updated: '2026-01-01',
+            },
+            entries: [],
+            stats: {
+                total_entries: 0,
+                categories: [],
+                top_languages: [],
+                oldest_entry: null,
+                total_sessions: 0,
+            },
+        };
         fs.writeFileSync(
-            path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] }),
+            path.join(tmpHome, 'profiles', 'personal.json'),
+            JSON.stringify(profile, null, 4),
         );
+        fs.writeFileSync(
+            path.join(tmpHome, 'config.json'),
+            JSON.stringify({ active_profile: 'personal' }),
+        );
+
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,
         });
@@ -60,11 +73,11 @@ describe('DNA Tools', () => {
         });
 
         it('returns DNA entries filtered by category', () => {
-            ctx.dnaEngine.captureInstruction(
-                'Use early returns in functions',
-                'session-1',
-                'correction',
-            );
+            ctx.dnaEngine.captureInstruction({
+                rule: 'Use early returns in functions',
+                source: 'correction',
+                sessionId: 'session-1',
+            });
             const result = handleGetDeveloperDna(ctx, {
                 category: 'style',
             });
@@ -72,8 +85,16 @@ describe('DNA Tools', () => {
         });
 
         it('returns all active entries when no filter', () => {
-            ctx.dnaEngine.captureInstruction('Use early returns', 'session-1', 'correction');
-            ctx.dnaEngine.captureInstruction('Prefer Drizzle over Prisma', 'session-1', 'explicit');
+            ctx.dnaEngine.captureInstruction({
+                rule: 'Use early returns',
+                source: 'correction',
+                sessionId: 'session-1',
+            });
+            ctx.dnaEngine.captureInstruction({
+                rule: 'Prefer Drizzle over Prisma',
+                source: 'explicit',
+                sessionId: 'session-1',
+            });
             const result = handleGetDeveloperDna(ctx, {});
             expect(result.data.entries.length).toBeGreaterThanOrEqual(2);
         });
@@ -82,24 +103,24 @@ describe('DNA Tools', () => {
     describe('handleRecordInstruction', () => {
         it('captures an instruction and returns the created entry', () => {
             const result = handleRecordInstruction(ctx, {
-                instruction: 'Always use server actions for mutations',
+                rule: 'Always use server actions for mutations',
                 sessionId: 'test-session',
-                isExplicit: false,
+                source: 'correction',
             });
 
             expect(result.data.entry).toBeDefined();
-            expect(result.data.entry.content).toContain('server actions');
+            expect(result.data.entry.rule).toContain('server actions');
         });
 
         it('stores explicit instructions with approved status', () => {
             const result = handleRecordInstruction(ctx, {
-                instruction: 'Never use inline styles',
+                rule: 'Never use inline styles',
                 sessionId: 'test-session',
-                isExplicit: true,
+                source: 'explicit',
             });
 
-            expect(result.data.entry.frontmatter.status).toBe('approved');
-            expect(result.data.entry.frontmatter.confidence).toBe(1.0);
+            expect(result.data.entry.status).toBe('approved');
+            expect(result.data.entry.confidence).toBe(1.0);
         });
     });
 });

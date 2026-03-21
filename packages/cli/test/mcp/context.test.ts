@@ -34,7 +34,7 @@ describe('createServerContext', () => {
             symbioteHome: '/tmp/test-symbiote',
         });
 
-        expect(ctx.dnaStorage).toBeDefined();
+        expect(ctx.profileStorage).toBeDefined();
         expect(ctx.dnaEngine).toBeDefined();
     });
 });

@@ -3,25 +3,27 @@ import { SessionStartHandler } from '#hooks/handlers/session-start.js';
 import { SessionStore } from '#hooks/session-store.js';
 import { createDatabase, type SymbioteDB } from '#storage/db.js';
 import type { DnaEngine } from '#dna/engine.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 import type { ConstraintRef } from '#hooks/handlers/pre-tool-use.js';
 import type { HealthEngine } from '#brain/health/index.js';
 import type { HealthReport } from '#brain/health/index.js';
 
-function makeDnaEntry(content: string): DnaEntry {
+function makeDnaEntry(rule: string): DnaEntry {
     return {
-        frontmatter: {
-            id: content.slice(0, 10),
-            confidence: 0.8,
-            source: 'explicit',
-            status: 'approved',
-            category: 'style',
-            firstSeen: '2026-01-01',
-            lastSeen: '2026-01-01',
+        id: rule.slice(0, 10),
+        rule,
+        reason: '',
+        category: 'style',
+        applies_to: [],
+        source: 'explicit' as const,
+        status: 'approved' as const,
+        confidence: 0.8,
+        evidence: {
+            first_seen: '2026-01-01',
+            last_seen: '2026-01-01',
             occurrences: 1,
-            sessionIds: [],
+            sessions: 1,
         },
-        content,
     };
 }
 
@@ -88,6 +90,8 @@ describe('SessionStartHandler', () => {
             constraints: overrides.constraints ?? constraints,
             health: overrides.health ?? makeHealthEngine(),
             cachedHealth: overrides.cachedHealth !== undefined ? overrides.cachedHealth : null,
+            brainDir: '/tmp/symbiote-test-brain',
+            rootDir: '/tmp/symbiote-test-root',
         });
     }
 
@@ -103,10 +107,10 @@ describe('SessionStartHandler', () => {
             const handler = makeHandler();
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).toContain('search for Symbiote MCP tools');
+            expect(ctx).toContain('ALWAYS use Symbiote MCP tools');
         });
 
-        it('formats DNA as prose not bullet list', async () => {
+        it('formats DNA as categorized bullet list', async () => {
             const handler = makeHandler({
                 dnaEntries: [
                     makeDnaEntry('use single quotes'),
@@ -117,8 +121,8 @@ describe('SessionStartHandler', () => {
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
 
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).not.toMatch(/- \[style\]/);
-            expect(ctx).toContain('Developer style:');
+            expect(ctx).toContain('Developer DNA (active):');
+            expect(ctx).toMatch(/- \[style\]/);
             expect(ctx).toContain('use single quotes');
             expect(ctx).toContain('prefer const over let');
         });
@@ -291,11 +295,11 @@ describe('SessionStartHandler', () => {
     });
 
     describe('empty DNA and constraints', () => {
-        it('omits Developer style line when DNA is empty', async () => {
+        it('omits Developer DNA section when DNA is empty', async () => {
             const handler = makeHandler({ dnaEntries: [] });
             const result = await handler.handle({ sessionId: 'sess-1', source: 'startup' });
             const ctx = result.hookSpecificOutput?.additionalContext ?? '';
-            expect(ctx).not.toContain('Developer style:');
+            expect(ctx).not.toContain('Developer DNA');
         });
 
         it('omits Constraints section when constraints are empty', async () => {

@@ -20,22 +20,35 @@ describe('MCP Resources', () => {
         db = await createDatabase(':memory:');
         tmpHome = path.join(os.tmpdir(), `symbiote-mcp-res-home-${Date.now()}`);
         tmpBrain = path.join(os.tmpdir(), `symbiote-mcp-res-brain-${Date.now()}`);
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'style'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'preferences'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'anti-patterns'), {
-            recursive: true,
-        });
-        fs.mkdirSync(path.join(tmpHome, 'dna', 'decisions'), {
-            recursive: true,
-        });
+
+        fs.mkdirSync(path.join(tmpHome, 'profiles'), { recursive: true });
+        const profile = {
+            version: 1,
+            profile: {
+                name: 'Test User',
+                handle: 'test',
+                bio: '',
+                created: '2026-01-01',
+                updated: '2026-01-01',
+            },
+            entries: [],
+            stats: {
+                total_entries: 0,
+                categories: [],
+                top_languages: [],
+                oldest_entry: null,
+                total_sessions: 0,
+            },
+        };
         fs.writeFileSync(
-            path.join(tmpHome, 'dna', 'index.json'),
-            JSON.stringify({ version: 1, entries: [] }),
+            path.join(tmpHome, 'profiles', 'personal.json'),
+            JSON.stringify(profile, null, 4),
         );
+        fs.writeFileSync(
+            path.join(tmpHome, 'config.json'),
+            JSON.stringify({ active_profile: 'personal' }),
+        );
+
         fs.mkdirSync(path.join(tmpBrain, 'intent', 'decisions'), {
             recursive: true,
         });
@@ -65,7 +78,11 @@ describe('MCP Resources', () => {
         });
 
         it('includes entry details when DNA entries exist', () => {
-            ctx.dnaEngine.captureInstruction('Use early returns', 's1', 'correction');
+            ctx.dnaEngine.captureInstruction({
+                rule: 'Use early returns',
+                source: 'correction',
+                sessionId: 's1',
+            });
             const result = handleDnaResource(ctx);
             expect(result).toContain('early returns');
         });
