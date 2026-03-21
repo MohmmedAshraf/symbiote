@@ -111,7 +111,7 @@ export class ProfileStorage {
         const fallback = this.readProfile('personal');
         if (fallback) return fallback;
 
-        this.ensurePersonalProfile('Developer', 'developer');
+        this.ensurePersonalProfile('', '');
         return this.readProfile('personal')!;
     }
 

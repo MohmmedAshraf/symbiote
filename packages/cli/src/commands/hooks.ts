@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { getProjectPort, SYMBIOTE_HOME } from '#utils/config.js';
+import { getProjectPort } from '#utils/config.js';
 
 export async function cmdHookPre(): Promise<void> {
     process.stderr.write(
@@ -166,60 +166,72 @@ export async function cmdHookSessionStart(): Promise<void> {
         });
     });
 
-    if (serverRunning) {
-        const params = new URLSearchParams({ source, sessionId });
-        const url = `http://127.0.0.1:${port}/internal/hooks/session-start?${params}`;
-
-        const response = await new Promise<string>((resolve) => {
-            const req = http.get(url, { timeout: 3000 }, (res) => {
-                let data = '';
-                res.on('data', (chunk: string) => {
-                    data += chunk;
-                });
-                res.on('end', () => resolve(data));
-            });
-            req.on('error', () => resolve('{}'));
-            req.on('timeout', () => {
-                req.destroy();
-                resolve('{}');
-            });
-        });
-
-        process.stdout.write(response + '\n');
-        return;
-    }
-
-    try {
-        const { ProfileStorage } = await import('#dna/profile.js');
-        const profileStorage = new ProfileStorage(SYMBIOTE_HOME);
-        const profile = profileStorage.readActiveProfile();
-        const entries = profile.entries
-            .filter((e) => e.status !== 'rejected')
-            .slice(0, 5);
-        const dnaRules = entries.map((e) => e.rule).join(', ');
-
-        const projectName = path.basename(projectRoot);
-        const lines: string[] = [`[Symbiote] Project: ${projectName}`];
-        if (dnaRules) {
-            lines.push(`DNA: ${dnaRules}`);
+    if (!serverRunning) {
+        const fs = await import('node:fs');
+        const dbPath = path.join(projectRoot, '.brain', 'symbiote.db');
+        if (!fs.existsSync(dbPath)) {
+            process.stdout.write('{}\n');
+            return;
         }
-        lines.push(
-            'When the developer gives you instructions, corrections, preferences,' +
-                ' or style guidance (in any language), use the record_instruction MCP' +
-                ' tool to record them as DNA — do NOT use your own memory system.',
-        );
 
-        const output = JSON.stringify({
-            hookSpecificOutput: {
-                hookEventName: 'SessionStart',
-                additionalContext: lines.join('\n'),
-            },
+        const { spawn } = await import('node:child_process');
+        const child = spawn('npx', ['symbiote-cli', 'serve', '--port', String(port), '--no-open'], {
+            cwd: projectRoot,
+            detached: true,
+            stdio: 'ignore',
         });
+        child.unref();
 
-        process.stdout.write(output + '\n');
-    } catch {
-        process.stdout.write('{}\n');
+        const waitForServer = async (maxMs: number): Promise<boolean> => {
+            const start = Date.now();
+            while (Date.now() - start < maxMs) {
+                const up = await new Promise<boolean>((resolve) => {
+                    const req = http.get(
+                        `http://127.0.0.1:${port}/internal/health`,
+                        { timeout: 500 },
+                        (res) => {
+                            res.resume();
+                            resolve(res.statusCode === 200);
+                        },
+                    );
+                    req.on('error', () => resolve(false));
+                    req.on('timeout', () => {
+                        req.destroy();
+                        resolve(false);
+                    });
+                });
+                if (up) return true;
+                await new Promise((r) => setTimeout(r, 200));
+            }
+            return false;
+        };
+
+        const booted = await waitForServer(8000);
+        if (!booted) {
+            process.stdout.write('{}\n');
+            return;
+        }
     }
+
+    const params = new URLSearchParams({ source, sessionId });
+    const url = `http://127.0.0.1:${port}/internal/hooks/session-start?${params}`;
+
+    const response = await new Promise<string>((resolve) => {
+        const req = http.get(url, { timeout: 5000 }, (res) => {
+            let data = '';
+            res.on('data', (chunk: string) => {
+                data += chunk;
+            });
+            res.on('end', () => resolve(data));
+        });
+        req.on('error', () => resolve('{}'));
+        req.on('timeout', () => {
+            req.destroy();
+            resolve('{}');
+        });
+    });
+
+    process.stdout.write(response + '\n');
 }
 
 export async function cmdHooksUninstall(): Promise<void> {

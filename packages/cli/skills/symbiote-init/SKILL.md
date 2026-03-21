@@ -11,17 +11,34 @@ MCP server is already registered globally by `symbiote install`. This skill only
 
 ## Process
 
-1. Scan the codebase
+1. Scan the codebase and start the server
 2. Write project overview
-3. Build extraction lists from context
-4. Dispatch subagent to record everything
-5. Print one-line summary
+3. Scan ALL projects for developer identity
+4. Build complete DNA entries, constraints, and decisions
+5. Dispatch subagent with pre-built entries
+6. Print one-line summary
 
-## Step 1: Scan
+## Step 1: Scan and Start Server
+
+Run these as SEPARATE bash commands:
 
 ```bash
 npx symbiote-cli scan
 ```
+
+Then start the server:
+
+```bash
+npx symbiote-cli serve --no-open > /dev/null 2>&1 &
+```
+
+Then wait and verify:
+
+```bash
+sleep 3 && curl -s http://127.0.0.1:$(cat .brain/port)/internal/health
+```
+
+IMPORTANT: Do NOT combine scan and serve into one command. The scan must finish and release the DB lock before the server starts.
 
 ## Step 2: Write Project Overview
 
@@ -45,123 +62,160 @@ Read the codebase context (CLAUDE.md, package.json, top-level structure, scan re
 
 - `{top-level-dir}/` — {what it contains}
 - `{top-level-dir}/` — {what it contains}
-- `{sub-dir}/` — {what it contains, if important}
 
 ## Key Patterns
 
-- {How data flows, e.g. "Server actions → Zod validation → Drizzle ORM"}
-- {How modules connect, e.g. "MCP server exposes graph queries to AI tools"}
-- {Any non-obvious architectural pattern}
+- {How data flows}
+- {How modules connect}
 
 ## Entry Points
 
 - `{file}` — {what it does}
-- `{file}` — {what it does}
 ```
 
-Rules:
+Rules: keep it under 40 lines, no frontmatter, be specific to THIS project.
 
-- Keep it under 40 lines total
-- No frontmatter — this is a plain markdown file, not an intent entry
-- Focus on WHAT and HOW, not rules or preferences (those go in constraints/decisions)
-- Be specific to THIS project, not generic descriptions
-- Use the project's actual directory names, tech choices, and patterns
+## Step 3: Scan ALL Projects for Developer Identity
 
-## Step 3: Build Extraction Lists
+Read the developer's full coding identity across every project:
 
-Read your context (CLAUDE.md, memories, rule files) and build three separate lists:
+1. `~/.claude/CLAUDE.md` — global instructions
+2. Every CLAUDE.md in `~/.claude/projects/*/` — all project instructions
+3. Every `.md` file in `~/.claude/projects/*/memory/` — all memories
+4. `./CLAUDE.md` — current project
 
-### DNA (coding preferences) → `record_instruction`
+Read ALL of these. Do not skip any.
 
-Extract how the developer writes code:
+**Also extract the developer's identity** from the global CLAUDE.md:
 
-- Formatting (indentation, quotes, semicolons, line length)
-- Language conventions (strict TypeScript, ESM, etc.)
-- Code structure (early returns, composition, small functions)
-- Anti-patterns (no `any`, no dead code, no comments)
-- Testing preferences (TDD, isolation, framework)
-- Workflow (conventional commits, small commits)
+- Name (look for "Name:", "Author:", or similar)
+- Email
+- GitHub handle
+- Website/URL
 
-### Constraints (project rules) → `propose_constraint`
+## Step 4: Build Complete DNA Entries
 
-Extract rules the project enforces:
+From everything in Step 3, build three COMPLETE lists. Every entry must be fully formed — do NOT leave fields empty.
 
-- "All mutations through server actions"
-- "Validate external input with Zod at boundaries"
-- "Tests must mirror src/ structure"
+### DNA entries
 
-### Decisions (architectural choices) → `propose_decision`
+Build each entry as a COMPLETE JSON object with ALL fields filled:
 
-Extract choices with rationale:
+```json
+{
+    "rule": "Use 4-space indentation everywhere, never tabs",
+    "reason": "Consistency across polyglot stack eliminates context-switching friction and keeps diffs uniform",
+    "category": "formatting",
+    "applies_to": ["typescript", "javascript", "json", "php"],
+    "not_for": ["go"],
+    "source": "explicit"
+}
+```
 
-- "Chose Vitest over Jest for native ESM support"
-- "Using DuckDB for graph storage — local-first, no external deps"
-- "Switched to Drizzle for better type safety"
+**EVERY field is required:**
 
-### What to Skip (applies to all three)
+- `rule` — one specific sentence, self-contained
+- `reason` — WHY this matters. NEVER leave empty. "Comments rot faster than code; good names eliminate narration" is good. Generic "for consistency" is not acceptable.
+- `category` — use organic categories: `formatting`, `patterns`, `architecture`, `workflow`, `testing`, `tooling`, `ai-collaboration`. Not the old fixed categories.
+- `applies_to` — list of languages/frameworks in lowercase. Empty `[]` means universal.
+- `not_for` — exclusions where a rule doesn't apply (e.g., Go uses tabs not spaces). Omit if no exclusions.
+- `source` — always `"explicit"` for init
+
+**Categories to cover** (verify you have entries for each):
+
+- **formatting** — indentation, quotes, semicolons, line length, file naming (kebab-case?)
+- **patterns** — early returns, composition over inheritance, small functions, naming, error handling, type strictness
+- **architecture** — project structure, separation of concerns, where logic lives, module boundaries, monorepo patterns
+- **workflow** — commit style, no co-authored-by, never push without asking, no destructive DB ops, challenge plans
+- **testing** — framework per language (Vitest, Pest), TDD, test structure, isolation
+- **tooling** — framework choices per stack: Laravel+Inertia for PHP, Next.js for TS, Supabase, Stripe, Tailwind, shadcn
+- **ai-collaboration** — concise responses, no trailing summaries, research before changing, no docs unless asked
+
+**Confidence scoring:**
+
+- Found in 3+ project CLAUDE.md files → `1.0`
+- Found in 1-2 projects → `0.7`
+- Current project only → `0.5`
+
+**Completeness checklist before proceeding:**
+
+- [ ] Formatting rules (indentation, quotes, line length, file naming)
+- [ ] Code patterns (early returns, composition, function size, type strictness)
+- [ ] Architecture (project structure, separation of concerns, module boundaries)
+- [ ] Workflow (commits, pushing, destructive operations, AI collaboration style)
+- [ ] Testing (framework per language, TDD, test structure)
+- [ ] Tooling (framework choices per language/stack)
+- [ ] AI collaboration (response style, autonomy level)
+- [ ] Language-specific entries with proper `applies_to` scoping
+- [ ] `not_for` exclusions where rules don't apply to certain languages
+- [ ] Every `reason` field is filled with a specific WHY
+
+### Constraints (project rules)
+
+For THIS project only. Use `propose_constraint` MCP tool.
+
+### Decisions (architectural choices)
+
+For THIS project only. Use `propose_decision` MCP tool.
+
+### What to Skip
 
 - File paths or directory descriptions
 - Tool/product feature lists
-- Author identity
+- Author identity (captured separately)
 - CLI commands or usage examples
-- Anything describing WHAT the project IS rather than rules/choices/preferences
 
-### Formatting Rules (applies to all three)
+## Step 5: Dispatch Subagent
 
-Each entry must be:
+Launch a single Agent to record everything. Pass the COMPLETE pre-built entries — do NOT ask the subagent to figure out fields.
 
-- One clear, grammatically correct sentence
-- Self-contained — understandable without context
-- Specific — not vague or overly broad
-
-## Step 4: Dispatch Subagent
-
-Launch a single Agent to record everything. Pass it all three lists.
+**Critical: also pass the developer identity** so the subagent can update the profile metadata.
 
 **Agent prompt template:**
 
-````
+```
 Record the following Symbiote entries using MCP tools. Call tools in parallel where possible.
 
-**DNA entries** — use `record_instruction` for each. Example call:
-```json
-{
-  "rule": "Use 4-space indentation everywhere, never tabs",
-  "reason": "Better readability in nested callbacks and PR reviews",
-  "category": "formatting",
-  "applies_to": ["typescript", "javascript"],
-  "source": "explicit"
-}
-````
+## Developer Identity
 
-Required: `rule`, `source`. Optional: `reason`, `category`, `applies_to`, `not_for`.
+After recording all entries, the profile at ~/.symbiote/profiles/personal.json needs its metadata updated.
+Read the file, update the "profile" block with:
+- name: {developer name}
+- handle: {github handle}
+- bio: {one-liner about their coding identity, synthesized from the DNA entries}
+Then write the file back.
 
-1. [entry]
-2. [entry]
+## DNA entries
 
-**Constraints** — use `propose_constraint` for each with `scope: "global"` and a slugified `id`:
+Use `record_instruction` for each. Pass the EXACT JSON shown — do not modify or simplify the fields.
 
+1. {"rule": "...", "reason": "...", "category": "...", "applies_to": [...], "not_for": [...], "source": "explicit"}
+2. {"rule": "...", "reason": "...", "category": "...", "applies_to": [...], "source": "explicit"}
+...
+
+## Constraints
+
+Use `propose_constraint` for each with `scope: "global"` and a slugified `id`:
 1. [constraint]
 2. [constraint]
 
-**Decisions** — use `propose_decision` for each with `scope: "global"` and a slugified `id`:
+## Decisions
 
+Use `propose_decision` for each with `scope: "global"` and a slugified `id`:
 1. [decision]
 2. [decision]
 
 Return counts: { dna: N, constraints: N, decisions: N, failed: N }
-
 ```
 
-## Step 5: Output
+**IMPORTANT:** List every DNA entry as a complete JSON object in the subagent prompt. The subagent just passes them through to `record_instruction` — it does NOT need to think about what fields to include.
+
+## Step 6: Output
 
 One line, nothing more:
 
 ```
-
-Symbiote initialized — scanned 350 files, recorded 18 DNA entries, 5 constraints, 3 decisions.
-
+Symbiote initialized — scanned 350 files, recorded 48 DNA entries, 5 constraints, 3 decisions.
 ```
 
 Do NOT render tables, lists, or per-entry details.
-```
