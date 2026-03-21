@@ -1,0 +1,16 @@
+{
+    "name": "symbiote-plugins",
+    "owner": {
+        "name": "Mohamed Ashraf",
+        "email": "cupo.ashraf@gmail.com",
+        "url": "https://outhebox.dev"
+    },
+    "plugins": [
+        {
+            "name": "symbiote",
+            "source": "./plugin",
+            "description": "AI coding companion with persistent memory — code knowledge graph, developer DNA, and architectural intelligence via MCP",
+            "version": "0.2.2"
+        }
+    ]
+}

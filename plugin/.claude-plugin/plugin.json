@@ -1,0 +1,20 @@
+{
+    "name": "symbiote",
+    "version": "0.2.2",
+    "description": "AI coding companion with persistent memory — code knowledge graph, developer DNA, and architectural intelligence via MCP",
+    "author": {
+        "name": "Mohamed Ashraf",
+        "email": "cupo.ashraf@gmail.com",
+        "url": "https://outhebox.dev"
+    },
+    "repository": "https://github.com/MohmmedAshraf/synapse",
+    "license": "MIT",
+    "keywords": [
+        "mcp",
+        "code-intelligence",
+        "knowledge-graph",
+        "developer-dna",
+        "architecture",
+        "memory"
+    ]
+}

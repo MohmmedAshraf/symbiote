@@ -55,3 +55,4 @@ packages/cli/LICENSE
 docs/
 /.superpowers
 .mcp.json
+!plugin/.mcp.json
