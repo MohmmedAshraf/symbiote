@@ -12,6 +12,7 @@ export interface BrainConfig {
 
 export interface GlobalConfig {
     version: number;
+    active_profile?: string;
 }
 
 export function ensureBrainDir(projectRoot: string): string {
@@ -51,16 +52,7 @@ export function ensureSymbioteHome(): string {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 4) + '\n');
     }
 
-    fs.mkdirSync(path.join(SYMBIOTE_HOME, 'dna', 'style'), { recursive: true });
-    fs.mkdirSync(path.join(SYMBIOTE_HOME, 'dna', 'preferences'), {
-        recursive: true,
-    });
-    fs.mkdirSync(path.join(SYMBIOTE_HOME, 'dna', 'anti-patterns'), {
-        recursive: true,
-    });
-    fs.mkdirSync(path.join(SYMBIOTE_HOME, 'dna', 'decisions'), {
-        recursive: true,
-    });
+    fs.mkdirSync(path.join(SYMBIOTE_HOME, 'profiles'), { recursive: true });
 
     return SYMBIOTE_HOME;
 }
