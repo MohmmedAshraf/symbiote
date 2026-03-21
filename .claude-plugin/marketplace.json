@@ -10,7 +10,7 @@
             "name": "symbiote",
             "source": "./plugin",
             "description": "AI coding companion with persistent memory — code knowledge graph, developer DNA, and architectural intelligence via MCP",
-            "version": "0.2.2"
+            "version": "0.2.3"
         }
     ]
 }
