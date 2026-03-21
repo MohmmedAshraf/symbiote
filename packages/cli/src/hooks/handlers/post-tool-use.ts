@@ -4,7 +4,7 @@ import type { SessionStore } from '#hooks/session-store.js';
 import type { AttentionSet } from '#hooks/attention.js';
 import type { GraphInstance } from '#core/types.js';
 import type { ParseResult } from '#core/parser.js';
-import type { DnaEntry } from '#dna/types.js';
+import type { DnaEntry } from '#dna/schema.js';
 import { EventBus } from '#events/bus.js';
 import { createEvent } from '#events/types.js';
 import { checkDnaViolations } from '#hooks/dna-checker.js';

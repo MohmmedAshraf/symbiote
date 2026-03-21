@@ -20,24 +20,21 @@ export {
 } from '#utils/config.js';
 
 export {
-    DnaStorage,
+    ProfileStorage,
     DnaEngine,
     EmbeddingModel,
     cosineSimilarity,
-    parseFrontmatter,
-    serializeEntry,
-    DNA_CATEGORIES,
-    DNA_STATUSES,
-    EMBEDDING_DIM,
-    type DnaCategory,
-    type DnaStatus,
-    type DnaSource,
-    type DnaFrontmatter,
+    DnaEntrySchema,
+    DnaProfileSchema,
+    parseYamlBlock,
+    exportProfile,
+    importProfile,
+    importFromUrl,
+    type CaptureInput,
     type DnaEntry,
-    type DnaIndex,
-    type DnaIndexEntry,
-    type ListOptions,
-    type SimilarMatch,
+    type DnaProfile,
+    type DnaSource,
+    type DnaStatus,
 } from '#dna/index.js';
 
 export {
